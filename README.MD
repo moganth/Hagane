@@ -23,6 +23,12 @@ cargo build --release -p builder --bin hagane
 .\target\release\hagane.exe run .\path\to\installer.yaml --release
 ```
 
+Publish the installer as a GitHub release asset:
+
+```powershell
+gh release create v0.1.0 .\hagane\bin\hagane-setup.exe --title "v0.1.0" --notes "Hagane installer release"
+```
+
 ## Repository Highlights
 
 - `engine/` : parser, validation, requirements, installer step execution
