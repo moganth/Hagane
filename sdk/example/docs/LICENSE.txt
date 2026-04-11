@@ -1,0 +1,29 @@
+END USER LICENSE AGREEMENT
+
+IMPORTANT: READ THIS AGREEMENT CAREFULLY BEFORE INSTALLING OR USING MYAPP.
+
+1. GRANT OF LICENSE
+Acme Corporation grants you a non-exclusive, non-transferable license to
+install and use MyApp on computers owned or controlled by you, solely for
+your personal or internal business purposes.
+
+2. RESTRICTIONS
+You may not: (a) copy or redistribute the software; (b) modify, translate,
+adapt, or create derivative works; (c) reverse engineer or decompile;
+(d) remove any proprietary notices.
+
+3. TERM AND TERMINATION
+This license is effective until terminated. Your rights under this license
+will terminate automatically if you fail to comply with any of its terms.
+
+4. DISCLAIMER OF WARRANTIES
+THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY AND
+FITNESS FOR A PARTICULAR PURPOSE.
+
+5. LIMITATION OF LIABILITY
+IN NO EVENT SHALL ACME CORPORATION BE LIABLE FOR ANY INDIRECT, INCIDENTAL,
+SPECIAL, OR CONSEQUENTIAL DAMAGES ARISING FROM THE USE OF THIS SOFTWARE.
+
+By installing MyApp, you agree to be bound by the terms of this agreement.
+Copyright (c) 2024 Acme Corporation. All rights reserved.

@@ -1,0 +1,66 @@
+# -----------------------------------------------------------------------------
+# Installer-Engine .gitignore
+# Keeps source/manifests/docs, ignores build artifacts and local machine files.
+# -----------------------------------------------------------------------------
+
+# Rust build output
+/target/
+**/target/
+
+#Rust generated lockfiles
+/Cargo.lock
+Cargo.lock
+
+# Generated installer embed payload
+/runner/src/generated/embedded.rs
+
+# Local Python virtual env / cache
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Test / temp outputs
+*.log
+*.tmp
+*.temp
+*.bak
+*.old
+
+# Packaged binaries / archives produced locally
+*.exe
+*.msi
+*.zip
+*.7z
+*.tar
+*.gz
+*.zst
+
+# Keep source assets and sample manifests under sdk/
+!sdk/**
+
+# OS-specific clutter
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# VS Code / IDE local settings
+.vscode/
+.idea/
+*.code-workspace
+
+# Rust analyzer / debugging local files
+*.pdb
+*.dSYM/
+
+# Environment files
+.env
+.env.*
+
+# Node modules (if ever used for tooling)
+node_modules/
+
+#py-test files
+create_multireso_icon.py

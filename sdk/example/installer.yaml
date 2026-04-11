@@ -1,0 +1,300 @@
+# ── MyApp Installer Definition ─────────────────────────────────────────────────
+# Build with: iebuild --manifest installer.yaml --build
+# Silent:     MyApp-setup.exe /S
+
+app:
+  name: "MyApp"
+  version: "2.1.0"
+  publisher: "Acme Corporation"
+  description: "A fast, modern productivity application for Windows."
+  website: "https://example.com"
+  support_url: "https://example.com/support"
+  logo: "assets/logo.png"
+  banner: "assets/banner.png"
+  icon: "assets/icon.ico"
+  default_install_dir: "$PROGRAMFILES64\\Acme\\MyApp"
+  registry_key: "Acme\\MyApp"
+  require_admin: true
+
+theme:
+  accent_color: "#0F6CBD"
+  accent_dark_color: "#0B4F9A"
+  accent_light_color: "#DCEBFA"
+  background_color: "#FFFFFF"
+  surface_color: "#F7F9FC"
+  text_color: "#1A1A1A"
+  text_muted_color: "#667085"
+  border_color: "#D0D7E2"
+  success_color: "#107C10"
+  success_bg_color: "#F3FAF4"
+  error_color: "#C42B1C"
+  error_bg_color: "#FFF4F2"
+  font_family: "'Segoe UI', system-ui, sans-serif"
+  border_radius: 6
+  window_width: 780
+  window_height: 540
+  banner_position: top
+
+# Example: Minimal modern preset
+# theme:
+#   accent_color: "#2563EB"
+#   accent_dark_color: "#1D4ED8"
+#   accent_light_color: "#DBEAFE"
+#   background_color: "#FFFFFF"
+#   surface_color: "#F8FAFC"
+#   text_color: "#0F172A"
+#   text_muted_color: "#475569"
+#   border_color: "#E2E8F0"
+#   success_color: "#15803D"
+#   success_bg_color: "#F0FDF4"
+#   error_color: "#B91C1C"
+#   error_bg_color: "#FEF2F2"
+#   font_family: "'Segoe UI', system-ui, sans-serif"
+#   border_radius: 8
+
+# Example: Dark corporate preset
+# theme:
+#   accent_color: "#4F8FF7"
+#   accent_dark_color: "#2E6FDB"
+#   accent_light_color: "#D9E7FF"
+#   background_color: "#0F172A"
+#   surface_color: "#111C33"
+#   text_color: "#E5EEF9"
+#   text_muted_color: "#94A3B8"
+#   border_color: "#24344D"
+#   success_color: "#22C55E"
+#   success_bg_color: "#102A1A"
+#   error_color: "#F87171"
+#   error_bg_color: "#2A1414"
+#   progress_color: "#331a27"
+#   progress_light_color: "#804261"
+#   font_family: "'Segoe UI', system-ui, sans-serif"
+#   border_radius: 8
+
+pages:
+  - type: welcome
+    title: "Welcome to MyApp Setup"
+    subtitle: "Version 2.1.0"
+
+  - type: license
+    title: "License Agreement"
+    license_file: "docs/LICENSE.txt"
+
+  - type: requirements
+    title: "System Requirements Check"
+
+  - type: install_dir
+    title: "Choose Installation Folder"
+
+  - type: components
+    title: "Select Components"
+
+  - type: summary
+    title: "Ready to Install"
+
+  - type: install
+    title: "Installing MyApp"
+
+  - type: finish
+    title: "Setup Complete"
+
+requirements:
+  - type: os
+    platform: windows
+    min_build: 18362        # Windows 10 1903+
+    label: "Windows 10 1903 or newer"
+
+  - type: ram
+    min_mb: 2048
+    label: "2 GB RAM minimum"
+
+  - type: disk
+    min_mb: 512
+    path: "$INSTDIR"
+    label: "512 MB free disk space"
+
+  - type: dotnet
+    min_version: "4.8"
+    label: ".NET Framework 4.8"
+
+
+components:
+  - id: core
+    name: "Core Application"
+    description: "The main application files. Required."
+    size_mb: 120
+    required: true
+    selected: true
+
+  - id: docs
+    name: "Documentation"
+    description: "PDF user manual and help files."
+    size_mb: 18
+    required: false
+    selected: true
+
+  - id: samples
+    name: "Sample Files"
+    description: "Example projects and templates to get you started."
+    size_mb: 34
+    required: false
+    selected: false
+
+  - id: cli
+    name: "Command Line Tools"
+    description: "myapp.exe CLI — adds to system PATH."
+    size_mb: 8
+    required: false
+    selected: false
+
+steps:
+  # ── Create install directory ───────────────────────────────────────────────
+  - action: create_dir
+    path: "$INSTDIR"
+
+  - action: create_dir
+    path: "$INSTDIR\\logs"
+
+  # ── Extract main payload ───────────────────────────────────────────────────
+  - action: extract
+    archive: "payload.zst"
+    destination: "$INSTDIR"
+    component: core
+
+  - action: extract
+    archive: "docs.zst"
+    destination: "$INSTDIR\\docs"
+    component: docs
+
+  - action: extract
+    archive: "samples.zst"
+    destination: "$INSTDIR\\samples"
+    component: samples
+
+  # ── Registry — Add/Remove Programs entry ─────────────────────────────────
+  - action: registry
+    operation: write
+    hive: HKLM
+    key: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\AcmeMyApp"
+    value_name: "DisplayName"
+    value_type: SZ
+    value_data: "MyApp 2.1.0"
+
+  - action: registry
+    operation: write
+    hive: HKLM
+    key: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\AcmeMyApp"
+    value_name: "DisplayVersion"
+    value_type: SZ
+    value_data: "2.1.0"
+
+  - action: registry
+    operation: write
+    hive: HKLM
+    key: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\AcmeMyApp"
+    value_name: "Publisher"
+    value_type: SZ
+    value_data: "Acme Corporation"
+
+  - action: registry
+    operation: write
+    hive: HKLM
+    key: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\AcmeMyApp"
+    value_name: "InstallLocation"
+    value_type: SZ
+    value_data: "$INSTDIR"
+
+  - action: registry
+    operation: write
+    hive: HKLM
+    key: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\AcmeMyApp"
+    value_name: "UninstallString"
+    value_type: SZ
+    value_data: "$INSTDIR\\uninstall.exe"
+
+  - action: registry
+    operation: write
+    hive: HKLM
+    key: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\AcmeMyApp"
+    value_name: "EstimatedSize"
+    value_type: DWORD
+    value_data: 180224    # KB
+
+  - action: registry
+    operation: write
+    hive: HKLM
+    key: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\AcmeMyApp"
+    value_name: "NoModify"
+    value_type: DWORD
+    value_data: 1
+
+  - action: registry
+    operation: write
+    hive: HKLM
+    key: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\AcmeMyApp"
+    value_name: "NoRepair"
+    value_type: DWORD
+    value_data: 1
+
+  # ── App registry settings ─────────────────────────────────────────────────
+  - action: registry
+    operation: write
+    hive: HKLM
+    key: "SOFTWARE\\Acme\\MyApp"
+    value_name: "InstallDir"
+    value_type: SZ
+    value_data: "$INSTDIR"
+
+  - action: registry
+    operation: write
+    hive: HKLM
+    key: "SOFTWARE\\Acme\\MyApp"
+    value_name: "Version"
+    value_type: SZ
+    value_data: "2.1.0"
+
+  # ── Shortcuts ─────────────────────────────────────────────────────────────
+  - action: shortcut
+    target: "$INSTDIR\\MyApp.exe"
+    location: desktop
+    name: "MyApp"
+    description: "Launch MyApp"
+    icon: "$INSTDIR\\MyApp.exe"
+    working_dir: "$INSTDIR"
+    component: core
+
+  - action: shortcut
+    target: "$INSTDIR\\MyApp.exe"
+    location: start_menu
+    name: "MyApp"
+    description: "Launch MyApp"
+    icon: "$INSTDIR\\MyApp.exe"
+    working_dir: "$INSTDIR"
+    component: core
+
+  - action: shortcut
+    target: "$INSTDIR\\docs\\UserManual.pdf"
+    location: start_menu
+    name: "MyApp User Manual"
+    component: docs
+
+  # ── CLI tools — add to PATH ───────────────────────────────────────────────
+  - action: env_var
+    name: PATH
+    value: "$INSTDIR\\bin"
+    scope: system
+    operation: append
+
+  # ── Write uninstaller ─────────────────────────────────────────────────────
+  - action: write_uninstaller
+    path: "$INSTDIR\\uninstall.exe"
+
+uninstall:
+  display_name: "MyApp 2.1.0"
+  publisher: "Acme Corporation"
+
+silent:
+  install_dir: "$PROGRAMFILES64\\Acme\\MyApp"
+  components:
+    - core
+    - cli
