@@ -78,6 +78,15 @@ fn validate_steps(manifest: &InstallerManifest) -> Result<()> {
                 if !valid_ops.contains(&e.operation.as_str()) {
                     bail!("Step {}: invalid env var operation '{}'. Must be 'set', 'append', or 'prepend'", i, e.operation);
                 }
+                if let Some(component) = &e.component {
+                    let Some(components) = &manifest.components else {
+                        bail!("Step {}: env var component '{}' requires manifest.components to be defined", i, component);
+                    };
+                    let known = components.iter().any(|c| c.id == *component);
+                    if !known {
+                        bail!("Step {}: env var component '{}' does not match any defined component", i, component);
+                    }
+                }
             }
             _ => {}
         }

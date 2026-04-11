@@ -83,7 +83,6 @@ pub fn check_vc_redist(year: &str, arch: Option<&str>) -> Result<bool> {
             RegOpenKeyExW, RegEnumKeyExW, HKEY_LOCAL_MACHINE, KEY_READ,
         };
         use windows::core::PCWSTR;
-        use windows::Win32::Foundation::ERROR_SUCCESS;
 
         let arch_str = arch.unwrap_or("x64");
         // Search both 32-bit and 64-bit uninstall keys

@@ -285,6 +285,8 @@ pub struct EnvVarStep {
     pub scope: String,
     /// "set", "append", "prepend"
     pub operation: String,
+    /// Only apply this env var step if the given component id is selected
+    pub component: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

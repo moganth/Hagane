@@ -1,0 +1,112 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Setup Complete</title>
+<style>
+:root{--accent:#0078D4;--accent-dark:#005A9E;--accent-light:#EBF3FB;--bg:#fff;--bg-alt:#F5F5F5;--text:#1A1A1A;--text-muted:#6B6B6B;--border:#E0E0E0;--success:#107C10;--radius:6px;--font:'Segoe UI',system-ui,sans-serif}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:var(--font);font-size:14px;color:var(--text);background:var(--bg);overflow:hidden;user-select:none;-webkit-font-smoothing:antialiased}
+.root{display:flex;flex-direction:column;height:100vh}
+.banner{flex-shrink:0;display:flex;align-items:stretch;min-height:96px;background:var(--bg-alt);border-bottom:1px solid var(--border);overflow:hidden}
+.brand-tile{width:96px;min-width:96px;background:linear-gradient(135deg,var(--accent) 0%,var(--accent-dark) 100%);display:flex;align-items:center;justify-content:center}
+.banner-logo{width:48px;height:48px;object-fit:contain;display:none}
+.banner-logo-ph{width:48px;height:48px;background:rgba(255,255,255,.22);border-radius:8px}
+.banner-art{flex:1;background:linear-gradient(135deg,var(--accent) 0%,var(--accent-dark) 100%);background-size:cover;background-position:center}
+.content{flex:1;overflow-y:auto;padding:28px 36px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;animation:fadeIn .25s ease}
+.footer{flex-shrink:0;display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:12px 20px;border-top:1px solid var(--border);background:var(--bg-alt)}
+.btn{display:inline-flex;align-items:center;justify-content:center;padding:7px 20px;border-radius:var(--radius);font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;border:1px solid transparent;min-width:100px;transition:background .15s,opacity .15s}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}.btn-primary:hover{background:var(--accent-dark)}
+.btn-secondary{background:transparent;color:var(--text);border-color:var(--border)}.btn-secondary:hover{background:var(--bg-alt)}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes popIn{0%{transform:translateY(8px);opacity:0}100%{transform:translateY(0);opacity:1}}
+.success-icon{display:none}
+.success-dot{display:none}
+.finish-title{font-size:24px;font-weight:700;text-align:center;color:var(--text)}
+.finish-sub{font-size:14px;color:var(--text-muted);text-align:center;line-height:1.65;max-width:440px}
+.options-box{width:100%;max-width:380px;display:flex;flex-direction:column;gap:10px;background:var(--bg-alt);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px}
+.check-row{display:flex;align-items:center;gap:10px;cursor:pointer}
+.check-row input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
+.check-row span{font-size:13px;line-height:1.4}
+.divider{width:100%;max-width:380px;border:none;border-top:1px solid var(--border)}
+</style></head><body>
+<div class="root">
+  <div class="banner">
+    <div class="brand-tile">
+      <img id="banner-logo" class="banner-logo" alt="">
+      <div id="banner-logo-ph" class="banner-logo-ph"></div>
+    </div>
+    <div id="banner-art" class="banner-art"></div>
+  </div>
+  <div class="content">
+    <div class="finish-title" id="finish-title">Setup Complete!</div>
+    <div class="finish-sub" id="finish-sub">
+      The application has been installed successfully on your computer.<br>
+      Click <strong>Finish</strong> to exit the installer.
+    </div>
+    <hr class="divider">
+    <div class="options-box">
+      <label class="check-row">
+        <input type="checkbox" id="cb-launch" checked>
+        <span id="launch-label">Launch application now</span>
+      </label>
+      <label class="check-row">
+        <input type="checkbox" id="cb-desktop" checked>
+        <span>Create desktop shortcut</span>
+      </label>
+    </div>
+  </div>
+  <div class="footer">
+    <button id="btn-finish" class="btn btn-primary">Finish</button>
+  </div>
+</div>
+<script>
+function applyTheme(s){const r=document.documentElement;r.style.setProperty('--accent',s.accent_color||'#0078D4');r.style.setProperty('--accent-dark',s.accent_dark_color||'#005A9E');r.style.setProperty('--accent-light',s.accent_light_color||'#EBF3FB');r.style.setProperty('--bg',s.background_color||'#FFFFFF');r.style.setProperty('--bg-alt',s.surface_color||'#F5F5F5');r.style.setProperty('--text',s.text_color||'#1A1A1A');r.style.setProperty('--text-muted',s.text_muted_color||'#6B6B6B');r.style.setProperty('--border',s.border_color||'#E0E0E0');r.style.setProperty('--radius',(s.border_radius??6)+'px');r.style.setProperty('--font',s.font_family||"'Segoe UI',system-ui,sans-serif");r.style.setProperty('--success',s.success_color||'#107C10');r.style.setProperty('--success-bg',s.success_bg_color||'#F7F9F8');r.style.setProperty('--error',s.error_color||'#C42B1C');r.style.setProperty('--error-bg',s.error_bg_color||'#FFF7F6');r.style.setProperty('--progress',s.progress_color||'#0078D4');r.style.setProperty('--progress-light',s.progress_light_color||'#EBF3FB');}
+function onPageStateUpdate(s) {
+  applyTheme(s);
+  const isUninstall = !!s.is_uninstall;
+  document.getElementById('finish-title').textContent = isUninstall
+    ? s.app_name + ' Uninstalled'
+    : s.app_name + ' Setup Complete!';
+  document.getElementById('finish-sub').innerHTML = isUninstall
+    ? '<strong>' + esc(s.app_name) + '</strong> has been removed from your computer.<br>' +
+      'Removed from: <code style="font-size:12px;background:var(--bg-alt);padding:1px 5px;border-radius:3px">' + esc(s.install_dir) + '</code>'
+    : '<strong>' + esc(s.app_name) + ' v' + esc(s.app_version) + '</strong> has been installed successfully.<br>' +
+      'Installed to: <code style="font-size:12px;background:var(--bg-alt);padding:1px 5px;border-radius:3px">' +
+      esc(s.install_dir) + '</code>';
+  document.getElementById('launch-label').textContent = 'Launch ' + esc(s.app_name);
+  document.querySelector('.options-box').style.display = isUninstall ? 'none' : 'flex';
+  document.getElementById('btn-finish').textContent = isUninstall ? 'Close' : 'Finish';
+  const iconAsset = s.logo_b64;
+  if (iconAsset) {
+    const l = document.getElementById("banner-logo");
+    l.src = (iconAsset.startsWith && iconAsset.startsWith("data:")) ? iconAsset : "data:image/png;base64," + iconAsset;
+    l.style.display = "block";
+    document.getElementById("banner-logo-ph").style.display = "none";
+  }
+  const bannerAsset = s.banner_b64;
+  if (bannerAsset) {
+    const art = document.getElementById("banner-art");
+    if (art) {
+      const src = (bannerAsset.startsWith && bannerAsset.startsWith("data:")) ? bannerAsset : "data:image/png;base64," + bannerAsset;
+      art.style.backgroundImage = "url(" + src + ")";
+      art.style.backgroundSize = "cover";
+      art.style.backgroundPosition = "center";
+    }
+  }
+  document.getElementById('cb-launch').checked  = s.launch_app !== false;
+  document.getElementById('cb-desktop').checked = s.create_desktop_shortcut !== false;
+}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+function send(t,p={}){const m=JSON.stringify({type:t,...p});if(window.chrome&&window.chrome.webview)window.chrome.webview.postMessage(m);else console.log('[→]',m)}
+window.__engineEvent=function(e){if(e.event==='state_update')onPageStateUpdate(e.state)};
+document.addEventListener('DOMContentLoaded',()=>{
+  send('ready');
+  const cbLaunch  = document.getElementById('cb-launch');
+  const cbDesktop = document.getElementById('cb-desktop');
+  [cbLaunch, cbDesktop].forEach(cb => cb.addEventListener('change', () => {
+    send('set_finish_options', {launch_app: cbLaunch.checked, create_desktop_shortcut: cbDesktop.checked});
+  }));
+  document.getElementById('btn-finish').onclick = () => {
+    send('set_finish_options', {launch_app: cbLaunch.checked, create_desktop_shortcut: cbDesktop.checked});
+    send('next');
+  };
+});
+</script>
+</body></html>

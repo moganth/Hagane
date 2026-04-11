@@ -1,5 +1,18 @@
 fn main() {
-    let icon_path = "../sdk/example/assets/icon.ico";
+  let fallback_icon = "../sdk/example/assets/icon.ico";
+  let icon_path = std::env::var("HAGANE_ICON_PATH")
+    .ok()
+    .filter(|v| !v.trim().is_empty())
+    .map(std::path::PathBuf::from)
+    .filter(|p| p.exists())
+    .or_else(|| {
+      let p = std::path::PathBuf::from(fallback_icon);
+      if p.exists() {
+        Some(p)
+      } else {
+        None
+      }
+    });
 
     #[cfg(windows)]
     {
@@ -23,13 +36,32 @@ fn main() {
 </assembly>
 "#);
         // Embed app icon if present
-        if std::path::Path::new(icon_path).exists() {
-            res.set_icon(icon_path);
+    if let Some(path) = icon_path.as_ref() {
+      let normalized = normalize_icon_path(path);
+      if let Some(icon) = normalized.to_str() {
+        res.set_icon(icon);
+      }
         }
         if let Err(e) = res.compile() {
             eprintln!("winres compile warning: {}", e);
         }
     }
     println!("cargo:rerun-if-changed=build.rs");
-    println!("cargo:rerun-if-changed={}", icon_path);
+  println!("cargo:rerun-if-env-changed=HAGANE_ICON_PATH");
+  if let Some(path) = icon_path {
+    println!("cargo:rerun-if-changed={}", path.display());
+  } else {
+    println!("cargo:rerun-if-changed={}", fallback_icon);
+  }
+}
+
+fn normalize_icon_path(path: &std::path::Path) -> std::path::PathBuf {
+  #[cfg(windows)]
+  {
+    let s = path.to_string_lossy();
+    if let Some(stripped) = s.strip_prefix(r"\\?\") {
+      return std::path::PathBuf::from(stripped);
+    }
+  }
+  path.to_path_buf()
 }
