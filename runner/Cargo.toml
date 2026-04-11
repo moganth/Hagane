@@ -35,8 +35,3 @@ webview2-com-sys = "0.28"
 [build-dependencies]
 # Embed manifest for UAC elevation request and DPI awareness
 winres = "0.1"
-
-[profile.release]
-opt-level = 3
-lto = true
-strip = true

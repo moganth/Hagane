@@ -15,7 +15,6 @@ pub fn apply_registry_step(
     {
         use windows::Win32::System::Registry::*;
         use windows::core::PCWSTR;
-        use windows::Win32::Foundation::ERROR_SUCCESS;
 
         let root_hkey = parse_hive(hive)?;
 

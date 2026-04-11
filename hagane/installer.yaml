@@ -1,0 +1,111 @@
+# yaml-language-server: $schema=../sdk/schema/installer.schema.json
+
+app:
+  name: "Hagane"
+  version: "0.1.0"
+  publisher: "Installer Engine"
+  description: "Command-line installer builder for the Installer Engine workspace."
+  default_install_dir: "$PROGRAMFILES64\\Hagane"
+  registry_key: "InstallerEngine\\Hagane"
+  require_admin: true
+
+pages:
+  - type: welcome
+    title: "Welcome to Hagane Setup"
+    subtitle: "Install the Hagane command-line tool"
+
+  - type: install_dir
+    title: "Choose Installation Folder"
+
+  - type: components
+    title: "Choose PATH Scope"
+
+  - type: summary
+    title: "Ready to Install"
+
+  - type: install
+    title: "Installing Hagane"
+
+  - type: finish
+    title: "Setup Complete"
+
+components:
+  - id: user_path
+    name: "Add to user PATH"
+    description: "Make hagane available in your current Windows user profile."
+    required: false
+    selected: true
+
+  - id: system_path
+    name: "Add to system PATH"
+    description: "Make hagane available for all users on this machine."
+    required: false
+    selected: false
+
+steps:
+  - action: create_dir
+    path: "$INSTDIR"
+
+  - action: create_dir
+    path: "$INSTDIR\\bin"
+
+  - action: extract
+    archive: "payload.zst"
+    destination: "$INSTDIR"
+
+  - action: registry
+    operation: write
+    hive: HKLM
+    key: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Hagane"
+    value_name: "DisplayName"
+    value_type: SZ
+    value_data: "Hagane"
+
+  - action: registry
+    operation: write
+    hive: HKLM
+    key: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Hagane"
+    value_name: "DisplayVersion"
+    value_type: SZ
+    value_data: "0.1.0"
+
+  - action: registry
+    operation: write
+    hive: HKLM
+    key: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Hagane"
+    value_name: "Publisher"
+    value_type: SZ
+    value_data: "Installer Engine"
+
+  - action: registry
+    operation: write
+    hive: HKLM
+    key: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Hagane"
+    value_name: "InstallLocation"
+    value_type: SZ
+    value_data: "$INSTDIR"
+
+  - action: registry
+    operation: write
+    hive: HKLM
+    key: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Hagane"
+    value_name: "UninstallString"
+    value_type: SZ
+    value_data: "$INSTDIR\\uninstall.exe"
+
+  - action: env_var
+    name: "Path"
+    value: "$INSTDIR\\bin"
+    scope: "user"
+    operation: "append"
+    component: "user_path"
+
+  - action: env_var
+    name: "Path"
+    value: "$INSTDIR\\bin"
+    scope: "system"
+    operation: "append"
+    component: "system_path"
+
+  - action: write_uninstaller
+    path: "$INSTDIR\\uninstall.exe"

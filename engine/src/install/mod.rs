@@ -117,6 +117,7 @@ impl StepRunner {
             }
 
             InstallStep::EnvVar(s) => {
+                if !self.component_active(s.component.as_deref()) { return Ok(()); }
                 apply_env_var(
                     &s.name,
                     &self.resolve_vars(&s.value),
@@ -285,7 +286,6 @@ fn read_reg_string(hkey: windows::Win32::System::Registry::HKEY, wide_name: &[u1
         )
     };
 
-    use windows::Win32::Foundation::ERROR_SUCCESS;
     if res.is_ok() {
         let len = (size as usize / 2).saturating_sub(1);
         Some(String::from_utf16_lossy(&buf[..len]).to_string())

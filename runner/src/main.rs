@@ -16,7 +16,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-include!("generated/embedded.rs");
+include!("../../hagane/generated/embedded.rs");
 
 fn main() {
     env_logger::Builder::from_env(
@@ -188,7 +188,7 @@ fn run() -> Result<()> {
                                                 if let Some(args) = args {
                                                     let mut raw_pwstr = PWSTR::null();
                                                     if args.TryGetWebMessageAsString(&mut raw_pwstr).is_ok() {
-                                                        let msg = unsafe { raw_pwstr.to_string() }.unwrap_or_default();
+                                                        let msg = raw_pwstr.to_string().unwrap_or_default();
                                                         handle_message(msg, &wv_msg, &state_msg, &manifest_msg, &archives_msg, &html_msg);
 
                                                     }

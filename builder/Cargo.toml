@@ -5,6 +5,10 @@ edition = "2021"
 
 [[bin]]
 name = "iebuild"
+path = "src/iebuild.rs"
+
+[[bin]]
+name = "hagane"
 path = "src/main.rs"
 
 [dependencies]
