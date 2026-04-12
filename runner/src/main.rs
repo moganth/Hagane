@@ -290,6 +290,7 @@ fn handle_message(
                                 selected_components,
                                 archives: (*archives_clone).clone(),
                                 backup_dir: std::env::temp_dir().join("installer_backup"),
+                                logging: manifest_clone.logging.clone(),
                             };
 
                             let mut runner = StepRunner::new(ctx);
@@ -466,6 +467,7 @@ fn run_silent(
         selected_components: state.selected_components,
         archives,
         backup_dir: std::env::temp_dir().join("installer_backup"),
+        logging: manifest.logging.clone(),
     };
 
     let mut runner = StepRunner::new(ctx);
@@ -687,6 +689,7 @@ where
                 selected_components: HashSet::new(),
                 archives: HashMap::new(),
                 backup_dir: std::env::temp_dir().join("uninstall_backup"),
+                logging: manifest.logging.clone(),
             };
             let mut runner = StepRunner::new(ctx);
             runner.run_all(extra_steps, |_step, _total, _label| {})?;

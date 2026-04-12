@@ -1,0 +1,28 @@
+app:
+  name: "SimPsNonZero"
+  version: "1.0.0"
+  publisher: "Acme"
+  require_admin: false
+
+logging:
+  mode: manual_only
+  path: "$TEMP\\HaganeErrorSim\\logs"
+  file_name: "installation.log"
+  timestamp: true
+
+pages:
+  - type: install
+
+steps:
+  - action: log_ui
+    level: info
+    message: "Testing PowerShell non-zero exit"
+  - action: log_file
+    level: info
+    message: "Testing PowerShell non-zero exit"
+  - action: run_powershell
+    script: "exit 3"
+    wait: true
+    fail_on_nonzero: true
+    timeout_sec: 10
+

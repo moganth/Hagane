@@ -16,6 +16,13 @@ app:
   registry_key: "Acme\\MyApp"
   require_admin: true
 
+logging:
+  mode: manual_only
+  path: "$INSTDIR\\logs"
+  file_name: "installation.log"
+  timestamp: true
+  include_raw_os_error: false
+
 theme:
   accent_color: "#0F6CBD"
   accent_dark_color: "#0B4F9A"
@@ -148,23 +155,72 @@ components:
     selected: false
 
 steps:
+  # ── Manual logging examples (error codes are emitted automatically) ───────
+  - action: log_ui
+    level: info
+    message: "Manifest loaded and validated"
+
+  - action: log_file
+    level: info
+    message: "Manifest loaded and validated"
+
   # ── Create install directory ───────────────────────────────────────────────
+  - action: log_ui
+    level: info
+    message: "Resolving installation path"
+
+  - action: log_file
+    level: info
+    message: "Resolving installation path"
+
   - action: create_dir
     path: "$INSTDIR"
+
+  - action: log_ui
+    level: info
+    message: "Preparing logs directory"
+
+  - action: log_file
+    level: info
+    message: "Preparing logs directory"
 
   - action: create_dir
     path: "$INSTDIR\\logs"
 
   # ── Extract main payload ───────────────────────────────────────────────────
+  - action: log_ui
+    level: info
+    message: "Extracting core payload"
+
+  - action: log_file
+    level: info
+    message: "Extracting core payload"
+
   - action: extract
     archive: "payload.zst"
     destination: "$INSTDIR"
     component: core
 
+  - action: log_ui
+    level: info
+    message: "Extracting documentation payload"
+
+  - action: log_file
+    level: info
+    message: "Extracting documentation payload"
+
   - action: extract
     archive: "docs.zst"
     destination: "$INSTDIR\\docs"
     component: docs
+
+  - action: log_ui
+    level: info
+    message: "Extracting sample payload"
+
+  - action: log_file
+    level: info
+    message: "Extracting sample payload"
 
   - action: extract
     archive: "samples.zst"
@@ -172,6 +228,14 @@ steps:
     component: samples
 
   # ── Registry — Add/Remove Programs entry ─────────────────────────────────
+  - action: log_ui
+    level: info
+    message: "Writing uninstall registry entries"
+
+  - action: log_file
+    level: info
+    message: "Writing uninstall registry entries"
+
   - action: registry
     operation: write
     hive: HKLM
@@ -237,6 +301,14 @@ steps:
     value_data: 1
 
   # ── App registry settings ─────────────────────────────────────────────────
+  - action: log_ui
+    level: info
+    message: "Writing application registry settings"
+
+  - action: log_file
+    level: info
+    message: "Writing application registry settings"
+
   - action: registry
     operation: write
     hive: HKLM
@@ -254,6 +326,14 @@ steps:
     value_data: "2.1.0"
 
   # ── Shortcuts ─────────────────────────────────────────────────────────────
+  - action: log_ui
+    level: info
+    message: "Creating shortcuts"
+
+  - action: log_file
+    level: info
+    message: "Creating shortcuts"
+
   - action: shortcut
     target: "$INSTDIR\\MyApp.exe"
     location: desktop
@@ -279,13 +359,44 @@ steps:
     component: docs
 
   # ── CLI tools — add to PATH ───────────────────────────────────────────────
+  - action: log_ui
+    level: info
+    message: "Updating PATH for command line tools"
+
+  - action: log_file
+    level: info
+    message: "Updating PATH for command line tools"
+
   - action: env_var
     name: PATH
     value: "$INSTDIR\\bin"
     scope: system
     operation: append
 
+  # ── PowerShell example step ───────────────────────────────────────────────
+  - action: log_ui
+    level: info
+    message: "Running post-install PowerShell check"
+
+  - action: log_file
+    level: info
+    message: "Running post-install PowerShell check"
+
+  - action: run_powershell
+    script: "Write-Host 'MyApp post-install validation completed'"
+    wait: true
+    fail_on_nonzero: true
+    timeout_sec: 30
+
   # ── Write uninstaller ─────────────────────────────────────────────────────
+  - action: log_ui
+    level: info
+    message: "Writing uninstaller"
+
+  - action: log_file
+    level: info
+    message: "Writing uninstaller"
+
   - action: write_uninstaller
     path: "$INSTDIR\\uninstall.exe"
 

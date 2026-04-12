@@ -381,6 +381,120 @@ All checks run **in parallel** via Rayon the moment the requirements page loads.
 
 ---
 
+## Logging and Error Codes
+
+The installer supports optional logging to the progress UI and to a log file, plus automatic error code classification for failed steps.
+
+### Logging Configuration
+
+Add a top-level `logging` block to enable file logging:
+
+```yaml
+logging:
+  mode: auto
+  path: "$INSTDIR\\logs"
+  file_name: "installation.log"
+  timestamp: true
+  include_raw_os_error: false
+```
+
+Use `mode: manual_only` if you want only explicit `log_ui` and `log_file` actions to write messages.
+
+### Logging Actions
+
+| action | Purpose |
+|---|---|
+| `log_ui` | Write a message to the installer progress log UI |
+| `log_file` | Write a message to the installation log file |
+
+### PowerShell Action
+
+The `run_powershell` action executes scripts with deterministic error handling.
+
+```yaml
+steps:
+  - action: run_powershell
+    script: |
+      Write-Host "Hello from installer"
+    wait: true
+    fail_on_nonzero: true
+    timeout_sec: 30
+```
+
+Supported parameters:
+
+- `script` or `file` (exactly one required)
+- `arguments`
+- `wait`
+- `fail_on_nonzero`
+- `timeout_sec`
+- `component`
+
+### Stable Error Codes
+
+The installer classifies step failures into stable v1 error codes:
+
+- `HG-YAML-001` - manifest validation failure
+- `HG-VAR-001` - unresolved installer variable
+- `HG-EXTRACT-001` - archive missing from payload
+- `HG-EXTRACT-002` - extraction I/O failure
+- `HG-COPY-001` - copy source missing or invalid
+- `HG-REG-001` - invalid registry configuration
+- `HG-REG-002` - registry access denied / elevation required
+- `HG-ENV-001` - environment variable operation failure
+- `HG-RUN-001` - executable not found
+- `HG-RUN-002` - process non-zero exit or execution failure
+- `HG-PS-001` - PowerShell syntax/parse error
+- `HG-PS-002` - PowerShell/command not found
+- `HG-PS-003` - PowerShell non-zero exit
+- `HG-PS-004` - PowerShell timeout
+- `HG-PS-005` - PowerShell access denied or execution policy blocked
+
+See [ERROR_CODES.md](ERROR_CODES.md) for the full field-by-field format and fix guidance.
+
+---
+
+## Conditional Step Execution
+
+Several actions support a `component` field. If the component is not selected, the step is skipped.
+
+Supported actions include `extract`, `copy_file`, `env_var`, `shortcut`, `run_program`, and `run_powershell`.
+
+```yaml
+components:
+  - id: docs
+    name: "Documentation"
+    required: false
+    selected: true
+
+steps:
+  - action: extract
+    archive: "docs.zst"
+    destination: "$INSTDIR\\docs"
+    component: docs
+```
+
+---
+
+## Administrator Elevation
+
+Set `app.require_admin` to control whether the installer requests elevation:
+
+```yaml
+app:
+  require_admin: true
+```
+
+Use `true` for operations that need system access, such as:
+
+- `HKLM` registry writes
+- system environment variables
+- protected install locations like `C:\Program Files`
+
+Use `false` for user-level installs that should not prompt for elevation.
+
+---
+
 ## Theme Customization
 
 All colors, fonts, and sizing are CSS variables injected at runtime from `theme:` in your YAML.

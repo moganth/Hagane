@@ -1,0 +1,13 @@
+app:
+  name: "SimYaml"
+  version: "1.0.0"
+  publisher: ""
+  require_admin: false
+
+pages:
+  - type: install
+
+steps:
+  - action: create_dir
+    path: "$INSTDIR"
+

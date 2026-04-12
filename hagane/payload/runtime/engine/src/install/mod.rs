@@ -8,7 +8,7 @@ pub mod shortcuts;
 use anyhow::{Context, Result};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use crate::parser::schema::InstallStep;
+use crate::parser::schema::{InstallStep, LogLevel, LoggingConfig, LoggingMode, RunPowerShellStep};
 use rollback::RollbackJournal;
 
 pub struct InstallContext {
@@ -20,17 +20,36 @@ pub struct InstallContext {
     pub archives: std::collections::HashMap<String, Vec<u8>>,
     /// Temp/backup dir for rollback files
     pub backup_dir: PathBuf,
+    /// Optional logging configuration from manifest
+    pub logging: Option<LoggingConfig>,
 }
 
 pub struct StepRunner {
     ctx: InstallContext,
     journal: RollbackJournal,
+    file_logger: Option<FileLogger>,
+    manual_only_logging: bool,
+}
+
+struct FileLogger {
+    path: PathBuf,
+    timestamp: bool,
 }
 
 impl StepRunner {
     pub fn new(ctx: InstallContext) -> Self {
         let journal = RollbackJournal::new(&ctx.backup_dir);
-        Self { ctx, journal }
+        let manual_only_logging = matches!(
+            ctx.logging.as_ref().and_then(|c| c.mode.clone()),
+            Some(LoggingMode::ManualOnly)
+        );
+        let file_logger = init_file_logger(&ctx);
+        Self {
+            ctx,
+            journal,
+            file_logger,
+            manual_only_logging,
+        }
     }
 
     /// Execute all steps sequentially. Reports progress via callback.
@@ -43,17 +62,22 @@ impl StepRunner {
         let total = steps.len();
         for (i, step) in steps.iter().enumerate() {
             let label = step_label(step);
-            on_progress(i, total, &label);
+            let progress_label = self.progress_label(step, &label);
+            on_progress(i, total, &progress_label);
             log::info!("Step {}/{}: {}", i + 1, total, label);
 
             if let Err(e) = self.run_step(step) {
-                log::error!("Step {} failed: {}", i + 1, e);
+                let classified = self.classify_step_error(i + 1, step, &e);
+                log::error!("Step {} failed: {}", i + 1, classified);
+                let _ = self.write_log_file(LogLevel::Error, &classified);
                 log::warn!("Starting rollback ({} actions to undo)…", self.journal.entry_count());
                 let errors = self.journal.rollback();
                 for re in &errors {
                     log::error!("Rollback error: {}", re);
+                    let _ = self.write_log_file(LogLevel::Error, &format!("Rollback error: {}", re));
                 }
-                return Err(e.context(format!("Step {}/{} failed: {}", i + 1, total, label)));
+                return Err(anyhow::anyhow!(classified)
+                    .context(format!("Step {}/{} failed: {}", i + 1, total, label)));
             }
         }
         on_progress(total, total, "Done");
@@ -67,7 +91,7 @@ impl StepRunner {
                 let data = self.ctx.archives.get(&s.archive)
                     .ok_or_else(|| anyhow::anyhow!("Archive '{}' not found in payload", s.archive))?
                     .clone();
-                let dest = self.resolve_vars(&s.destination);
+                let dest = self.resolve_vars_path(&s.destination)?;
                 let dest_path = PathBuf::from(&dest);
                 extractor::extract_zstd_archive(&data, &dest_path, |_, _| {})
                     .with_context(|| format!("Extract '{}' → '{}'", s.archive, dest))?;
@@ -75,18 +99,32 @@ impl StepRunner {
 
             InstallStep::CopyFile(s) => {
                 if !self.component_active(s.component.as_deref()) { return Ok(()); }
-                let src = PathBuf::from(self.resolve_vars(&s.source));
-                let dst = PathBuf::from(self.resolve_vars(&s.destination));
+                let src = PathBuf::from(self.resolve_vars_path(&s.source)?);
+                let dst = PathBuf::from(self.resolve_vars_path(&s.destination)?);
                 files::copy_file(&src, &dst, s.overwrite, &mut self.journal)?;
             }
 
             InstallStep::DeleteFile(s) => {
-                files::delete_file(Path::new(&self.resolve_vars(&s.path)))?;
+                files::delete_file(Path::new(&self.resolve_vars_path(&s.path)?))?;
             }
 
             InstallStep::CreateDir(s) => {
-                let p = PathBuf::from(self.resolve_vars(&s.path));
+                let p = PathBuf::from(self.resolve_vars_path(&s.path)?);
                 files::create_dir(&p, &mut self.journal)?;
+            }
+
+            InstallStep::LogUi(s) => {
+                let msg = self.resolve_vars(&s.message);
+                match s.level.clone().unwrap_or(LogLevel::Info) {
+                    LogLevel::Info => log::info!("{}", msg),
+                    LogLevel::Warn => log::warn!("{}", msg),
+                    LogLevel::Error => log::error!("{}", msg),
+                }
+            }
+
+            InstallStep::LogFile(s) => {
+                let msg = self.resolve_vars(&s.message);
+                self.write_log_file(s.level.clone().unwrap_or(LogLevel::Info), &msg)?;
             }
 
             InstallStep::Registry(s) => {
@@ -94,7 +132,7 @@ impl StepRunner {
                 registry_ops::apply_registry_step(
                     &s.operation,
                     &s.hive,
-                    &self.resolve_vars(&s.key),
+                    &self.resolve_vars_path(&s.key)?,
                     s.value_name.as_deref(),
                     s.value_type.as_ref(),
                     resolved_value_data.as_ref(),
@@ -105,13 +143,13 @@ impl StepRunner {
             InstallStep::Shortcut(s) => {
                 if !self.component_active(s.component.as_deref()) { return Ok(()); }
                 shortcuts::create_shortcut(
-                    &self.resolve_vars(&s.target),
+                    &self.resolve_vars_path(&s.target)?,
                     &s.location,
                     &s.name,
                     s.description.as_deref(),
-                    s.icon.as_deref(),
+                    s.icon.as_deref().map(|v| self.resolve_vars(v)).as_deref(),
                     s.arguments.as_deref(),
-                    s.working_dir.as_deref(),
+                    s.working_dir.as_deref().map(|v| self.resolve_vars(v)).as_deref(),
                     &mut self.journal,
                 )?;
             }
@@ -120,7 +158,7 @@ impl StepRunner {
                 if !self.component_active(s.component.as_deref()) { return Ok(()); }
                 apply_env_var(
                     &s.name,
-                    &self.resolve_vars(&s.value),
+                    &self.resolve_vars_path(&s.value)?,
                     &s.scope,
                     &s.operation,
                     &mut self.journal,
@@ -132,7 +170,7 @@ impl StepRunner {
                     &s.operation,
                     &s.name,
                     s.display_name.as_deref(),
-                    s.executable.as_deref().map(|e| self.resolve_vars(e)).as_deref(),
+                    s.executable.as_deref().map(|e| self.resolve_vars_path(e)).transpose()?.as_deref(),
                     s.start_type.as_deref(),
                     s.description.as_deref(),
                 )?;
@@ -141,17 +179,113 @@ impl StepRunner {
             InstallStep::RunProgram(s) => {
                 if !self.component_active(s.component.as_deref()) { return Ok(()); }
                 run_program(
-                    &self.resolve_vars(&s.executable),
+                    &self.resolve_vars_path(&s.executable)?,
                     s.arguments.as_deref(),
                     s.wait,
                 )?;
             }
 
+            InstallStep::RunPowerShell(s) => {
+                if !self.component_active(s.component.as_deref()) { return Ok(()); }
+                self.run_powershell(s)?;
+            }
+
             InstallStep::WriteUninstaller(s) => {
-                let path = PathBuf::from(self.resolve_vars(&s.path));
+                let path = PathBuf::from(self.resolve_vars_path(&s.path)?);
                 write_uninstaller_stub(&path)?;
             }
         }
+        Ok(())
+    }
+
+    fn progress_label(&self, step: &InstallStep, default_label: &str) -> String {
+        if !self.manual_only_logging {
+            return default_label.to_string();
+        }
+        match step {
+            InstallStep::LogUi(s) => self.resolve_vars(&s.message),
+            _ => String::new(),
+        }
+    }
+
+    fn run_powershell(&self, step: &RunPowerShellStep) -> Result<()> {
+        #[cfg(windows)]
+        {
+            use std::process::{Command, Stdio};
+            use std::time::{Duration, Instant};
+
+            let mut cmd = Command::new("powershell");
+            cmd.arg("-NoProfile")
+                .arg("-ExecutionPolicy")
+                .arg("Bypass")
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped());
+
+            if let Some(script) = &step.script {
+                cmd.arg("-Command").arg(self.resolve_vars(script));
+            } else if let Some(file) = &step.file {
+                cmd.arg("-File").arg(self.resolve_vars_path(file)?);
+            }
+
+            if let Some(args) = &step.arguments {
+                cmd.args(args.split_whitespace());
+            }
+
+            if !step.wait {
+                cmd.spawn().context("HG-PS-002: failed to spawn powershell")?;
+                return Ok(());
+            }
+
+            let mut child = cmd.spawn().context("HG-PS-002: failed to spawn powershell")?;
+
+            let output = if let Some(timeout_sec) = step.timeout_sec {
+                let deadline = Instant::now() + Duration::from_secs(timeout_sec);
+                loop {
+                    if let Some(_status) = child.try_wait().context("HG-PS-003: failed while waiting for powershell")? {
+                        break child.wait_with_output().context("HG-PS-003: failed to collect powershell output")?;
+                    }
+                    if Instant::now() >= deadline {
+                        let _ = child.kill();
+                        return Err(anyhow::anyhow!(
+                            "HG-PS-004: PowerShell execution timed out after {} seconds",
+                            timeout_sec
+                        ));
+                    }
+                    std::thread::sleep(Duration::from_millis(100));
+                }
+            } else {
+                child.wait_with_output().context("HG-PS-003: failed to collect powershell output")?
+            };
+
+            if step.fail_on_nonzero && !output.status.success() {
+                let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+                let reason = stderr.trim();
+                if reason.contains("At line:") || reason.contains("ParserError") {
+                    return Err(anyhow::anyhow!("HG-PS-001: PowerShell syntax/parse error: {}", reason));
+                }
+                if reason.contains("is not recognized") || reason.contains("CommandNotFoundException") {
+                    return Err(anyhow::anyhow!("HG-PS-002: PowerShell command not found: {}", reason));
+                }
+                if reason.contains("running scripts is disabled")
+                    || reason.contains("UnauthorizedAccess")
+                    || reason.contains("Access to the path")
+                {
+                    return Err(anyhow::anyhow!("HG-PS-005: PowerShell blocked by policy/access rules: {}", reason));
+                }
+                return Err(anyhow::anyhow!(
+                    "HG-PS-003: PowerShell returned non-zero exit code {:?}: {}",
+                    output.status.code(),
+                    reason
+                ));
+            }
+        }
+
+        #[cfg(not(windows))]
+        {
+            let _ = step;
+            return Err(anyhow::anyhow!("HG-PS-002: run_powershell is only supported on Windows"));
+        }
+
         Ok(())
     }
 
@@ -165,18 +299,159 @@ impl StepRunner {
     /// Resolve installer variables in a string:
     /// $INSTDIR, $PROGRAMFILES, $PROGRAMFILES64, $APPDATA, $LOCALAPPDATA, $TEMP, $WINDIR
     pub fn resolve_vars(&self, input: &str) -> String {
-        let mut s = input.replace("$INSTDIR", &self.ctx.install_dir.to_string_lossy());
+        resolve_vars_with_install_dir(input, &self.ctx.install_dir)
+    }
 
-        #[cfg(windows)]
-        {
-            if let Ok(pf) = std::env::var("ProgramFiles") { s = s.replace("$PROGRAMFILES", &pf); }
-            if let Ok(pf64) = std::env::var("ProgramW6432") { s = s.replace("$PROGRAMFILES64", &pf64); }
-            if let Ok(ad) = std::env::var("APPDATA")      { s = s.replace("$APPDATA", &ad); }
-            if let Ok(la) = std::env::var("LOCALAPPDATA") { s = s.replace("$LOCALAPPDATA", &la); }
-            if let Ok(tmp) = std::env::var("TEMP")        { s = s.replace("$TEMP", &tmp); }
-            if let Ok(win) = std::env::var("WINDIR")      { s = s.replace("$WINDIR", &win); }
+    fn resolve_vars_path(&self, input: &str) -> Result<String> {
+        let resolved = self.resolve_vars(input);
+        if let Some(token) = unresolved_token(&resolved) {
+            return Err(anyhow::anyhow!(
+                "HG-VAR-001: unresolved variable '{}' in '{}'",
+                token,
+                input
+            ));
         }
-        s
+        Ok(resolved)
+    }
+
+    fn write_log_file(&self, level: LogLevel, message: &str) -> Result<()> {
+        let Some(logger) = &self.file_logger else {
+            return Err(anyhow::anyhow!(
+                "HG-YAML-001: logging.path and logging.file_name must be configured for action 'log_file'"
+            ));
+        };
+
+        let ts = if logger.timestamp {
+            format!("[{}] ", chrono::Local::now().format("%Y-%m-%d %H:%M:%S"))
+        } else {
+            String::new()
+        };
+        let level = match level {
+            LogLevel::Info => "INFO",
+            LogLevel::Warn => "WARN",
+            LogLevel::Error => "ERROR",
+        };
+        let line = format!("{}[{}] {}\n", ts, level, message);
+        use std::io::Write;
+        let mut f = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&logger.path)
+            .with_context(|| format!("HG-EXTRACT-002: cannot open log file {}", logger.path.display()))?;
+        f.write_all(line.as_bytes())
+            .with_context(|| format!("HG-EXTRACT-002: cannot write log file {}", logger.path.display()))?;
+        Ok(())
+    }
+
+    fn classify_step_error(&self, step_index: usize, step: &InstallStep, err: &anyhow::Error) -> String {
+        let raw = format!("{}", err);
+        let lower = raw.to_lowercase();
+
+        let (code, field, value, reason, fix) = match step {
+            InstallStep::Extract(s) => {
+                if raw.contains("not found in payload") {
+                    (
+                        "HG-EXTRACT-001",
+                        "archive",
+                        s.archive.clone(),
+                        format!("archive '{}' is missing from embedded payload", s.archive),
+                        "Run hagane build again and ensure the archive source folder exists near installer.yaml.",
+                    )
+                } else {
+                    (
+                        "HG-EXTRACT-002",
+                        "destination",
+                        s.destination.clone(),
+                        raw,
+                        "Check destination path permissions and ensure no file lock prevents extraction.",
+                    )
+                }
+            }
+            InstallStep::CopyFile(s) => (
+                "HG-COPY-001",
+                "source",
+                s.source.clone(),
+                raw,
+                "Verify the source file exists and the path resolves correctly.",
+            ),
+            InstallStep::Registry(s) => {
+                if lower.contains("denied") || lower.contains("access") {
+                    (
+                        "HG-REG-002",
+                        "key",
+                        format!("{}\\{}", s.hive, s.key),
+                        raw,
+                        "Run installer as Administrator or switch to HKCU where appropriate.",
+                    )
+                } else {
+                    (
+                        "HG-REG-001",
+                        "key",
+                        format!("{}\\{}", s.hive, s.key),
+                        raw,
+                        "Validate hive/key/value_type and ensure the registry path is valid.",
+                    )
+                }
+            }
+            InstallStep::EnvVar(s) => (
+                "HG-ENV-001",
+                "operation",
+                format!("scope={}, operation={}", s.scope, s.operation),
+                raw,
+                "Use scope user/system and operation set/append/prepend.",
+            ),
+            InstallStep::RunProgram(s) => {
+                if lower.contains("not found") {
+                    (
+                        "HG-RUN-001",
+                        "executable",
+                        s.executable.clone(),
+                        raw,
+                        "Check executable path and confirm file exists after extract/copy steps.",
+                    )
+                } else {
+                    (
+                        "HG-RUN-002",
+                        "executable",
+                        s.executable.clone(),
+                        raw,
+                        "Review arguments and the target program output; ensure dependencies are present.",
+                    )
+                }
+            }
+            InstallStep::RunPowerShell(s) => {
+                let value = s.file.clone().or_else(|| s.script.clone()).unwrap_or_default();
+                if raw.contains("HG-PS-001") {
+                    ("HG-PS-001", "script", value, raw, "Fix PowerShell script syntax and test it manually with powershell -NoProfile.")
+                } else if raw.contains("HG-PS-002") {
+                    ("HG-PS-002", "script", value, raw, "Ensure powershell and all referenced commands are available.")
+                } else if raw.contains("HG-PS-004") {
+                    ("HG-PS-004", "timeout_sec", value, raw, "Increase timeout_sec or optimize the script.")
+                } else if raw.contains("HG-PS-005") {
+                    ("HG-PS-005", "script", value, raw, "Adjust ExecutionPolicy/signing or run with required privileges.")
+                } else {
+                    ("HG-PS-003", "script", value, raw, "Check script output and exit code handling.")
+                }
+            }
+            _ => (
+                "HG-RUN-002",
+                "step",
+                step_label(step),
+                raw,
+                "Review the failing step configuration and referenced resources.",
+            ),
+        };
+
+        format!(
+            "[ERROR] {} step={} action={} field={} value={} reason=\"{}\" fix=\"{}\"",
+            code,
+            step_index,
+            step_action(step),
+            field,
+            value,
+            reason,
+            fix,
+        )
     }
 
     fn resolve_value_data(&self, value: &serde_json::Value) -> serde_json::Value {
@@ -320,7 +595,14 @@ fn run_program(executable: &str, arguments: Option<&str>, wait: bool) -> Result<
         cmd.args(args.split_whitespace());
     }
     if wait {
-        cmd.status().with_context(|| format!("Failed to run: {}", executable))?;
+        let status = cmd.status().with_context(|| format!("Failed to run: {}", executable))?;
+        if !status.success() {
+            return Err(anyhow::anyhow!(
+                "HG-RUN-002: process '{}' returned non-zero exit code {:?}",
+                executable,
+                status.code()
+            ));
+        }
     } else {
         cmd.spawn().with_context(|| format!("Failed to spawn: {}", executable))?;
     }
@@ -360,11 +642,94 @@ fn step_label(step: &InstallStep) -> String {
         InstallStep::CopyFile(s)      => format!("Copying {}", s.destination),
         InstallStep::DeleteFile(s)    => format!("Deleting {}", s.path),
         InstallStep::CreateDir(s)     => format!("Creating directory {}", s.path),
+        InstallStep::LogUi(s)         => s.message.clone(),
+        InstallStep::LogFile(_)       => "Writing installer log".to_string(),
         InstallStep::Registry(s)      => format!("Writing registry {}\\{}", s.hive, s.key),
         InstallStep::Shortcut(s)      => format!("Creating shortcut '{}'", s.name),
         InstallStep::EnvVar(s)        => format!("Setting environment variable {}", s.name),
         InstallStep::Service(s)       => format!("Service: {:?} '{}'", s.operation, s.name),
         InstallStep::RunProgram(s)    => format!("Running {}", s.executable),
+        InstallStep::RunPowerShell(_) => "Running PowerShell".to_string(),
         InstallStep::WriteUninstaller(s) => format!("Writing uninstaller to {}", s.path),
     }
+}
+
+fn step_action(step: &InstallStep) -> &'static str {
+    match step {
+        InstallStep::Extract(_) => "extract",
+        InstallStep::CopyFile(_) => "copy_file",
+        InstallStep::DeleteFile(_) => "delete_file",
+        InstallStep::CreateDir(_) => "create_dir",
+        InstallStep::LogUi(_) => "log_ui",
+        InstallStep::LogFile(_) => "log_file",
+        InstallStep::Registry(_) => "registry",
+        InstallStep::Shortcut(_) => "shortcut",
+        InstallStep::EnvVar(_) => "env_var",
+        InstallStep::Service(_) => "service",
+        InstallStep::RunProgram(_) => "run_program",
+        InstallStep::RunPowerShell(_) => "run_powershell",
+        InstallStep::WriteUninstaller(_) => "write_uninstaller",
+    }
+}
+
+fn resolve_vars_with_install_dir(input: &str, install_dir: &Path) -> String {
+    let mut s = input.replace("$INSTDIR", &install_dir.to_string_lossy());
+
+    #[cfg(windows)]
+    {
+        if let Ok(pf) = std::env::var("ProgramFiles") { s = s.replace("$PROGRAMFILES", &pf); }
+        if let Ok(pf64) = std::env::var("ProgramW6432") { s = s.replace("$PROGRAMFILES64", &pf64); }
+        if let Ok(ad) = std::env::var("APPDATA")      { s = s.replace("$APPDATA", &ad); }
+        if let Ok(la) = std::env::var("LOCALAPPDATA") { s = s.replace("$LOCALAPPDATA", &la); }
+        if let Ok(tmp) = std::env::var("TEMP")        { s = s.replace("$TEMP", &tmp); }
+        if let Ok(win) = std::env::var("WINDIR")      { s = s.replace("$WINDIR", &win); }
+    }
+    s
+}
+
+fn unresolved_token(value: &str) -> Option<String> {
+    let bytes = value.as_bytes();
+    let mut i = 0usize;
+    while i < bytes.len() {
+        if bytes[i] == b'$' {
+            let start = i;
+            i += 1;
+            let mut end = i;
+            while end < bytes.len() {
+                let c = bytes[end] as char;
+                if c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_' {
+                    end += 1;
+                } else {
+                    break;
+                }
+            }
+            if end > i {
+                return Some(value[start..end].to_string());
+            }
+        }
+        i += 1;
+    }
+    None
+}
+
+fn init_file_logger(ctx: &InstallContext) -> Option<FileLogger> {
+    let config = ctx.logging.as_ref()?;
+    let path_raw = config.path.as_ref()?;
+    let file_name = config.file_name.as_ref()?;
+
+    let dir = PathBuf::from(resolve_vars_with_install_dir(path_raw, &ctx.install_dir));
+    let mut file_path = dir.clone();
+    file_path.push(file_name);
+
+    if let Some(parent) = file_path.parent() {
+        if let Err(e) = std::fs::create_dir_all(parent) {
+            log::error!("Failed to create log directory '{}': {}", parent.display(), e);
+            return None;
+        }
+    }
+
+    Some(FileLogger {
+        path: file_path,
+        timestamp: config.timestamp.unwrap_or(true),
+    })
 }

@@ -237,6 +237,12 @@ fn run_pack(manifest_path: &Path, release: bool) -> Result<()> {
         cmd.arg("--release");
     }
 
+    // Drive runner UAC manifest level from installer.yaml app.require_admin.
+    cmd.env(
+        "HAGANE_REQUIRE_ADMIN",
+        if manifest.app.require_admin { "1" } else { "0" },
+    );
+
     if let Some(icon_rel) = manifest.app.icon.as_deref() {
         let icon_path = manifest_dir.join(icon_rel);
         if icon_path.exists() {
