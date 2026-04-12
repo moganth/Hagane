@@ -178,8 +178,15 @@ impl StepRunner {
 
             InstallStep::RunProgram(s) => {
                 if !self.component_active(s.component.as_deref()) { return Ok(()); }
+                let executable = self.resolve_vars_path(&s.executable)?;
+                if looks_like_file_path(&executable) && !Path::new(&executable).exists() {
+                    return Err(anyhow::anyhow!(
+                        "HG-RUN-001: executable not found at '{}'",
+                        executable
+                    ));
+                }
                 run_program(
-                    &self.resolve_vars_path(&s.executable)?,
+                    &executable,
                     s.arguments.as_deref(),
                     s.wait,
                 )?;
@@ -222,7 +229,13 @@ impl StepRunner {
                 .stderr(Stdio::piped());
 
             if let Some(script) = &step.script {
-                cmd.arg("-Command").arg(self.resolve_vars(script));
+                // Stop on non-terminating errors so permissions/command failures
+                // produce non-zero exits we can classify reliably.
+                let wrapped = format!(
+                    "$ErrorActionPreference='Stop'; {}",
+                    self.resolve_vars(script)
+                );
+                cmd.arg("-Command").arg(wrapped);
             } else if let Some(file) = &step.file {
                 cmd.arg("-File").arg(self.resolve_vars_path(file)?);
             }
@@ -260,7 +273,10 @@ impl StepRunner {
             if step.fail_on_nonzero && !output.status.success() {
                 let stderr = String::from_utf8_lossy(&output.stderr).to_string();
                 let reason = stderr.trim();
-                if reason.contains("At line:") || reason.contains("ParserError") {
+                if reason.contains("ParserError")
+                    || reason.contains("Missing condition")
+                    || reason.contains("Unexpected token")
+                {
                     return Err(anyhow::anyhow!("HG-PS-001: PowerShell syntax/parse error: {}", reason));
                 }
                 if reason.contains("is not recognized") || reason.contains("CommandNotFoundException") {
@@ -268,7 +284,9 @@ impl StepRunner {
                 }
                 if reason.contains("running scripts is disabled")
                     || reason.contains("UnauthorizedAccess")
+                    || reason.contains("Access is denied")
                     || reason.contains("Access to the path")
+                    || reason.contains("PSSecurityException")
                 {
                     return Err(anyhow::anyhow!("HG-PS-005: PowerShell blocked by policy/access rules: {}", reason));
                 }
@@ -344,8 +362,26 @@ impl StepRunner {
     }
 
     fn classify_step_error(&self, step_index: usize, step: &InstallStep, err: &anyhow::Error) -> String {
-        let raw = format!("{}", err);
+        let raw = format!("{:#}", err);
         let lower = raw.to_lowercase();
+
+        // Preserve explicit code-originated failures from helpers.
+        if raw.contains("HG-VAR-001") {
+            return format!(
+                "[ERROR] HG-VAR-001 step={} action={} field=path value={} reason=\"{}\" fix=\"Use supported variables ($INSTDIR, $PROGRAMFILES, $PROGRAMFILES64, $APPDATA, $LOCALAPPDATA, $TEMP, $WINDIR).\"",
+                step_index,
+                step_action(step),
+                step_label(step),
+                first_reason_line(&raw),
+            );
+        }
+
+        let permission_related = lower.contains("access is denied")
+            || lower.contains("permission denied")
+            || lower.contains("os error 5")
+            || lower.contains("unauthorized")
+            || lower.contains("privilege")
+            || lower.contains("elevation");
 
         let (code, field, value, reason, fix) = match step {
             InstallStep::Extract(s) => {
@@ -362,8 +398,8 @@ impl StepRunner {
                         "HG-EXTRACT-002",
                         "destination",
                         s.destination.clone(),
-                        raw,
-                        "Check destination path permissions and ensure no file lock prevents extraction.",
+                        first_reason_line(&raw),
+                        "Check destination path permissions and ensure no file lock prevents extraction. If writing into protected locations, run installer elevated.",
                     )
                 }
             }
@@ -371,24 +407,26 @@ impl StepRunner {
                 "HG-COPY-001",
                 "source",
                 s.source.clone(),
-                raw,
+                first_reason_line(&raw),
                 "Verify the source file exists and the path resolves correctly.",
             ),
             InstallStep::Registry(s) => {
-                if lower.contains("denied") || lower.contains("access") {
+                let likely_hklm_permission = s.hive == "HKLM"
+                    && (lower.contains("regcreatekeyexw failed") || lower.contains("regopenkeyexw failed"));
+                if permission_related || likely_hklm_permission {
                     (
                         "HG-REG-002",
                         "key",
                         format!("{}\\{}", s.hive, s.key),
-                        raw,
-                        "Run installer as Administrator or switch to HKCU where appropriate.",
+                        first_reason_line(&raw),
+                        "Registry write requires elevated permission. Run installer as Administrator or use HKCU for user-scope settings.",
                     )
                 } else {
                     (
                         "HG-REG-001",
                         "key",
                         format!("{}\\{}", s.hive, s.key),
-                        raw,
+                        first_reason_line(&raw),
                         "Validate hive/key/value_type and ensure the registry path is valid.",
                     )
                 }
@@ -397,16 +435,19 @@ impl StepRunner {
                 "HG-ENV-001",
                 "operation",
                 format!("scope={}, operation={}", s.scope, s.operation),
-                raw,
-                "Use scope user/system and operation set/append/prepend.",
+                first_reason_line(&raw),
+                "Use scope user/system and operation set/append/prepend. For system scope, run installer elevated.",
             ),
             InstallStep::RunProgram(s) => {
-                if lower.contains("not found") {
+                if lower.contains("not found")
+                    || lower.contains("cannot find")
+                    || lower.contains("os error 2")
+                {
                     (
                         "HG-RUN-001",
                         "executable",
                         s.executable.clone(),
-                        raw,
+                        first_reason_line(&raw),
                         "Check executable path and confirm file exists after extract/copy steps.",
                     )
                 } else {
@@ -414,7 +455,7 @@ impl StepRunner {
                         "HG-RUN-002",
                         "executable",
                         s.executable.clone(),
-                        raw,
+                        first_reason_line(&raw),
                         "Review arguments and the target program output; ensure dependencies are present.",
                     )
                 }
@@ -422,22 +463,22 @@ impl StepRunner {
             InstallStep::RunPowerShell(s) => {
                 let value = s.file.clone().or_else(|| s.script.clone()).unwrap_or_default();
                 if raw.contains("HG-PS-001") {
-                    ("HG-PS-001", "script", value, raw, "Fix PowerShell script syntax and test it manually with powershell -NoProfile.")
+                    ("HG-PS-001", "script", value, first_reason_line(&raw), "Fix PowerShell script syntax and test it manually with powershell -NoProfile.")
                 } else if raw.contains("HG-PS-002") {
-                    ("HG-PS-002", "script", value, raw, "Ensure powershell and all referenced commands are available.")
+                    ("HG-PS-002", "script", value, first_reason_line(&raw), "Ensure powershell and all referenced commands are available in PATH.")
                 } else if raw.contains("HG-PS-004") {
-                    ("HG-PS-004", "timeout_sec", value, raw, "Increase timeout_sec or optimize the script.")
+                    ("HG-PS-004", "timeout_sec", value, first_reason_line(&raw), "Increase timeout_sec or optimize the script.")
                 } else if raw.contains("HG-PS-005") {
-                    ("HG-PS-005", "script", value, raw, "Adjust ExecutionPolicy/signing or run with required privileges.")
+                    ("HG-PS-005", "script", value, first_reason_line(&raw), "PowerShell requires elevated permission or policy changes. Run as Administrator or adjust ExecutionPolicy/signing.")
                 } else {
-                    ("HG-PS-003", "script", value, raw, "Check script output and exit code handling.")
+                    ("HG-PS-003", "script", value, first_reason_line(&raw), "Check script output and exit code handling.")
                 }
             }
             _ => (
                 "HG-RUN-002",
                 "step",
                 step_label(step),
-                raw,
+                first_reason_line(&raw),
                 "Review the failing step configuration and referenced resources.",
             ),
         };
@@ -732,4 +773,16 @@ fn init_file_logger(ctx: &InstallContext) -> Option<FileLogger> {
         path: file_path,
         timestamp: config.timestamp.unwrap_or(true),
     })
+}
+
+fn first_reason_line(raw: &str) -> String {
+    raw.lines()
+        .map(|l| l.trim())
+        .find(|l| !l.is_empty())
+        .unwrap_or(raw)
+        .replace('"', "'")
+}
+
+fn looks_like_file_path(value: &str) -> bool {
+    value.contains('\\') || value.contains('/') || value.contains(':') || value.starts_with('.')
 }
