@@ -10,9 +10,36 @@ pub struct InstallerManifest {
     pub pages: Vec<PageDefinition>,
     pub requirements: Option<Vec<Requirement>>,
     pub components: Option<Vec<Component>>,
+    pub logging: Option<LoggingConfig>,
     pub steps: Vec<InstallStep>,
     pub uninstall: Option<UninstallConfig>,
     pub silent: Option<SilentConfig>,
+}
+
+// ── Logging ──────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LoggingConfig {
+    pub mode: Option<LoggingMode>,
+    pub path: Option<String>,
+    pub file_name: Option<String>,
+    pub timestamp: Option<bool>,
+    pub include_raw_os_error: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum LoggingMode {
+    Auto,
+    ManualOnly,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum LogLevel {
+    Info,
+    Warn,
+    Error,
 }
 
 // ── App metadata ──────────────────────────────────────────────────────────────
@@ -189,12 +216,28 @@ pub enum InstallStep {
     CopyFile(CopyFileStep),
     DeleteFile(DeleteFileStep),
     CreateDir(CreateDirStep),
+    LogUi(LogUiStep),
+    LogFile(LogFileStep),
     Registry(RegistryStep),
     Shortcut(ShortcutStep),
     EnvVar(EnvVarStep),
     Service(ServiceStep),
     RunProgram(RunProgramStep),
+    #[serde(rename = "run_powershell", alias = "run_power_shell")]
+    RunPowerShell(RunPowerShellStep),
     WriteUninstaller(WriteUninstallerStep),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LogUiStep {
+    pub message: String,
+    pub level: Option<LogLevel>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LogFileStep {
+    pub message: String,
+    pub level: Option<LogLevel>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -315,6 +358,22 @@ pub struct RunProgramStep {
     /// Wait for the process to exit before continuing
     #[serde(default = "default_true")]
     pub wait: bool,
+    pub component: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RunPowerShellStep {
+    pub script: Option<String>,
+    pub file: Option<String>,
+    pub arguments: Option<String>,
+    /// Wait for the process to exit before continuing
+    #[serde(default = "default_true")]
+    pub wait: bool,
+    /// If true, non-zero exit codes fail the installation
+    #[serde(default = "default_true")]
+    pub fail_on_nonzero: bool,
+    /// Timeout in seconds for wait=true mode
+    pub timeout_sec: Option<u64>,
     pub component: Option<String>,
 }
 

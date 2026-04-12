@@ -1,0 +1,30 @@
+app:
+  name: "SimRegInvalid"
+  version: "1.0.0"
+  publisher: "Acme"
+  require_admin: false
+
+logging:
+  mode: manual_only
+  path: "$TEMP\\HaganeErrorSim\\logs"
+  file_name: "installation.log"
+  timestamp: true
+
+pages:
+  - type: install
+
+steps:
+  - action: log_ui
+    level: info
+    message: "Testing invalid registry key write"
+  - action: log_file
+    level: info
+    message: "Testing invalid registry key write"
+  - action: registry
+    operation: write
+    hive: HKCU
+    key: "SOFTWARE\\Acme\\RegInvalidTypeSim"
+    value_name: "X"
+    value_type: BINARY
+    value_data: "Y"
+

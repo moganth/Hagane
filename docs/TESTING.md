@@ -175,6 +175,22 @@ Edit `installer.yaml`:
 default_install_dir: "C:\\Program Files\\MyCompany\\MyApp"  # Custom path
 ```
 
+### Logging and error code validation
+
+Use the following checks to verify the implemented logging and error code behavior:
+
+1. Add a `logging` block with `path` and `file_name` to your test manifest.
+2. Add at least one `log_ui` step and one `log_file` step.
+3. Confirm the installer writes a log file in the configured location.
+4. Trigger a known failure, such as a missing archive, to confirm the installer emits an `HG-*` code.
+5. Confirm `run_powershell` failures classify correctly for syntax errors, non-zero exit, timeout, and access denied cases.
+
+Example test output should include lines like:
+
+```text
+[ERROR] HG-EXTRACT-001 step=4 action=extract field=archive value=payload.zst reason="..." fix="..."
+```
+
 ---
 
 ## Quick Start Template
@@ -223,6 +239,32 @@ iebuild.exe --manifest installer.yaml --build
 
 ```powershell
 target/release/HelloWorld-setup.exe
+```
+
+### Logging-focused Quick Start
+
+If you want to test the logging pipeline directly, add these steps to the template:
+
+```yaml
+logging:
+  mode: auto
+  path: "$TEMP\\MyAppLogs"
+  file_name: "installation.log"
+  timestamp: true
+
+steps:
+  - action: log_ui
+    message: "Starting install"
+    level: info
+
+  - action: log_file
+    message: "Writing to log file"
+    level: info
+
+  - action: run_powershell
+    script: "Write-Host 'Testing PowerShell action'"
+    wait: true
+    fail_on_nonzero: true
 ```
 
 ---

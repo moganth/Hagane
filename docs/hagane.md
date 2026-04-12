@@ -113,6 +113,37 @@ Fix:
 2. Confirm logs show `Using EXE icon:` during pack.
 3. Re-open Explorer (or sign out/in) if cache still shows old icon.
 
+### Installer error codes are not visible
+
+Cause: the manifest does not enable file logging, or the error happened before the installer reached the step runner.
+
+Fix:
+
+1. Add a top-level `logging` block to `installer.yaml`.
+2. Use `mode: auto` unless you explicitly want manual-only logging.
+3. Keep `log_file` output in a user-writable path during testing, such as `$TEMP`.
+4. Check [ERROR_CODES.md](ERROR_CODES.md) for the full code list and fix guidance.
+
+### PowerShell step fails with access denied
+
+Cause: the script needs elevation, or execution policy blocks the command.
+
+Fix:
+
+- Set `app.require_admin: true` when the script writes to protected locations.
+- Confirm the PowerShell command is valid and available in PATH.
+- Use `timeout_sec` only if the script is expected to finish quickly.
+
+### Logging file not created
+
+Cause: `logging.path` or `logging.file_name` is missing, or the destination folder cannot be created.
+
+Fix:
+
+- Add `logging.path` and `logging.file_name` to the manifest.
+- Use a writable location during development.
+- Confirm the `log_file` action message is non-empty.
+
 ## Release Checklist
 
 - Build `hagane.exe` in release mode.
@@ -122,3 +153,4 @@ Fix:
 - Verify PATH integration (user/system choices).
 - Verify ability to build external installer projects.
 - Verify EXE icon and UI branding.
+- Verify installation logs and error codes are emitted correctly during a failing test manifest.

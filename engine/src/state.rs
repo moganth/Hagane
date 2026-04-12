@@ -64,7 +64,9 @@ impl InstallProgress {
         self.total_steps = total;
         self.current_label = label.to_string();
         self.percent = if total == 0 { 100 } else { ((step as f64 / total as f64) * 100.0) as u8 };
-        self.log.push(label.to_string());
+        if !label.trim().is_empty() {
+            self.log.push(label.to_string());
+        }
     }
 }
 

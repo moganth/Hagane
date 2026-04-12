@@ -1,0 +1,27 @@
+app:
+  name: "SimCopyMissing"
+  version: "1.0.0"
+  publisher: "Acme"
+  require_admin: false
+
+logging:
+  mode: manual_only
+  path: "$TEMP\\HaganeErrorSim\\logs"
+  file_name: "installation.log"
+  timestamp: true
+
+pages:
+  - type: install
+
+steps:
+  - action: log_ui
+    level: info
+    message: "Testing missing copy source"
+  - action: log_file
+    level: info
+    message: "Testing missing copy source"
+  - action: copy_file
+    source: "$INSTDIR\\does_not_exist.txt"
+    destination: "$INSTDIR\\out.txt"
+    overwrite: true
+

@@ -1,5 +1,9 @@
 fn main() {
   let fallback_icon = "../sdk/example/assets/icon.ico";
+  let require_admin = std::env::var("HAGANE_REQUIRE_ADMIN")
+    .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+    .unwrap_or(true);
+  let execution_level = if require_admin { "requireAdministrator" } else { "asInvoker" };
   let icon_path = std::env::var("HAGANE_ICON_PATH")
     .ok()
     .filter(|v| !v.trim().is_empty())
@@ -17,13 +21,13 @@ fn main() {
     #[cfg(windows)]
     {
         let mut res = winres::WindowsResource::new();
-        // Request admin elevation via UAC
-        res.set_manifest(r#"
+        // UAC level is selected from installer.yaml app.require_admin.
+        res.set_manifest(&format!(r#"
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
     <security>
       <requestedPrivileges>
-        <requestedExecutionLevel level="requireAdministrator" uiAccess="false"/>
+        <requestedExecutionLevel level="{}" uiAccess="false"/>
       </requestedPrivileges>
     </security>
   </trustInfo>
@@ -34,7 +38,7 @@ fn main() {
     </windowsSettings>
   </application>
 </assembly>
-"#);
+"#, execution_level));
         // Embed app icon if present
     if let Some(path) = icon_path.as_ref() {
       let normalized = normalize_icon_path(path);
@@ -47,6 +51,7 @@ fn main() {
         }
     }
     println!("cargo:rerun-if-changed=build.rs");
+  println!("cargo:rerun-if-env-changed=HAGANE_REQUIRE_ADMIN");
   println!("cargo:rerun-if-env-changed=HAGANE_ICON_PATH");
   if let Some(path) = icon_path {
     println!("cargo:rerun-if-changed={}", path.display());
