@@ -159,6 +159,13 @@ fn run_build(args: BuildOptions) -> Result<()> {
     let manifest_yaml = normalize_manifest_yaml(&manifest_yaml_raw, &manifest_dir)
         .context("Failed to preprocess manifest")?;
 
+    // When building the Hagane installer itself, stage a fresh runtime workspace
+    // into hagane/payload/runtime *before* archive compression so payload.zst
+    // always contains up-to-date engine/runner/ui sources.
+    if is_hagane_self_manifest(&manifest_path) {
+        prepare_bundled_runtime_payload(&workspace_root, &manifest_dir)?;
+    }
+
     // ── 2. Load assets ────────────────────────────────────────────────────────
     let logo_bytes   = packer::read_optional_asset(&manifest_dir, manifest.app.logo.as_deref());
     let banner_bytes = packer::read_optional_asset(&manifest_dir, manifest.app.banner.as_deref());
@@ -201,13 +208,6 @@ fn run_build(args: BuildOptions) -> Result<()> {
         &archives,
         &embedded_rs_path,
     )?;
-
-    // When building the Hagane installer itself, bundle a minimal runtime
-    // workspace (engine + runner + ui) so installed hagane can compile
-    // manifests from any directory without depending on this source repo.
-    if is_hagane_self_manifest(&manifest_path) {
-        prepare_bundled_runtime_payload(&workspace_root, &manifest_dir)?;
-    }
 
     log::info!("embedded.rs generated. Run `hagane pack --release` to compile.");
 
