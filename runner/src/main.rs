@@ -720,6 +720,15 @@ where
     progress(step_no, total_steps, "Removing application registry keys");
     step_no += 1;
 
+    for step in &manifest.steps {
+        if let engine::parser::schema::InstallStep::RegisterApp(r) = step {
+            let resolved_key = resolve_uninstall_var_string(&r.key, manifest, &install_dir);
+            let _ = Command::new("reg")
+                .args(["delete", &format!("{}\\{}", r.hive, resolved_key), "/f"])
+                .status();
+        }
+    }
+
     if let Some(app_key) = &manifest.app.registry_key {
         let resolved_app_key = resolve_uninstall_var_string(app_key, manifest, &install_dir);
         let full_key = format!("SOFTWARE\\{}", resolved_app_key);
