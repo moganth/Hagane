@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use crate::parser::schema::{InstallerManifest, PageType};
 use crate::requirements::CheckResult;
 
@@ -163,20 +163,8 @@ impl InstallerState {
                     .unwrap_or_else(|_| "C:\\Program Files".into());
                 format!("{}\\{}", pf, manifest.app.name)
             });
-
-        // Resolve installer variables at state-init time.
-        // IMPORTANT: resolve $PROGRAMFILES64 before $PROGRAMFILES to avoid
-        // partial replacement of "$PROGRAMFILES64" -> "C:\\Program Files64".
-        let install_dir = install_dir
-            .replace(
-                "$PROGRAMFILES64",
-                &std::env::var("ProgramW6432")
-                    .or_else(|_| std::env::var("ProgramFiles"))
-                    .unwrap_or("C:\\Program Files".into()),
-            )
-            .replace("$PROGRAMFILES", &std::env::var("ProgramFiles").unwrap_or("C:\\Program Files".into()))
-            .replace("$APPDATA",      &std::env::var("APPDATA").unwrap_or_default())
-            .replace("$LOCALAPPDATA", &std::env::var("LOCALAPPDATA").unwrap_or_default());
+        let declared_vars = manifest.variables.clone().unwrap_or_default();
+        let install_dir = resolve_manifest_vars(&install_dir, &declared_vars);
 
         // Default all non-required components as selected
         let selected_components: HashSet<String> = manifest.components
@@ -307,4 +295,37 @@ impl InstallerState {
         }
         v
     }
+}
+
+fn resolve_manifest_vars(input: &str, declared_vars: &HashMap<String, String>) -> String {
+    let mut s = input.to_string();
+
+    for _ in 0..10 {
+        let before = s.clone();
+        for (key, value) in declared_vars {
+            let normalized = key.trim().trim_start_matches('$');
+            if normalized.is_empty() {
+                continue;
+            }
+            let token = format!("${}", normalized);
+            s = s.replace(&token, value);
+        }
+        if s == before {
+            break;
+        }
+    }
+
+    s = s.replace(
+        "$PROGRAMFILES64",
+        &std::env::var("ProgramW6432")
+            .or_else(|_| std::env::var("ProgramFiles"))
+            .unwrap_or("C:\\Program Files".into()),
+    );
+    s = s.replace(
+        "$PROGRAMFILES",
+        &std::env::var("ProgramFiles").unwrap_or("C:\\Program Files".into()),
+    );
+    s = s.replace("$APPDATA", &std::env::var("APPDATA").unwrap_or_default());
+    s = s.replace("$LOCALAPPDATA", &std::env::var("LOCALAPPDATA").unwrap_or_default());
+    s
 }

@@ -11,6 +11,12 @@ Install target layout:
 
 The installed `hagane.exe` compiles user installers from any directory by using the bundled runtime workspace.
 
+### Runtime Source Of Truth
+
+- The authoritative code lives in root workspace crates: `engine/`, `runner/`, and `ui/`.
+- `hagane/payload/runtime` is generated at build time when packaging `hagane/installer.yaml`.
+- This avoids maintaining duplicate runtime source trees in git while still shipping a self-contained installed Hagane.
+
 ## Build Hagane CLI
 
 From workspace root:

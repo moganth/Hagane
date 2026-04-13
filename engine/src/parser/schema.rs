@@ -6,6 +6,7 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InstallerManifest {
     pub app: AppInfo,
+    pub variables: Option<HashMap<String, String>>,
     pub theme: Option<ThemeConfig>,
     pub pages: Vec<PageDefinition>,
     pub requirements: Option<Vec<Requirement>>,
@@ -218,7 +219,10 @@ pub enum InstallStep {
     CreateDir(CreateDirStep),
     LogUi(LogUiStep),
     LogFile(LogFileStep),
+    LogBoth(LogBothStep),
     Registry(RegistryStep),
+    RegisterUninstall(RegisterUninstallStep),
+    RegisterApp(RegisterAppStep),
     Shortcut(ShortcutStep),
     EnvVar(EnvVarStep),
     Service(ServiceStep),
@@ -236,6 +240,12 @@ pub struct LogUiStep {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LogFileStep {
+    pub message: String,
+    pub level: Option<LogLevel>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LogBothStep {
     pub message: String,
     pub level: Option<LogLevel>,
 }
@@ -277,6 +287,42 @@ pub struct RegistryStep {
     pub value_name: Option<String>,
     pub value_type: Option<RegistryValueType>,
     pub value_data: Option<serde_json::Value>,
+}
+
+/// High-level uninstall registration helper.
+/// Expands internally to standard uninstall registry values.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RegisterUninstallStep {
+    /// "HKLM", "HKCU", "HKCR", "HKU", "HKCC"
+    pub hive: String,
+    /// Full uninstall key path under the chosen hive.
+    pub key: String,
+    #[serde(alias = "name")]
+    pub display_name: String,
+    #[serde(alias = "version")]
+    pub display_version: String,
+    pub publisher: String,
+    #[serde(alias = "inst_loc", alias = "Inst_loc")]
+    pub install_location: String,
+    #[serde(alias = "uninstall")]
+    pub uninstall_string: String,
+    pub estimated_size_kb: Option<u32>,
+    #[serde(default = "default_true")]
+    pub no_modify: bool,
+    #[serde(default = "default_true")]
+    pub no_repair: bool,
+}
+
+/// High-level app registry helper.
+/// Writes standard app registry values under a single app key.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RegisterAppStep {
+    /// "HKLM", "HKCU", "HKCR", "HKU", "HKCC"
+    pub hive: String,
+    pub key: String,
+    #[serde(alias = "inst_loc", alias = "Inst_loc")]
+    pub install_location: String,
+    pub version: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
