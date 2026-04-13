@@ -358,12 +358,51 @@ All checks run **in parallel** via Rayon the moment the requirements page loads.
 | `copy_file` | Copy file with optional overwrite + backup |
 | `delete_file` | Delete a file |
 | `create_dir` | Create directory (and parents) |
+| `log_ui` | Log to installer UI only |
+| `log_file` | Log to installer file only |
+| `log_both` | Log to both installer UI and file |
 | `registry` | Write/delete registry keys and values |
+| `register_uninstall` | High-level Add/Remove Programs registration (expands internally) |
+| `register_app` | High-level app settings registration (`InstallDir` + `Version`) |
 | `shortcut` | Create .lnk shortcut (desktop/start menu/startup) |
 | `env_var` | Set/append/prepend to environment variables |
 | `service` | Install/start/stop/delete Windows services |
 | `run_program` | Execute a program (optionally wait) |
 | `write_uninstaller` | Write the auto-generated uninstaller |
+
+---
+
+## Declared Variables (Define Once, Reuse Anywhere)
+
+Use a top-level `variables` block to avoid repeating the same paths and keys.
+
+```yaml
+variables:
+  COMPANY: "Acme"
+  PRODUCT: "MyApp"
+  COMPANY_PRODUCT: "$COMPANY\\$PRODUCT"
+  INSTALL_ROOT: "$PROGRAMFILES64\\$COMPANY\\$PRODUCT"
+  APP_REG_KEY: "SOFTWARE\\$COMPANY_PRODUCT"
+
+app:
+  default_install_dir: "$INSTALL_ROOT"
+  registry_key: "$COMPANY_PRODUCT"
+
+steps:
+  - action: registry
+    operation: write
+    hive: HKLM
+    key: "$APP_REG_KEY"
+    value_name: "InstallDir"
+    value_type: SZ
+    value_data: "$INSTDIR"
+```
+
+Rules:
+
+- Variable keys should use `A-Z`, `0-9`, and `_` (optionally prefixed with `$`).
+- Built-in variables cannot be overridden: `$INSTDIR`, `$PROGRAMFILES`, `$PROGRAMFILES64`, `$APPDATA`, `$LOCALAPPDATA`, `$TEMP`, `$WINDIR`.
+- Declared variables can reference other declared variables.
 
 ---
 
@@ -378,6 +417,8 @@ All checks run **in parallel** via Rayon the moment the requirements page loads.
 | `$LOCALAPPDATA` | `C:\Users\<user>\AppData\Local` |
 | `$TEMP` | Temp directory |
 | `$WINDIR` | `C:\Windows` |
+
+You can also use your own variables from the top-level `variables:` block.
 
 ---
 
@@ -398,7 +439,7 @@ logging:
   include_raw_os_error: false
 ```
 
-Use `mode: manual_only` if you want only explicit `log_ui` and `log_file` actions to write messages.
+Use `mode: manual_only` if you want only explicit `log_ui`, `log_file`, and `log_both` actions to write messages.
 
 ### Logging Actions
 
@@ -406,6 +447,7 @@ Use `mode: manual_only` if you want only explicit `log_ui` and `log_file` action
 |---|---|
 | `log_ui` | Write a message to the installer progress log UI |
 | `log_file` | Write a message to the installation log file |
+| `log_both` | Write the same message to both progress log UI and installation log file |
 
 ### PowerShell Action
 
@@ -473,6 +515,65 @@ steps:
     destination: "$INSTDIR\\docs"
     component: docs
 ```
+
+---
+
+## High-Level Registry Abstractions
+
+Use high-level actions to avoid repetitive registry write blocks.
+
+### `register_uninstall`
+
+For Add/Remove Programs metadata, use one `register_uninstall` step:
+
+```yaml
+- action: register_uninstall
+  hive: HKLM
+  key: "$UNINSTALL_KEY"
+  name: "MyApp 2.1.0"
+  version: "2.1.0"
+  publisher: "Acme Corporation"
+  inst_loc: "$INSTDIR"
+  uninstall: "$INSTDIR\\uninstall.exe"
+  estimated_size_kb: 180224
+  no_modify: true
+  no_repair: true
+```
+
+This expands internally into writes for:
+
+- `DisplayName`
+- `DisplayVersion`
+- `Publisher`
+- `InstallLocation`
+- `UninstallString`
+- `EstimatedSize` (if provided)
+- `NoModify`
+- `NoRepair`
+
+Aliases supported for readability:
+
+- `name` -> `display_name`
+- `version` -> `display_version`
+- `inst_loc` -> `install_location`
+- `uninstall` -> `uninstall_string`
+
+### `register_app`
+
+For app settings, use one concise block:
+
+```yaml
+- action: register_app
+  hive: HKLM
+  key: "$APP_REG_KEY"
+  inst_loc: "$INSTDIR"
+  version: "2.1.0"
+```
+
+This writes:
+
+- `InstallDir` = `inst_loc`
+- `Version` = `version`
 
 ---
 

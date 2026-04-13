@@ -14,17 +14,18 @@ Hagane supports three logging/execution actions in `steps` and `uninstall.extra_
 
 - `log_ui`: writes a message to the installer progress log UI.
 - `log_file`: writes a message to the installer log file.
+- `log_both`: writes the same message to both installer progress UI and log file.
 - `run_powershell`: execute PowerShell scripts with error classification.
 
 ### Logging Configuration Block
 
-Add a top-level `logging` block. This block is **required** if any step uses the `log_file` action:
+Add a top-level `logging` block. This block is **required** if any step uses the `log_file` or `log_both` action:
 
 ```yaml
 logging:
   mode: manual_only              # "auto" or "manual_only" (default: auto)
-  path: "$INSTDIR\\logs"         # Directory to store log files (required for log_file actions)
-  file_name: "installation.log"  # Log file name (required for log_file actions)
+  path: "$INSTDIR\\logs"         # Directory to store log files (required for log_file/log_both actions)
+  file_name: "installation.log"  # Log file name (required for log_file/log_both actions)
   timestamp: true                # Prefix each log line with ISO timestamp (default: true)
   include_raw_os_error: false    # Include raw OS error details in auto-logged errors (default: false)
 ```
@@ -33,9 +34,9 @@ logging:
 
 | Parameter | Type | Default | Required? | Notes |
 |-----------|------|---------|-----------|-------|
-| `mode` | string | `auto` | No | Set to `manual_only` to disable automatic error logging. Only `log_ui` and `log_file` actions are recorded. Set to `auto` to automatically log all errors with error codes. |
-| `path` | string | — | Yes (if using `log_file`) | Installation directory must be resolvable. Supports `$INSTDIR`, `$PROGRAMFILES`, `$APPDATA`, `$LOCALAPPDATA`, and other variables. |
-| `file_name` | string | — | Yes (if using `log_file`) | Name of the log file (e.g., `installation.log`, `setup.log`). |
+| `mode` | string | `auto` | No | Set to `manual_only` to disable automatic error logging. Only `log_ui`, `log_file`, and `log_both` actions are recorded. Set to `auto` to automatically log all errors with error codes. |
+| `path` | string | — | Yes (if using `log_file`/`log_both`) | Installation directory must be resolvable. Supports `$INSTDIR`, `$PROGRAMFILES`, `$APPDATA`, `$LOCALAPPDATA`, and other variables. |
+| `file_name` | string | — | Yes (if using `log_file`/`log_both`) | Name of the log file (e.g., `installation.log`, `setup.log`). |
 | `timestamp` | boolean | `true` | No | If `true`, each log line is prefixed with ISO 8601 timestamp (e.g., `2026-04-12T14:32:01.234Z`). |
 | `include_raw_os_error` | boolean | `false` | No | If `true`, automatic error classification includes raw Windows OS error details (may expose implementation details). |
 
@@ -73,7 +74,24 @@ Write a message to the installation log file. Useful for detailed audit trails a
 | `message` | string | — | **Yes** | The message text to write. Must be non-empty. Supports variables ($INSTDIR, etc.). |
 | `level` | string | `info` | No | Log level: `info`, `warn`, or `error`. Determines prefix in log file. |
 
-**Note**: The `logging` block with `path` and `file_name` must be defined at the manifest top level for `log_file` actions to work.
+### `log_both` Action
+
+Write one message to both the installer progress log UI and installation log file.
+
+```yaml
+- action: log_both
+  message: "Preparing installation..."
+  level: info
+```
+
+#### `log_both` Parameters
+
+| Parameter | Type | Default | Required? | Notes |
+|-----------|------|---------|-----------|-------|
+| `message` | string | — | **Yes** | Message written to both UI and file outputs. Must be non-empty. Supports variables ($INSTDIR, etc.). |
+| `level` | string | `info` | No | Log level: `info`, `warn`, or `error`. Applied to both outputs. |
+
+**Note**: The `logging` block with `path` and `file_name` must be defined at the manifest top level for `log_file` and `log_both` actions to work.
 
 ## Conditional Step Execution with Components
 
@@ -248,6 +266,7 @@ value=malformed value
 - `$LOCALAPPDATA` — per-user Local\Application Data folder
 - `$TEMP` — user temp directory
 - `$WINDIR` — Windows system directory
+- Any custom variable declared in top-level `variables:` (for example `$APP_REG_KEY`)
 
 **Common causes:**
 - Misspelled variable name (e.g., `$INSTDIR_ROOT` instead of `$INSTDIR`)
@@ -255,6 +274,8 @@ value=malformed value
 - Custom variables (not supported)
 
 **Typical fix:** Correct the variable name and re-run the installer.
+
+**Authoring note:** Custom variables must be declared in `variables:` and use keys with `A-Z`, `0-9`, and `_` (optionally prefixed with `$`).
 
 ---
 
@@ -318,6 +339,11 @@ value=<source path from manifest>
 
 ### Registry Operations
 
+You can either use low-level `registry` actions or high-level actions:
+
+- `register_uninstall` for Add/Remove Programs metadata
+- `register_app` for app settings (`InstallDir`, `Version`)
+
 #### `HG-REG-001` — Invalid Registry Configuration
 
 **When it occurs:** A `registry` step contains structurally invalid configuration (invalid hive, key format, or type).
@@ -327,6 +353,8 @@ value=<source path from manifest>
 - `value_type` mismatch (e.g., `BINARY` type with string value)
 - Invalid key path syntax
 - Missing required fields for the operation
+- Missing required `register_uninstall` fields (name/version/publisher/install location/uninstall string)
+- Missing required `register_app` fields (`inst_loc`/`install_location`, `version`)
 
 **Typical fix:** Validate the registry hive, key, value type, and value format. Test with regedit if unsure.
 

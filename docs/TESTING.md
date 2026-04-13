@@ -180,8 +180,8 @@ default_install_dir: "C:\\Program Files\\MyCompany\\MyApp"  # Custom path
 Use the following checks to verify the implemented logging and error code behavior:
 
 1. Add a `logging` block with `path` and `file_name` to your test manifest.
-2. Add at least one `log_ui` step and one `log_file` step.
-3. Confirm the installer writes a log file in the configured location.
+2. Add at least one logging step (`log_ui`, `log_file`, or `log_both`).
+3. Confirm the installer writes a log file in the configured location for `log_file`/`log_both`.
 4. Trigger a known failure, such as a missing archive, to confirm the installer emits an `HG-*` code.
 5. Confirm `run_powershell` failures classify correctly for syntax errors, non-zero exit, timeout, and access denied cases.
 
@@ -253,12 +253,8 @@ logging:
   timestamp: true
 
 steps:
-  - action: log_ui
+  - action: log_both
     message: "Starting install"
-    level: info
-
-  - action: log_file
-    message: "Writing to log file"
     level: info
 
   - action: run_powershell
