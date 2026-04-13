@@ -1,4 +1,4 @@
-# ── MyApp Installer Definition ─────────────────────────────────────────────────
+# -- MyApp Installer Definition -------------------------------------------------
 # Build with: iebuild --manifest installer.yaml --build
 # Silent:     MyApp-setup.exe /S
 
@@ -12,13 +12,23 @@ app:
   logo: "assets/logo.png"
   banner: "assets/banner.png"
   icon: "assets/icon.ico"
-  default_install_dir: "$PROGRAMFILES64\\Acme\\MyApp"
-  registry_key: "Acme\\MyApp"
+  default_install_dir: "$INSTALL_ROOT"
+  registry_key: "$COMPANY_PRODUCT"
   require_admin: true
+
+variables:
+  COMPANY: "Acme"
+  PRODUCT: "MyApp"
+  COMPANY_PRODUCT: "$COMPANY\\$PRODUCT"
+  INSTALL_ROOT: "$PROGRAMFILES64\\$COMPANY\\$PRODUCT"
+  LOG_DIR: "$INSTDIR\\logs"
+  APP_EXE: "$INSTDIR\\MyApp.exe"
+  UNINSTALL_KEY: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\AcmeMyApp"
+  APP_REG_KEY: "SOFTWARE\\$COMPANY_PRODUCT"
 
 logging:
   mode: manual_only
-  path: "$INSTDIR\\logs"
+  path: "$LOG_DIR"
   file_name: "installation.log"
   timestamp: true
   include_raw_os_error: false
@@ -149,50 +159,34 @@ components:
 
   - id: cli
     name: "Command Line Tools"
-    description: "myapp.exe CLI — adds to system PATH."
+    description: "myapp.exe CLI - adds to system PATH."
     size_mb: 8
     required: false
     selected: false
 
 steps:
-  # ── Manual logging examples (error codes are emitted automatically) ───────
-  - action: log_ui
+  # -- Manual logging examples (error codes are emitted automatically) -------
+  - action: log_both
     level: info
     message: "Manifest loaded and validated"
 
-  - action: log_file
-    level: info
-    message: "Manifest loaded and validated"
-
-  # ── Create install directory ───────────────────────────────────────────────
-  - action: log_ui
-    level: info
-    message: "Resolving installation path"
-
-  - action: log_file
+  # -- Create install directory -----------------------------------------------
+  - action: log_both
     level: info
     message: "Resolving installation path"
 
   - action: create_dir
     path: "$INSTDIR"
 
-  - action: log_ui
-    level: info
-    message: "Preparing logs directory"
-
-  - action: log_file
+  - action: log_both
     level: info
     message: "Preparing logs directory"
 
   - action: create_dir
-    path: "$INSTDIR\\logs"
+    path: "$LOG_DIR"
 
-  # ── Extract main payload ───────────────────────────────────────────────────
-  - action: log_ui
-    level: info
-    message: "Extracting core payload"
-
-  - action: log_file
+  # -- Extract main payload ---------------------------------------------------
+  - action: log_both
     level: info
     message: "Extracting core payload"
 
@@ -201,11 +195,7 @@ steps:
     destination: "$INSTDIR"
     component: core
 
-  - action: log_ui
-    level: info
-    message: "Extracting documentation payload"
-
-  - action: log_file
+  - action: log_both
     level: info
     message: "Extracting documentation payload"
 
@@ -214,11 +204,7 @@ steps:
     destination: "$INSTDIR\\docs"
     component: docs
 
-  - action: log_ui
-    level: info
-    message: "Extracting sample payload"
-
-  - action: log_file
+  - action: log_both
     level: info
     message: "Extracting sample payload"
 
@@ -227,128 +213,54 @@ steps:
     destination: "$INSTDIR\\samples"
     component: samples
 
-  # ── Registry — Add/Remove Programs entry ─────────────────────────────────
-  - action: log_ui
+  # -- Registry - Add/Remove Programs entry ---------------------------------
+  - action: log_both
     level: info
     message: "Writing uninstall registry entries"
 
-  - action: log_file
-    level: info
-    message: "Writing uninstall registry entries"
-
-  - action: registry
-    operation: write
+  - action: register_uninstall
     hive: HKLM
-    key: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\AcmeMyApp"
-    value_name: "DisplayName"
-    value_type: SZ
-    value_data: "MyApp 2.1.0"
+    key: "$UNINSTALL_KEY"
+    name: "MyApp 2.1.0"
+    version: "2.1.0"
+    publisher: "Acme Corporation"
+    inst_loc: "$INSTDIR"
+    uninstall: "$INSTDIR\\uninstall.exe"
+    estimated_size_kb: 180224
+    no_modify: true
+    no_repair: true
 
-  - action: registry
-    operation: write
-    hive: HKLM
-    key: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\AcmeMyApp"
-    value_name: "DisplayVersion"
-    value_type: SZ
-    value_data: "2.1.0"
-
-  - action: registry
-    operation: write
-    hive: HKLM
-    key: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\AcmeMyApp"
-    value_name: "Publisher"
-    value_type: SZ
-    value_data: "Acme Corporation"
-
-  - action: registry
-    operation: write
-    hive: HKLM
-    key: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\AcmeMyApp"
-    value_name: "InstallLocation"
-    value_type: SZ
-    value_data: "$INSTDIR"
-
-  - action: registry
-    operation: write
-    hive: HKLM
-    key: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\AcmeMyApp"
-    value_name: "UninstallString"
-    value_type: SZ
-    value_data: "$INSTDIR\\uninstall.exe"
-
-  - action: registry
-    operation: write
-    hive: HKLM
-    key: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\AcmeMyApp"
-    value_name: "EstimatedSize"
-    value_type: DWORD
-    value_data: 180224    # KB
-
-  - action: registry
-    operation: write
-    hive: HKLM
-    key: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\AcmeMyApp"
-    value_name: "NoModify"
-    value_type: DWORD
-    value_data: 1
-
-  - action: registry
-    operation: write
-    hive: HKLM
-    key: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\AcmeMyApp"
-    value_name: "NoRepair"
-    value_type: DWORD
-    value_data: 1
-
-  # ── App registry settings ─────────────────────────────────────────────────
-  - action: log_ui
+  # -- App registry settings -------------------------------------------------
+  - action: log_both
     level: info
     message: "Writing application registry settings"
 
-  - action: log_file
-    level: info
-    message: "Writing application registry settings"
-
-  - action: registry
-    operation: write
+  - action: register_app
     hive: HKLM
-    key: "SOFTWARE\\Acme\\MyApp"
-    value_name: "InstallDir"
-    value_type: SZ
-    value_data: "$INSTDIR"
+    key: "$APP_REG_KEY"
+    inst_loc: "$INSTDIR"
+    version: "2.1.0"
 
-  - action: registry
-    operation: write
-    hive: HKLM
-    key: "SOFTWARE\\Acme\\MyApp"
-    value_name: "Version"
-    value_type: SZ
-    value_data: "2.1.0"
-
-  # ── Shortcuts ─────────────────────────────────────────────────────────────
-  - action: log_ui
-    level: info
-    message: "Creating shortcuts"
-
-  - action: log_file
+  # -- Shortcuts -------------------------------------------------------------
+  - action: log_both
     level: info
     message: "Creating shortcuts"
 
   - action: shortcut
-    target: "$INSTDIR\\MyApp.exe"
+    target: "$APP_EXE"
     location: desktop
     name: "MyApp"
     description: "Launch MyApp"
-    icon: "$INSTDIR\\MyApp.exe"
+    icon: "$APP_EXE"
     working_dir: "$INSTDIR"
     component: core
 
   - action: shortcut
-    target: "$INSTDIR\\MyApp.exe"
+    target: "$APP_EXE"
     location: start_menu
     name: "MyApp"
     description: "Launch MyApp"
-    icon: "$INSTDIR\\MyApp.exe"
+    icon: "$APP_EXE"
     working_dir: "$INSTDIR"
     component: core
 
@@ -358,12 +270,8 @@ steps:
     name: "MyApp User Manual"
     component: docs
 
-  # ── CLI tools — add to PATH ───────────────────────────────────────────────
-  - action: log_ui
-    level: info
-    message: "Updating PATH for command line tools"
-
-  - action: log_file
+  # -- CLI tools - add to PATH -----------------------------------------------
+  - action: log_both
     level: info
     message: "Updating PATH for command line tools"
 
@@ -373,12 +281,8 @@ steps:
     scope: system
     operation: append
 
-  # ── PowerShell example step ───────────────────────────────────────────────
-  - action: log_ui
-    level: info
-    message: "Running post-install PowerShell check"
-
-  - action: log_file
+  # -- PowerShell example step -----------------------------------------------
+  - action: log_both
     level: info
     message: "Running post-install PowerShell check"
 
@@ -388,12 +292,8 @@ steps:
     fail_on_nonzero: true
     timeout_sec: 30
 
-  # ── Write uninstaller ─────────────────────────────────────────────────────
-  - action: log_ui
-    level: info
-    message: "Writing uninstaller"
-
-  - action: log_file
+  # -- Write uninstaller -----------------------------------------------------
+  - action: log_both
     level: info
     message: "Writing uninstaller"
 
@@ -405,7 +305,7 @@ uninstall:
   publisher: "Acme Corporation"
 
 silent:
-  install_dir: "$PROGRAMFILES64\\Acme\\MyApp"
+  install_dir: "$INSTALL_ROOT"
   components:
     - core
     - cli

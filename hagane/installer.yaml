@@ -2,7 +2,7 @@
 
 app:
   name: "Hagane"
-  version: "0.1.0"
+  version: "0.1.2"
   publisher: "Installer Engine"
   description: "Command-line installer builder for the Installer Engine workspace."
   default_install_dir: "$PROGRAMFILES64\\Hagane"
@@ -67,7 +67,7 @@ steps:
     key: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Hagane"
     value_name: "DisplayVersion"
     value_type: SZ
-    value_data: "0.1.0"
+    value_data: "0.1.2"
 
   - action: registry
     operation: write

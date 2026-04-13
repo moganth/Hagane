@@ -26,6 +26,13 @@
         "require_admin":       { "type": "boolean", "default": true }
       }
     },
+    "variables": {
+      "type": "object",
+      "description": "User-declared reusable variables. Keys should use A-Z, 0-9, and '_' (optionally prefixed with '$').",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
     "theme": {
       "type": "object",
       "additionalProperties": false,
@@ -107,7 +114,7 @@
         "properties": {
           "action": {
             "type": "string",
-            "enum": ["extract", "copy_file", "delete_file", "create_dir", "registry", "shortcut", "env_var", "service", "run_program", "write_uninstaller"]
+            "enum": ["extract", "copy_file", "delete_file", "create_dir", "log_ui", "log_file", "log_both", "registry", "register_uninstall", "register_app", "shortcut", "env_var", "service", "run_program", "run_powershell", "write_uninstaller"]
           },
           "archive":      { "type": "string", "description": "Archive name registered during build (extract)." },
           "destination":  { "type": "string" },
@@ -121,6 +128,16 @@
           "value_name":   { "type": "string" },
           "value_type":   { "type": "string", "enum": ["SZ", "EXPAND_SZ", "DWORD", "QWORD", "MULTI_SZ", "BINARY"] },
           "value_data":   {},
+          "display_name": { "type": "string", "description": "Used by register_uninstall (supports alias 'name')." },
+          "display_version": { "type": "string", "description": "Used by register_uninstall (supports alias 'version')." },
+          "publisher":   { "type": "string", "description": "Used by register_uninstall." },
+          "install_location": { "type": "string", "description": "Used by register_uninstall (supports alias 'inst_loc')." },
+          "uninstall_string": { "type": "string", "description": "Used by register_uninstall (supports alias 'uninstall')." },
+          "estimated_size_kb": { "type": "integer", "minimum": 0, "description": "Optional EstimatedSize DWORD for register_uninstall." },
+          "no_modify":   { "type": "boolean", "default": true, "description": "Used by register_uninstall; writes NoModify DWORD." },
+          "no_repair":   { "type": "boolean", "default": true, "description": "Used by register_uninstall; writes NoRepair DWORD." },
+          "inst_loc": { "type": "string", "description": "Used by register_app (alias for install location; writes InstallDir)." },
+          "version": { "type": "string", "description": "Used by register_app (writes Version)." },
           "target":       { "type": "string" },
           "location":     { "type": "string", "enum": ["desktop", "start_menu", "startup"] },
           "name":         { "type": "string" },
