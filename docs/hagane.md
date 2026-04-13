@@ -130,6 +130,11 @@ Fix:
 3. Keep `log_file` output in a user-writable path during testing, such as `$TEMP`.
 4. Check [ERROR_CODES.md](ERROR_CODES.md) for the full code list and fix guidance.
 
+Variable syntax note:
+
+- Preferred manifest variable syntax is `{{KEY}}` (for example `{{INSTDIR}}/logs`).
+- Legacy `$KEY` syntax remains supported for backward compatibility.
+
 ### PowerShell step fails with access denied
 
 Cause: the script needs elevation, or execution policy blocks the command.

@@ -307,25 +307,37 @@ fn resolve_manifest_vars(input: &str, declared_vars: &HashMap<String, String>) -
             if normalized.is_empty() {
                 continue;
             }
-            let token = format!("${}", normalized);
-            s = s.replace(&token, value);
+            let token_dollar = format!("${}", normalized);
+            let token_template = format!("{{{{{}}}}}", normalized);
+            s = s.replace(&token_dollar, value);
+            s = s.replace(&token_template, value);
         }
         if s == before {
             break;
         }
     }
 
-    s = s.replace(
-        "$PROGRAMFILES64",
-        &std::env::var("ProgramW6432")
-            .or_else(|_| std::env::var("ProgramFiles"))
-            .unwrap_or("C:\\Program Files".into()),
-    );
-    s = s.replace(
-        "$PROGRAMFILES",
-        &std::env::var("ProgramFiles").unwrap_or("C:\\Program Files".into()),
-    );
-    s = s.replace("$APPDATA", &std::env::var("APPDATA").unwrap_or_default());
-    s = s.replace("$LOCALAPPDATA", &std::env::var("LOCALAPPDATA").unwrap_or_default());
+    let pf64 = std::env::var("ProgramW6432")
+        .or_else(|_| std::env::var("ProgramFiles"))
+        .unwrap_or("C:\\Program Files".into());
+    s = s.replace("$PROGRAMFILES64", &pf64);
+    s = s.replace("{{PROGRAMFILES64}}", &pf64);
+
+    let pf = std::env::var("ProgramFiles").unwrap_or("C:\\Program Files".into());
+    s = s.replace("$PROGRAMFILES", &pf);
+    s = s.replace("{{PROGRAMFILES}}", &pf);
+
+    let appdata = std::env::var("APPDATA").unwrap_or_default();
+    s = s.replace("$APPDATA", &appdata);
+    s = s.replace("{{APPDATA}}", &appdata);
+
+    let local = std::env::var("LOCALAPPDATA").unwrap_or_default();
+    s = s.replace("$LOCALAPPDATA", &local);
+    s = s.replace("{{LOCALAPPDATA}}", &local);
+
+    #[cfg(windows)]
+    {
+        s = s.replace('/', "\\");
+    }
     s
 }

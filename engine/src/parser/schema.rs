@@ -56,7 +56,8 @@ pub struct AppInfo {
     pub logo: Option<String>,
     pub banner: Option<String>,
     pub icon: Option<String>,
-    /// Default install directory. Supports variables: $PROGRAMFILES, $APPDATA, $LOCALAPPDATA
+    /// Default install directory. Supports variables in either form:
+    /// $PROGRAMFILES / {{PROGRAMFILES}}, $APPDATA / {{APPDATA}}, $LOCALAPPDATA / {{LOCALAPPDATA}}
     pub default_install_dir: Option<String>,
     /// Registry key for uninstall entry
     pub registry_key: Option<String>,

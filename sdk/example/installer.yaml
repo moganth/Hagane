@@ -12,19 +12,19 @@ app:
   logo: "assets/logo.png"
   banner: "assets/banner.png"
   icon: "assets/icon.ico"
-  default_install_dir: "$INSTALL_ROOT"
-  registry_key: "$COMPANY_PRODUCT"
+  default_install_dir: "{{INSTALL_ROOT}}"
+  registry_key: "{{COMPANY_PRODUCT}}"
   require_admin: true
 
 variables:
   COMPANY: "Acme"
   PRODUCT: "MyApp"
-  COMPANY_PRODUCT: "$COMPANY\\$PRODUCT"
-  INSTALL_ROOT: "$PROGRAMFILES64\\$COMPANY\\$PRODUCT"
-  LOG_DIR: "$INSTDIR\\logs"
-  APP_EXE: "$INSTDIR\\MyApp.exe"
-  UNINSTALL_KEY: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\AcmeMyApp"
-  APP_REG_KEY: "SOFTWARE\\$COMPANY_PRODUCT"
+  COMPANY_PRODUCT: "{{COMPANY}}/{{PRODUCT}}"
+  INSTALL_ROOT: "{{PROGRAMFILES64}}/{{COMPANY}}/{{PRODUCT}}"
+  LOG_DIR: "{{INSTDIR}}/logs"
+  APP_EXE: "{{INSTDIR}}/MyApp.exe"
+  UNINSTALL_KEY: "SOFTWARE/Microsoft/Windows/CurrentVersion/Uninstall/AcmeMyApp"
+  APP_REG_KEY: "SOFTWARE/{{COMPANY_PRODUCT}}"
 
 logging:
   mode: manual_only
@@ -127,7 +127,7 @@ requirements:
 
   - type: disk
     min_mb: 512
-    path: "$INSTDIR"
+    path: "{{INSTDIR}}"
     label: "512 MB free disk space"
 
   - type: dotnet
@@ -183,7 +183,7 @@ steps:
     message: "Preparing logs directory"
 
   - action: create_dir
-    path: "$LOG_DIR"
+    path: "{{LOG_DIR}}"
 
   # -- Extract main payload ---------------------------------------------------
   - action: log_both
@@ -192,7 +192,7 @@ steps:
 
   - action: extract
     archive: "payload.zst"
-    destination: "$INSTDIR"
+    destination: "{{INSTDIR}}"
     component: core
 
   - action: log_both
@@ -201,7 +201,7 @@ steps:
 
   - action: extract
     archive: "docs.zst"
-    destination: "$INSTDIR\\docs"
+    destination: "{{INSTDIR}}/docs"
     component: docs
 
   - action: log_both
@@ -210,7 +210,7 @@ steps:
 
   - action: extract
     archive: "samples.zst"
-    destination: "$INSTDIR\\samples"
+    destination: "{{INSTDIR}}/samples"
     component: samples
 
   # -- Registry - Add/Remove Programs entry ---------------------------------
@@ -220,12 +220,12 @@ steps:
 
   - action: register_uninstall
     hive: HKLM
-    key: "$UNINSTALL_KEY"
+    key: "{{UNINSTALL_KEY}}"
     name: "MyApp 2.1.0"
     version: "2.1.0"
     publisher: "Acme Corporation"
-    inst_loc: "$INSTDIR"
-    uninstall: "$INSTDIR\\uninstall.exe"
+    inst_loc: "{{INSTDIR}}"
+    uninstall: "{{INSTDIR}}/uninstall.exe"
     estimated_size_kb: 180224
     no_modify: true
     no_repair: true
@@ -237,8 +237,8 @@ steps:
 
   - action: register_app
     hive: HKLM
-    key: "$APP_REG_KEY"
-    inst_loc: "$INSTDIR"
+    key: "{{APP_REG_KEY}}"
+    inst_loc: "{{INSTDIR}}"
     version: "2.1.0"
 
   # -- Shortcuts -------------------------------------------------------------
@@ -247,25 +247,25 @@ steps:
     message: "Creating shortcuts"
 
   - action: shortcut
-    target: "$APP_EXE"
+    target: "{{APP_EXE}}"
     location: desktop
     name: "MyApp"
     description: "Launch MyApp"
-    icon: "$APP_EXE"
-    working_dir: "$INSTDIR"
+    icon: "{{APP_EXE}}"
+    working_dir: "{{INSTDIR}}"
     component: core
 
   - action: shortcut
-    target: "$APP_EXE"
+    target: "{{APP_EXE}}"
     location: start_menu
     name: "MyApp"
     description: "Launch MyApp"
-    icon: "$APP_EXE"
-    working_dir: "$INSTDIR"
+    icon: "{{APP_EXE}}"
+    working_dir: "{{INSTDIR}}"
     component: core
 
   - action: shortcut
-    target: "$INSTDIR\\docs\\UserManual.pdf"
+    target: "{{INSTDIR}}/docs/UserManual.pdf"
     location: start_menu
     name: "MyApp User Manual"
     component: docs
@@ -277,7 +277,7 @@ steps:
 
   - action: env_var
     name: PATH
-    value: "$INSTDIR\\bin"
+    value: "{{INSTDIR}}/bin"
     scope: system
     operation: append
 
@@ -298,14 +298,14 @@ steps:
     message: "Writing uninstaller"
 
   - action: write_uninstaller
-    path: "$INSTDIR\\uninstall.exe"
+    path: "{{INSTDIR}}/uninstall.exe"
 
 uninstall:
   display_name: "MyApp 2.1.0"
   publisher: "Acme Corporation"
 
 silent:
-  install_dir: "$INSTALL_ROOT"
+  install_dir: "{{INSTALL_ROOT}}"
   components:
     - core
     - cli
