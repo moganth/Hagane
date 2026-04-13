@@ -204,7 +204,7 @@ app:
   name: "HelloWorld"
   version: "1.0.0"
   publisher: "MyCompany"
-  default_install_dir: "$PROGRAMFILES64\\MyCompany\\HelloWorld"
+  default_install_dir: "{{PROGRAMFILES64}}/MyCompany/HelloWorld"
   require_admin: false
 
 pages:
@@ -215,7 +215,7 @@ pages:
 
 steps:
   - action: create_dir
-    path: "$INSTDIR"
+    path: "{{INSTDIR}}"
   
   - action: registry
     operation: write
@@ -226,7 +226,7 @@ steps:
     value_data: "1.0.0"
   
   - action: write_uninstaller
-    path: "$INSTDIR\\uninstall.exe"
+    path: "{{INSTDIR}}/uninstall.exe"
 ```
 
 ### 2. Build:

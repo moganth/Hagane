@@ -380,28 +380,29 @@ Use a top-level `variables` block to avoid repeating the same paths and keys.
 variables:
   COMPANY: "Acme"
   PRODUCT: "MyApp"
-  COMPANY_PRODUCT: "$COMPANY\\$PRODUCT"
-  INSTALL_ROOT: "$PROGRAMFILES64\\$COMPANY\\$PRODUCT"
-  APP_REG_KEY: "SOFTWARE\\$COMPANY_PRODUCT"
+  COMPANY_PRODUCT: "{{COMPANY}}/{{PRODUCT}}"
+  INSTALL_ROOT: "{{PROGRAMFILES64}}/{{COMPANY}}/{{PRODUCT}}"
+  APP_REG_KEY: "SOFTWARE/{{COMPANY_PRODUCT}}"
 
 app:
-  default_install_dir: "$INSTALL_ROOT"
-  registry_key: "$COMPANY_PRODUCT"
+  default_install_dir: "{{INSTALL_ROOT}}"
+  registry_key: "{{COMPANY_PRODUCT}}"
 
 steps:
   - action: registry
     operation: write
     hive: HKLM
-    key: "$APP_REG_KEY"
+    key: "{{APP_REG_KEY}}"
     value_name: "InstallDir"
     value_type: SZ
-    value_data: "$INSTDIR"
+    value_data: "{{INSTDIR}}"
 ```
 
 Rules:
 
 - Variable keys should use `A-Z`, `0-9`, and `_` (optionally prefixed with `$`).
-- Built-in variables cannot be overridden: `$INSTDIR`, `$PROGRAMFILES`, `$PROGRAMFILES64`, `$APPDATA`, `$LOCALAPPDATA`, `$TEMP`, `$WINDIR`.
+  - Preferred syntax is `{{KEY}}` (for example `{{INSTDIR}}`), with `$KEY` kept for backward compatibility.
+  - Built-in variables cannot be overridden: `{{INSTDIR}}`, `{{PROGRAMFILES}}`, `{{PROGRAMFILES64}}`, `{{APPDATA}}`, `{{LOCALAPPDATA}}`, `{{TEMP}}`, `{{WINDIR}}`.
 - Declared variables can reference other declared variables.
 
 ---
@@ -410,15 +411,15 @@ Rules:
 
 | Variable | Resolves to |
 |---|---|
-| `$INSTDIR` | Chosen installation directory |
-| `$PROGRAMFILES` | `C:\Program Files (x86)` |
-| `$PROGRAMFILES64` | `C:\Program Files` |
-| `$APPDATA` | `C:\Users\<user>\AppData\Roaming` |
-| `$LOCALAPPDATA` | `C:\Users\<user>\AppData\Local` |
-| `$TEMP` | Temp directory |
-| `$WINDIR` | `C:\Windows` |
+| `{{INSTDIR}}` | Chosen installation directory |
+| `{{PROGRAMFILES}}` | `C:\Program Files (x86)` |
+| `{{PROGRAMFILES64}}` | `C:\Program Files` |
+| `{{APPDATA}}` | `C:\Users\<user>\AppData\Roaming` |
+| `{{LOCALAPPDATA}}` | `C:\Users\<user>\AppData\Local` |
+| `{{TEMP}}` | Temp directory |
+| `{{WINDIR}}` | `C:\Windows` |
 
-You can also use your own variables from the top-level `variables:` block.
+Legacy `$INSTDIR` / `$PROGRAMFILES` style is also supported for existing manifests.
 
 ---
 
@@ -620,6 +621,13 @@ Add this comment to the top of your `installer.yaml` for VS Code YAML extension:
 cargo build --release          # builds all crates
 cargo build --release -p runner   # just the installer runner
 cargo build --release -p builder  # just hagane
+```
+## Quick Commands
+
+```powershell
+cargo build -p builder --bin hagane --release 
+Copy-Item .\target\release\hagane.exe .\hagane\payload\bin\hagane.exe -Force 
+cargo run -p builder --bin hagane -- run hagane/installer.yaml --release
 ```
 
 ## Notes

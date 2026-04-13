@@ -340,13 +340,19 @@ impl StepRunner {
     }
 
     /// Resolve installer variables in a string:
-    /// $INSTDIR, $PROGRAMFILES, $PROGRAMFILES64, $APPDATA, $LOCALAPPDATA, $TEMP, $WINDIR
+    /// $INSTDIR / {{INSTDIR}}, $PROGRAMFILES / {{PROGRAMFILES}}, $PROGRAMFILES64 / {{PROGRAMFILES64}},
+    /// $APPDATA / {{APPDATA}}, $LOCALAPPDATA / {{LOCALAPPDATA}}, $TEMP / {{TEMP}}, $WINDIR / {{WINDIR}}
     pub fn resolve_vars(&self, input: &str) -> String {
         resolve_vars_with_install_dir(input, &self.ctx.install_dir, &self.ctx.variables)
     }
 
     fn resolve_vars_path(&self, input: &str) -> Result<String> {
-        let resolved = self.resolve_vars(input);
+        let mut resolved = self.resolve_vars(input);
+        #[cfg(windows)]
+        {
+            // Allow manifest authors to use universal '/' separators in path-like fields.
+            resolved = resolved.replace('/', "\\");
+        }
         if let Some(token) = unresolved_token(&resolved) {
             return Err(anyhow::anyhow!(
                 "HG-VAR-001: unresolved variable '{}' in '{}'",
@@ -393,7 +399,7 @@ impl StepRunner {
         // Preserve explicit code-originated failures from helpers.
         if raw.contains("HG-VAR-001") {
             return format!(
-                "[ERROR] HG-VAR-001 step={} action={} field=path value={} reason=\"{}\" fix=\"Use supported variables ($INSTDIR, $PROGRAMFILES, $PROGRAMFILES64, $APPDATA, $LOCALAPPDATA, $TEMP, $WINDIR).\"",
+                "[ERROR] HG-VAR-001 step={} action={} field=path value={} reason=\"{}\" fix=\"Use supported variables ($INSTDIR or {{INSTDIR}}, $PROGRAMFILES or {{PROGRAMFILES}}, $PROGRAMFILES64 or {{PROGRAMFILES64}}, $APPDATA or {{APPDATA}}, $LOCALAPPDATA or {{LOCALAPPDATA}}, $TEMP or {{TEMP}}, $WINDIR or {{WINDIR}}).\"",
                 step_index,
                 step_action(step),
                 step_label(step),
@@ -872,8 +878,7 @@ fn resolve_vars_with_install_dir(
         let before = s.clone();
         for (key, value) in declared_vars {
             if let Some(normalized) = normalize_declared_var_key(key) {
-                let token = format!("${}", normalized);
-                s = s.replace(&token, value);
+                s = replace_var_token(&s, &normalized, value);
             }
         }
         if s == before {
@@ -883,21 +888,43 @@ fn resolve_vars_with_install_dir(
 
     // Resolve install dir after declared variables so values like
     // LOG_DIR="$INSTDIR\\logs" expand correctly.
-    s = s.replace("$INSTDIR", &install_dir.to_string_lossy());
+    s = replace_var_token(&s, "INSTDIR", &install_dir.to_string_lossy());
 
     #[cfg(windows)]
     {
-        if let Ok(pf64) = std::env::var("ProgramW6432") { s = s.replace("$PROGRAMFILES64", &pf64); }
-        if let Ok(pf) = std::env::var("ProgramFiles") { s = s.replace("$PROGRAMFILES", &pf); }
-        if let Ok(ad) = std::env::var("APPDATA")      { s = s.replace("$APPDATA", &ad); }
-        if let Ok(la) = std::env::var("LOCALAPPDATA") { s = s.replace("$LOCALAPPDATA", &la); }
-        if let Ok(tmp) = std::env::var("TEMP")        { s = s.replace("$TEMP", &tmp); }
-        if let Ok(win) = std::env::var("WINDIR")      { s = s.replace("$WINDIR", &win); }
+        if let Ok(pf64) = std::env::var("ProgramW6432") { s = replace_var_token(&s, "PROGRAMFILES64", &pf64); }
+        if let Ok(pf) = std::env::var("ProgramFiles") { s = replace_var_token(&s, "PROGRAMFILES", &pf); }
+        if let Ok(ad) = std::env::var("APPDATA")      { s = replace_var_token(&s, "APPDATA", &ad); }
+        if let Ok(la) = std::env::var("LOCALAPPDATA") { s = replace_var_token(&s, "LOCALAPPDATA", &la); }
+        if let Ok(tmp) = std::env::var("TEMP")        { s = replace_var_token(&s, "TEMP", &tmp); }
+        if let Ok(win) = std::env::var("WINDIR")      { s = replace_var_token(&s, "WINDIR", &win); }
     }
     s
 }
 
 fn unresolved_token(value: &str) -> Option<String> {
+    let bytes = value.as_bytes();
+    let mut i = 0usize;
+    while i + 3 < bytes.len() {
+        if bytes[i] == b'{' && bytes[i + 1] == b'{' {
+            let start = i;
+            i += 2;
+            let mut end = i;
+            while end < bytes.len() {
+                let c = bytes[end] as char;
+                if c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_' {
+                    end += 1;
+                } else {
+                    break;
+                }
+            }
+            if end + 1 < bytes.len() && bytes[end] == b'}' && bytes[end + 1] == b'}' && end > i {
+                return Some(value[start..end + 2].to_string());
+            }
+        }
+        i += 1;
+    }
+
     let bytes = value.as_bytes();
     let mut i = 0usize;
     while i < bytes.len() {
@@ -920,6 +947,12 @@ fn unresolved_token(value: &str) -> Option<String> {
         i += 1;
     }
     None
+}
+
+fn replace_var_token(input: &str, key: &str, value: &str) -> String {
+    let token_dollar = format!("${}", key);
+    let token_template = format!("{{{{{}}}}}", key);
+    input.replace(&token_dollar, value).replace(&token_template, value)
 }
 
 fn init_file_logger(ctx: &InstallContext) -> Option<FileLogger> {

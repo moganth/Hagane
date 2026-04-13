@@ -698,7 +698,7 @@ where
     for step in &manifest.steps {
         match step {
             engine::parser::schema::InstallStep::Registry(r) => {
-                let resolved_key = resolve_uninstall_var_string(&r.key, manifest, &install_dir);
+                let resolved_key = resolve_uninstall_var_string(&r.key, manifest, &install_dir).replace('/', "\\");
                 if matches!(r.operation, engine::parser::schema::RegistryOperation::Write)
                     && resolved_key.contains("CurrentVersion\\Uninstall\\")
                 {
@@ -708,7 +708,7 @@ where
                 }
             }
             engine::parser::schema::InstallStep::RegisterUninstall(r) => {
-                let resolved_key = resolve_uninstall_var_string(&r.key, manifest, &install_dir);
+                let resolved_key = resolve_uninstall_var_string(&r.key, manifest, &install_dir).replace('/', "\\");
                 let _ = Command::new("reg")
                     .args(["delete", &format!("{}\\{}", r.hive, resolved_key), "/f"])
                     .status();
@@ -722,7 +722,7 @@ where
 
     for step in &manifest.steps {
         if let engine::parser::schema::InstallStep::RegisterApp(r) = step {
-            let resolved_key = resolve_uninstall_var_string(&r.key, manifest, &install_dir);
+            let resolved_key = resolve_uninstall_var_string(&r.key, manifest, &install_dir).replace('/', "\\");
             let _ = Command::new("reg")
                 .args(["delete", &format!("{}\\{}", r.hive, resolved_key), "/f"])
                 .status();
@@ -730,7 +730,7 @@ where
     }
 
     if let Some(app_key) = &manifest.app.registry_key {
-        let resolved_app_key = resolve_uninstall_var_string(app_key, manifest, &install_dir);
+        let resolved_app_key = resolve_uninstall_var_string(app_key, manifest, &install_dir).replace('/', "\\");
         let full_key = format!("SOFTWARE\\{}", resolved_app_key);
         let _ = Command::new("reg")
             .args(["delete", &format!("HKLM\\{}", full_key), "/f"])
@@ -1044,8 +1044,10 @@ fn resolve_uninstall_var_string(
                 if normalized.is_empty() {
                     continue;
                 }
-                let token = format!("${}", normalized);
-                s = s.replace(&token, value);
+                let token_dollar = format!("${}", normalized);
+                let token_template = format!("{{{{{}}}}}", normalized);
+                s = s.replace(&token_dollar, value);
+                s = s.replace(&token_template, value);
             }
         }
         if s == before {
@@ -1053,20 +1055,34 @@ fn resolve_uninstall_var_string(
         }
     }
 
-    s = s.replace("$INSTDIR", &install_dir.to_string_lossy());
-    s = s.replace(
-        "$PROGRAMFILES64",
-        &std::env::var("ProgramW6432")
-            .or_else(|_| std::env::var("ProgramFiles"))
-            .unwrap_or_else(|_| "C:\\Program Files".to_string()),
-    );
-    s = s.replace(
-        "$PROGRAMFILES",
-        &std::env::var("ProgramFiles").unwrap_or_else(|_| "C:\\Program Files".to_string()),
-    );
-    s = s.replace("$APPDATA", &std::env::var("APPDATA").unwrap_or_default());
-    s = s.replace("$LOCALAPPDATA", &std::env::var("LOCALAPPDATA").unwrap_or_default());
-    s = s.replace("$TEMP", &std::env::var("TEMP").unwrap_or_default());
-    s = s.replace("$WINDIR", &std::env::var("WINDIR").unwrap_or_default());
+    let install_dir_s = install_dir.to_string_lossy().to_string();
+    s = s.replace("$INSTDIR", &install_dir_s);
+    s = s.replace("{{INSTDIR}}", &install_dir_s);
+
+    let pf64 = std::env::var("ProgramW6432")
+        .or_else(|_| std::env::var("ProgramFiles"))
+        .unwrap_or_else(|_| "C:\\Program Files".to_string());
+    s = s.replace("$PROGRAMFILES64", &pf64);
+    s = s.replace("{{PROGRAMFILES64}}", &pf64);
+
+    let pf = std::env::var("ProgramFiles").unwrap_or_else(|_| "C:\\Program Files".to_string());
+    s = s.replace("$PROGRAMFILES", &pf);
+    s = s.replace("{{PROGRAMFILES}}", &pf);
+
+    let appdata = std::env::var("APPDATA").unwrap_or_default();
+    s = s.replace("$APPDATA", &appdata);
+    s = s.replace("{{APPDATA}}", &appdata);
+
+    let local = std::env::var("LOCALAPPDATA").unwrap_or_default();
+    s = s.replace("$LOCALAPPDATA", &local);
+    s = s.replace("{{LOCALAPPDATA}}", &local);
+
+    let temp = std::env::var("TEMP").unwrap_or_default();
+    s = s.replace("$TEMP", &temp);
+    s = s.replace("{{TEMP}}", &temp);
+
+    let windir = std::env::var("WINDIR").unwrap_or_default();
+    s = s.replace("$WINDIR", &windir);
+    s = s.replace("{{WINDIR}}", &windir);
     s
 }
