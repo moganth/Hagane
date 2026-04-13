@@ -13,6 +13,7 @@ Cargo.lock
 
 # Generated installer embed payload
 /runner/src/generated/embedded.rs
+/hagane/generated/embedded.rs
 /hagane/payload/runtime/
 
 # Local Python virtual env / cache
