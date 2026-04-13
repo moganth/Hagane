@@ -11,8 +11,9 @@ use engine::{
     state::{InstallProgress, InstallerState, Page},
 };
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     path::PathBuf,
+    process::Command,
     sync::{Arc, Mutex},
 };
 
@@ -291,6 +292,7 @@ fn handle_message(
                                 archives: (*archives_clone).clone(),
                                 backup_dir: std::env::temp_dir().join("installer_backup"),
                                 logging: manifest_clone.logging.clone(),
+                                variables: manifest_clone.variables.clone().unwrap_or_default(),
                             };
 
                             let mut runner = StepRunner::new(ctx);
@@ -337,6 +339,45 @@ fn handle_message(
 
             // On terminal pages, Next should close the installer.
             if matches!(st.current_page(), engine::state::Page::Finish | engine::state::Page::Error) {
+                if matches!(st.current_page(), engine::state::Page::Finish)
+                    && st.install_succeeded == Some(true)
+                    && !st.is_uninstall
+                {
+                    let install_dir = PathBuf::from(&st.install_dir);
+                    let selected_components = st.selected_components.clone();
+
+                    if !st.create_desktop_shortcut {
+                        if let Err(e) = remove_desktop_shortcuts_from_manifest(
+                            manifest,
+                            &install_dir,
+                            &selected_components,
+                        ) {
+                            log::warn!("Failed to apply finish-page desktop shortcut option: {}", e);
+                        }
+                    }
+
+                    if st.launch_app {
+                        if let Some(launch) = build_launch_command(manifest, &install_dir, &selected_components) {
+                            let mut cmd = Command::new(&launch.executable);
+                            if let Some(args) = &launch.arguments {
+                                if !args.trim().is_empty() {
+                                    cmd.arg(args);
+                                }
+                            }
+                            if let Some(work_dir) = &launch.working_dir {
+                                if !work_dir.trim().is_empty() {
+                                    cmd.current_dir(work_dir);
+                                }
+                            }
+                            if let Err(e) = cmd.spawn() {
+                                log::warn!("Failed to launch '{}' from finish page: {}", launch.executable, e);
+                            }
+                        } else {
+                            log::warn!("Finish-page launch requested but no launchable executable was found.");
+                        }
+                    }
+                }
+
                 drop(st);
                 unsafe { windows::Win32::UI::WindowsAndMessaging::PostQuitMessage(0); }
                 return;
@@ -468,6 +509,7 @@ fn run_silent(
         archives,
         backup_dir: std::env::temp_dir().join("installer_backup"),
         logging: manifest.logging.clone(),
+        variables: manifest.variables.clone().unwrap_or_default(),
     };
 
     let mut runner = StepRunner::new(ctx);
@@ -634,8 +676,6 @@ where
     F: FnMut(usize, usize, &str),
 {
     use std::collections::HashMap;
-    use std::collections::HashSet;
-    use std::process::Command;
 
     let current_exe = std::env::current_exe().context("Unable to locate uninstaller executable")?;
     log::info!("Uninstall mode — {}", manifest.app.name);
@@ -648,7 +688,7 @@ where
         .map(|s| !s.is_empty())
         .unwrap_or(false);
 
-    let total_steps = if has_extra_steps { 6 } else { 5 };
+    let total_steps = if has_extra_steps { 7 } else { 6 };
     let mut step_no = 1usize;
 
     progress(step_no, total_steps, "Removing uninstall registry entries");
@@ -656,14 +696,24 @@ where
 
     // Best-effort cleanup of known registry locations defined by manifest.
     for step in &manifest.steps {
-        if let engine::parser::schema::InstallStep::Registry(r) = step {
-            if matches!(r.operation, engine::parser::schema::RegistryOperation::Write)
-                && r.key.contains("CurrentVersion\\Uninstall\\")
-            {
+        match step {
+            engine::parser::schema::InstallStep::Registry(r) => {
+                let resolved_key = resolve_uninstall_var_string(&r.key, manifest, &install_dir);
+                if matches!(r.operation, engine::parser::schema::RegistryOperation::Write)
+                    && resolved_key.contains("CurrentVersion\\Uninstall\\")
+                {
+                    let _ = Command::new("reg")
+                        .args(["delete", &format!("{}\\{}", r.hive, resolved_key), "/f"])
+                        .status();
+                }
+            }
+            engine::parser::schema::InstallStep::RegisterUninstall(r) => {
+                let resolved_key = resolve_uninstall_var_string(&r.key, manifest, &install_dir);
                 let _ = Command::new("reg")
-                    .args(["delete", &format!("{}\\{}", r.hive, r.key), "/f"])
+                    .args(["delete", &format!("{}\\{}", r.hive, resolved_key), "/f"])
                     .status();
             }
+            _ => {}
         }
     }
 
@@ -671,7 +721,8 @@ where
     step_no += 1;
 
     if let Some(app_key) = &manifest.app.registry_key {
-        let full_key = format!("SOFTWARE\\{}", app_key);
+        let resolved_app_key = resolve_uninstall_var_string(app_key, manifest, &install_dir);
+        let full_key = format!("SOFTWARE\\{}", resolved_app_key);
         let _ = Command::new("reg")
             .args(["delete", &format!("HKLM\\{}", full_key), "/f"])
             .status();
@@ -679,6 +730,10 @@ where
             .args(["delete", &format!("HKCU\\{}", full_key), "/f"])
             .status();
     }
+
+    progress(step_no, total_steps, "Removing shortcuts");
+    step_no += 1;
+    remove_all_manifest_shortcuts(manifest, &install_dir);
 
     if let Some(extra_steps) = manifest.uninstall.as_ref().and_then(|u| u.extra_steps.as_ref()) {
         if !extra_steps.is_empty() {
@@ -690,6 +745,7 @@ where
                 archives: HashMap::new(),
                 backup_dir: std::env::temp_dir().join("uninstall_backup"),
                 logging: manifest.logging.clone(),
+                variables: manifest.variables.clone().unwrap_or_default(),
             };
             let mut runner = StepRunner::new(ctx);
             runner.run_all(extra_steps, |_step, _total, _label| {})?;
@@ -803,4 +859,205 @@ fn open_external_url(url: &str) {
             SW_SHOWNORMAL,
         );
     }
+}
+
+#[cfg(windows)]
+struct LaunchCommand {
+    executable: String,
+    arguments: Option<String>,
+    working_dir: Option<String>,
+}
+
+#[cfg(windows)]
+fn build_launch_command(
+    manifest: &engine::parser::schema::InstallerManifest,
+    install_dir: &PathBuf,
+    selected_components: &HashSet<String>,
+) -> Option<LaunchCommand> {
+    for step in &manifest.steps {
+        if let engine::parser::schema::InstallStep::Shortcut(s) = step {
+            if !component_is_selected(&s.component, selected_components) {
+                continue;
+            }
+
+            let target = resolve_uninstall_var_string(&s.target, manifest, install_dir);
+            if !target.to_ascii_lowercase().ends_with(".exe") {
+                continue;
+            }
+
+            let args = s
+                .arguments
+                .as_ref()
+                .map(|a| resolve_uninstall_var_string(a, manifest, install_dir));
+            let work_dir = s
+                .working_dir
+                .as_ref()
+                .map(|w| resolve_uninstall_var_string(w, manifest, install_dir));
+
+            return Some(LaunchCommand {
+                executable: target,
+                arguments: args,
+                working_dir: work_dir,
+            });
+        }
+    }
+
+    let default_exe = install_dir.join(format!("{}.exe", manifest.app.name));
+    if default_exe.exists() {
+        return Some(LaunchCommand {
+            executable: default_exe.to_string_lossy().to_string(),
+            arguments: None,
+            working_dir: Some(install_dir.to_string_lossy().to_string()),
+        });
+    }
+
+    None
+}
+
+#[cfg(windows)]
+fn remove_desktop_shortcuts_from_manifest(
+    manifest: &engine::parser::schema::InstallerManifest,
+    install_dir: &PathBuf,
+    selected_components: &HashSet<String>,
+) -> Result<()> {
+    for step in &manifest.steps {
+        if let engine::parser::schema::InstallStep::Shortcut(s) = step {
+            if !matches!(s.location, engine::parser::schema::ShortcutLocation::Desktop) {
+                continue;
+            }
+            if !component_is_selected(&s.component, selected_components) {
+                continue;
+            }
+
+            if let Some(path) = manifest_shortcut_path(s, manifest, install_dir) {
+                let _ = std::fs::remove_file(path);
+            }
+        }
+    }
+    Ok(())
+}
+
+#[cfg(windows)]
+fn remove_all_manifest_shortcuts(
+    manifest: &engine::parser::schema::InstallerManifest,
+    install_dir: &PathBuf,
+) {
+    for step in &manifest.steps {
+        if let engine::parser::schema::InstallStep::Shortcut(s) = step {
+            if let Some(path) = manifest_shortcut_path(s, manifest, install_dir) {
+                let _ = std::fs::remove_file(path);
+            }
+        }
+    }
+}
+
+#[cfg(windows)]
+fn manifest_shortcut_path(
+    step: &engine::parser::schema::ShortcutStep,
+    manifest: &engine::parser::schema::InstallerManifest,
+    install_dir: &PathBuf,
+) -> Option<PathBuf> {
+    let location = shortcut_location_path(&step.location, manifest, install_dir)?;
+    let resolved_name = resolve_uninstall_var_string(&step.name, manifest, install_dir);
+    Some(location.join(format!("{}.lnk", resolved_name)))
+}
+
+#[cfg(windows)]
+fn shortcut_location_path(
+    location: &engine::parser::schema::ShortcutLocation,
+    manifest: &engine::parser::schema::InstallerManifest,
+    install_dir: &PathBuf,
+) -> Option<PathBuf> {
+    match location {
+        engine::parser::schema::ShortcutLocation::Desktop => known_folder_path("Desktop"),
+        engine::parser::schema::ShortcutLocation::StartMenu => known_folder_path("StartMenu"),
+        engine::parser::schema::ShortcutLocation::Startup => known_folder_path("Startup"),
+        engine::parser::schema::ShortcutLocation::Custom(path) => {
+            Some(PathBuf::from(resolve_uninstall_var_string(path, manifest, install_dir)))
+        }
+    }
+}
+
+#[cfg(windows)]
+fn known_folder_path(name: &str) -> Option<PathBuf> {
+    use windows::Win32::UI::Shell::SHGetKnownFolderPath;
+    use windows::core::GUID;
+
+    let guid: GUID = match name {
+        "Desktop" => GUID::from_values(
+            0xB4BFCC3A,
+            0xDB2C,
+            0x424C,
+            [0xB0, 0x29, 0x7F, 0xE9, 0x9A, 0x87, 0xC6, 0x41],
+        ),
+        "StartMenu" => GUID::from_values(
+            0x625B53C3,
+            0xAB48,
+            0x4EC1,
+            [0xBA, 0x1F, 0xA1, 0xEF, 0x41, 0x46, 0xFC, 0x19],
+        ),
+        "Startup" => GUID::from_values(
+            0xB97D20BB,
+            0xF46A,
+            0x4C97,
+            [0xBA, 0x10, 0x5E, 0x36, 0x08, 0x43, 0x08, 0x54],
+        ),
+        _ => return None,
+    };
+
+    unsafe {
+        SHGetKnownFolderPath(&guid, Default::default(), None)
+            .ok()
+            .map(|p| PathBuf::from(p.to_string().unwrap_or_default()))
+    }
+}
+
+#[cfg(windows)]
+fn component_is_selected(component: &Option<String>, selected_components: &HashSet<String>) -> bool {
+    component
+        .as_ref()
+        .map(|id| selected_components.contains(id))
+        .unwrap_or(true)
+}
+
+fn resolve_uninstall_var_string(
+    input: &str,
+    manifest: &engine::parser::schema::InstallerManifest,
+    install_dir: &PathBuf,
+) -> String {
+    let mut s = input.to_string();
+
+    for _ in 0..10 {
+        let before = s.clone();
+        if let Some(vars) = &manifest.variables {
+            for (key, value) in vars {
+                let normalized = key.trim().trim_start_matches('$');
+                if normalized.is_empty() {
+                    continue;
+                }
+                let token = format!("${}", normalized);
+                s = s.replace(&token, value);
+            }
+        }
+        if s == before {
+            break;
+        }
+    }
+
+    s = s.replace("$INSTDIR", &install_dir.to_string_lossy());
+    s = s.replace(
+        "$PROGRAMFILES64",
+        &std::env::var("ProgramW6432")
+            .or_else(|_| std::env::var("ProgramFiles"))
+            .unwrap_or_else(|_| "C:\\Program Files".to_string()),
+    );
+    s = s.replace(
+        "$PROGRAMFILES",
+        &std::env::var("ProgramFiles").unwrap_or_else(|_| "C:\\Program Files".to_string()),
+    );
+    s = s.replace("$APPDATA", &std::env::var("APPDATA").unwrap_or_default());
+    s = s.replace("$LOCALAPPDATA", &std::env::var("LOCALAPPDATA").unwrap_or_default());
+    s = s.replace("$TEMP", &std::env::var("TEMP").unwrap_or_default());
+    s = s.replace("$WINDIR", &std::env::var("WINDIR").unwrap_or_default());
+    s
 }

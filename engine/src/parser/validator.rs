@@ -5,6 +5,7 @@ use crate::parser::schema::{InstallerManifest, PageType, InstallStep};
 /// Returns Ok(()) or a descriptive error.
 pub fn validate(manifest: &InstallerManifest) -> Result<()> {
     validate_app(manifest)?;
+    validate_variables(manifest)?;
     validate_pages(manifest)?;
     validate_components(manifest)?;
     validate_steps(manifest)?;
@@ -22,6 +23,50 @@ fn validate_app(manifest: &InstallerManifest) -> Result<()> {
     if app.publisher.trim().is_empty() {
         bail!("HG-YAML-001: app.publisher must not be empty");
     }
+    Ok(())
+}
+
+fn validate_variables(manifest: &InstallerManifest) -> Result<()> {
+    let Some(vars) = &manifest.variables else { return Ok(()); };
+
+    let reserved = [
+        "INSTDIR",
+        "PROGRAMFILES",
+        "PROGRAMFILES64",
+        "APPDATA",
+        "LOCALAPPDATA",
+        "TEMP",
+        "WINDIR",
+    ];
+
+    for key in vars.keys() {
+        let trimmed = key.trim();
+        if trimmed.is_empty() {
+            bail!("HG-YAML-001: variables keys must not be empty");
+        }
+
+        let normalized = trimmed.trim_start_matches('$');
+        if normalized.is_empty() {
+            bail!("HG-YAML-001: variables key '{}' is invalid", key);
+        }
+        if reserved.contains(&normalized) {
+            bail!(
+                "HG-YAML-001: variables key '{}' attempts to override reserved variable '${}'",
+                key,
+                normalized
+            );
+        }
+        if !normalized
+            .chars()
+            .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_')
+        {
+            bail!(
+                "HG-YAML-001: variables key '{}' is invalid. Use only A-Z, 0-9, and '_' (optionally prefixed with '$')",
+                key
+            );
+        }
+    }
+
     Ok(())
 }
 
@@ -61,16 +106,19 @@ fn validate_components(manifest: &InstallerManifest) -> Result<()> {
 }
 
 fn validate_steps(manifest: &InstallerManifest) -> Result<()> {
-    let has_log_file_step = manifest.steps.iter().any(|s| matches!(s, InstallStep::LogFile(_)));
-    if has_log_file_step {
+    let has_file_logging_step = manifest
+        .steps
+        .iter()
+        .any(|s| matches!(s, InstallStep::LogFile(_) | InstallStep::LogBoth(_)));
+    if has_file_logging_step {
         let Some(logging) = &manifest.logging else {
-            bail!("HG-YAML-001: 'logging' block is required when using action 'log_file'");
+            bail!("HG-YAML-001: 'logging' block is required when using action 'log_file' or 'log_both'");
         };
         if logging.path.as_deref().unwrap_or(" ").trim().is_empty() {
-            bail!("HG-YAML-001: logging.path must be set when using action 'log_file'");
+            bail!("HG-YAML-001: logging.path must be set when using action 'log_file' or 'log_both'");
         }
         if logging.file_name.as_deref().unwrap_or(" ").trim().is_empty() {
-            bail!("HG-YAML-001: logging.file_name must be set when using action 'log_file'");
+            bail!("HG-YAML-001: logging.file_name must be set when using action 'log_file' or 'log_both'");
         }
     }
 
@@ -86,10 +134,54 @@ fn validate_steps(manifest: &InstallerManifest) -> Result<()> {
                     bail!("HG-YAML-001: Step {} action 'log_file' requires a non-empty message", i);
                 }
             }
+            InstallStep::LogBoth(s) => {
+                if s.message.trim().is_empty() {
+                    bail!("HG-YAML-001: Step {} action 'log_both' requires a non-empty message", i);
+                }
+            }
             InstallStep::Registry(r) => {
                 let valid_hives = ["HKLM", "HKCU", "HKCR", "HKU", "HKCC"];
                 if !valid_hives.contains(&r.hive.as_str()) {
                     bail!("HG-YAML-001: Step {} invalid registry hive '{}'. Must be one of: {:?}", i, r.hive, valid_hives);
+                }
+            }
+            InstallStep::RegisterUninstall(r) => {
+                let valid_hives = ["HKLM", "HKCU", "HKCR", "HKU", "HKCC"];
+                if !valid_hives.contains(&r.hive.as_str()) {
+                    bail!("HG-YAML-001: Step {} invalid register_uninstall hive '{}'. Must be one of: {:?}", i, r.hive, valid_hives);
+                }
+                if r.key.trim().is_empty() {
+                    bail!("HG-YAML-001: Step {} action 'register_uninstall' requires non-empty key", i);
+                }
+                if r.display_name.trim().is_empty() {
+                    bail!("HG-YAML-001: Step {} action 'register_uninstall' requires non-empty display_name/name", i);
+                }
+                if r.display_version.trim().is_empty() {
+                    bail!("HG-YAML-001: Step {} action 'register_uninstall' requires non-empty display_version/version", i);
+                }
+                if r.publisher.trim().is_empty() {
+                    bail!("HG-YAML-001: Step {} action 'register_uninstall' requires non-empty publisher", i);
+                }
+                if r.install_location.trim().is_empty() {
+                    bail!("HG-YAML-001: Step {} action 'register_uninstall' requires non-empty install_location/inst_loc", i);
+                }
+                if r.uninstall_string.trim().is_empty() {
+                    bail!("HG-YAML-001: Step {} action 'register_uninstall' requires non-empty uninstall_string/uninstall", i);
+                }
+            }
+            InstallStep::RegisterApp(r) => {
+                let valid_hives = ["HKLM", "HKCU", "HKCR", "HKU", "HKCC"];
+                if !valid_hives.contains(&r.hive.as_str()) {
+                    bail!("HG-YAML-001: Step {} invalid register_app hive '{}'. Must be one of: {:?}", i, r.hive, valid_hives);
+                }
+                if r.key.trim().is_empty() {
+                    bail!("HG-YAML-001: Step {} action 'register_app' requires non-empty key", i);
+                }
+                if r.install_location.trim().is_empty() {
+                    bail!("HG-YAML-001: Step {} action 'register_app' requires non-empty install_location/inst_loc", i);
+                }
+                if r.version.trim().is_empty() {
+                    bail!("HG-YAML-001: Step {} action 'register_app' requires non-empty version", i);
                 }
             }
             InstallStep::EnvVar(e) => {

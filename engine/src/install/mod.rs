@@ -6,9 +6,12 @@ pub mod services;
 pub mod shortcuts;
 
 use anyhow::{Context, Result};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use crate::parser::schema::{InstallStep, LogLevel, LoggingConfig, LoggingMode, RunPowerShellStep};
+use crate::parser::schema::{
+    InstallStep, LogLevel, LoggingConfig, LoggingMode, RegisterAppStep, RegisterUninstallStep, RegistryOperation,
+    RegistryValueType, RunPowerShellStep,
+};
 use rollback::RollbackJournal;
 
 pub struct InstallContext {
@@ -22,6 +25,8 @@ pub struct InstallContext {
     pub backup_dir: PathBuf,
     /// Optional logging configuration from manifest
     pub logging: Option<LoggingConfig>,
+    /// User-declared manifest variables
+    pub variables: HashMap<String, String>,
 }
 
 pub struct StepRunner {
@@ -127,6 +132,17 @@ impl StepRunner {
                 self.write_log_file(s.level.clone().unwrap_or(LogLevel::Info), &msg)?;
             }
 
+            InstallStep::LogBoth(s) => {
+                let msg = self.resolve_vars(&s.message);
+                let level = s.level.clone().unwrap_or(LogLevel::Info);
+                match level {
+                    LogLevel::Info => log::info!("{}", msg),
+                    LogLevel::Warn => log::warn!("{}", msg),
+                    LogLevel::Error => log::error!("{}", msg),
+                }
+                self.write_log_file(level, &msg)?;
+            }
+
             InstallStep::Registry(s) => {
                 let resolved_value_data = s.value_data.as_ref().map(|v| self.resolve_value_data(v));
                 registry_ops::apply_registry_step(
@@ -138,6 +154,14 @@ impl StepRunner {
                     resolved_value_data.as_ref(),
                     &mut self.journal,
                 )?;
+            }
+
+            InstallStep::RegisterUninstall(s) => {
+                self.apply_register_uninstall_step(s)?;
+            }
+
+            InstallStep::RegisterApp(s) => {
+                self.apply_register_app_step(s)?;
             }
 
             InstallStep::Shortcut(s) => {
@@ -211,6 +235,7 @@ impl StepRunner {
         }
         match step {
             InstallStep::LogUi(s) => self.resolve_vars(&s.message),
+            InstallStep::LogBoth(s) => self.resolve_vars(&s.message),
             _ => String::new(),
         }
     }
@@ -317,7 +342,7 @@ impl StepRunner {
     /// Resolve installer variables in a string:
     /// $INSTDIR, $PROGRAMFILES, $PROGRAMFILES64, $APPDATA, $LOCALAPPDATA, $TEMP, $WINDIR
     pub fn resolve_vars(&self, input: &str) -> String {
-        resolve_vars_with_install_dir(input, &self.ctx.install_dir)
+        resolve_vars_with_install_dir(input, &self.ctx.install_dir, &self.ctx.variables)
     }
 
     fn resolve_vars_path(&self, input: &str) -> Result<String> {
@@ -431,6 +456,48 @@ impl StepRunner {
                     )
                 }
             }
+            InstallStep::RegisterUninstall(s) => {
+                let likely_hklm_permission = s.hive == "HKLM"
+                    && (lower.contains("regcreatekeyexw failed") || lower.contains("regopenkeyexw failed"));
+                if permission_related || likely_hklm_permission {
+                    (
+                        "HG-REG-002",
+                        "key",
+                        format!("{}\\{}", s.hive, s.key),
+                        first_reason_line(&raw),
+                        "Registry write requires elevated permission. Run installer as Administrator or use HKCU for user-scope settings.",
+                    )
+                } else {
+                    (
+                        "HG-REG-001",
+                        "key",
+                        format!("{}\\{}", s.hive, s.key),
+                        first_reason_line(&raw),
+                        "Validate register_app key and values, and ensure the registry path is valid.",
+                    )
+                }
+            }
+            InstallStep::RegisterApp(s) => {
+                let likely_hklm_permission = s.hive == "HKLM"
+                    && (lower.contains("regcreatekeyexw failed") || lower.contains("regopenkeyexw failed"));
+                if permission_related || likely_hklm_permission {
+                    (
+                        "HG-REG-002",
+                        "key",
+                        format!("{}\\{}", s.hive, s.key),
+                        first_reason_line(&raw),
+                        "Registry write requires elevated permission. Run installer as Administrator or use HKCU for user-scope settings.",
+                    )
+                } else {
+                    (
+                        "HG-REG-001",
+                        "key",
+                        format!("{}\\{}", s.hive, s.key),
+                        first_reason_line(&raw),
+                        "Validate register_app key and values, and ensure the registry path is valid.",
+                    )
+                }
+            }
             InstallStep::EnvVar(s) => (
                 "HG-ENV-001",
                 "operation",
@@ -514,6 +581,79 @@ impl StepRunner {
 
     pub fn into_journal(self) -> RollbackJournal {
         self.journal
+    }
+
+    fn apply_register_uninstall_step(&mut self, step: &RegisterUninstallStep) -> Result<()> {
+        let key = self.resolve_vars_path(&step.key)?;
+
+        let display_name = serde_json::Value::String(self.resolve_vars(&step.display_name));
+        let display_version = serde_json::Value::String(self.resolve_vars(&step.display_version));
+        let publisher = serde_json::Value::String(self.resolve_vars(&step.publisher));
+        let install_location = serde_json::Value::String(self.resolve_vars_path(&step.install_location)?);
+        let uninstall_string = serde_json::Value::String(self.resolve_vars_path(&step.uninstall_string)?);
+
+        let write = |value_name: &str,
+                     value_type: RegistryValueType,
+                     value_data: &serde_json::Value,
+                     journal: &mut RollbackJournal|
+         -> Result<()> {
+            registry_ops::apply_registry_step(
+                &RegistryOperation::Write,
+                &step.hive,
+                &key,
+                Some(value_name),
+                Some(&value_type),
+                Some(value_data),
+                journal,
+            )
+        };
+
+        write("DisplayName", RegistryValueType::Sz, &display_name, &mut self.journal)?;
+        write("DisplayVersion", RegistryValueType::Sz, &display_version, &mut self.journal)?;
+        write("Publisher", RegistryValueType::Sz, &publisher, &mut self.journal)?;
+        write("InstallLocation", RegistryValueType::Sz, &install_location, &mut self.journal)?;
+        write("UninstallString", RegistryValueType::Sz, &uninstall_string, &mut self.journal)?;
+
+        if let Some(kb) = step.estimated_size_kb {
+            let v = serde_json::Value::Number(serde_json::Number::from(kb));
+            write("EstimatedSize", RegistryValueType::Dword, &v, &mut self.journal)?;
+        }
+
+        let no_modify = serde_json::Value::Number(serde_json::Number::from(if step.no_modify { 1 } else { 0 }));
+        write("NoModify", RegistryValueType::Dword, &no_modify, &mut self.journal)?;
+
+        let no_repair = serde_json::Value::Number(serde_json::Number::from(if step.no_repair { 1 } else { 0 }));
+        write("NoRepair", RegistryValueType::Dword, &no_repair, &mut self.journal)?;
+
+        Ok(())
+    }
+
+    fn apply_register_app_step(&mut self, step: &RegisterAppStep) -> Result<()> {
+        let key = self.resolve_vars_path(&step.key)?;
+
+        let install_location = serde_json::Value::String(self.resolve_vars_path(&step.install_location)?);
+        registry_ops::apply_registry_step(
+            &RegistryOperation::Write,
+            &step.hive,
+            &key,
+            Some("InstallDir"),
+            Some(&RegistryValueType::Sz),
+            Some(&install_location),
+            &mut self.journal,
+        )?;
+
+        let version = serde_json::Value::String(self.resolve_vars(&step.version));
+        registry_ops::apply_registry_step(
+            &RegistryOperation::Write,
+            &step.hive,
+            &key,
+            Some("Version"),
+            Some(&RegistryValueType::Sz),
+            Some(&version),
+            &mut self.journal,
+        )?;
+
+        Ok(())
     }
 }
 
@@ -685,7 +825,10 @@ fn step_label(step: &InstallStep) -> String {
         InstallStep::CreateDir(s)     => format!("Creating directory {}", s.path),
         InstallStep::LogUi(s)         => s.message.clone(),
         InstallStep::LogFile(_)       => "Writing installer log".to_string(),
-        InstallStep::Registry(s)      => format!("Writing registry {}\\{}", s.hive, s.key),
+        InstallStep::LogBoth(s)       => s.message.clone(),
+        InstallStep::Registry(s)          => format!("Writing registry {}\\{}", s.hive, s.key),
+        InstallStep::RegisterUninstall(s) => format!("Registering uninstall entry {}\\{}", s.hive, s.key),
+        InstallStep::RegisterApp(s)       => format!("Registering app settings {}\\{}", s.hive, s.key),
         InstallStep::Shortcut(s)      => format!("Creating shortcut '{}'", s.name),
         InstallStep::EnvVar(s)        => format!("Setting environment variable {}", s.name),
         InstallStep::Service(s)       => format!("Service: {:?} '{}'", s.operation, s.name),
@@ -703,7 +846,10 @@ fn step_action(step: &InstallStep) -> &'static str {
         InstallStep::CreateDir(_) => "create_dir",
         InstallStep::LogUi(_) => "log_ui",
         InstallStep::LogFile(_) => "log_file",
+        InstallStep::LogBoth(_) => "log_both",
         InstallStep::Registry(_) => "registry",
+        InstallStep::RegisterUninstall(_) => "register_uninstall",
+        InstallStep::RegisterApp(_) => "register_app",
         InstallStep::Shortcut(_) => "shortcut",
         InstallStep::EnvVar(_) => "env_var",
         InstallStep::Service(_) => "service",
@@ -713,13 +859,36 @@ fn step_action(step: &InstallStep) -> &'static str {
     }
 }
 
-fn resolve_vars_with_install_dir(input: &str, install_dir: &Path) -> String {
-    let mut s = input.replace("$INSTDIR", &install_dir.to_string_lossy());
+fn resolve_vars_with_install_dir(
+    input: &str,
+    install_dir: &Path,
+    declared_vars: &HashMap<String, String>,
+) -> String {
+    let mut s = input.to_string();
+
+    // Resolve user-declared variables first so they can still contain built-ins
+    // that are substituted in the next pass.
+    for _ in 0..10 {
+        let before = s.clone();
+        for (key, value) in declared_vars {
+            if let Some(normalized) = normalize_declared_var_key(key) {
+                let token = format!("${}", normalized);
+                s = s.replace(&token, value);
+            }
+        }
+        if s == before {
+            break;
+        }
+    }
+
+    // Resolve install dir after declared variables so values like
+    // LOG_DIR="$INSTDIR\\logs" expand correctly.
+    s = s.replace("$INSTDIR", &install_dir.to_string_lossy());
 
     #[cfg(windows)]
     {
-        if let Ok(pf) = std::env::var("ProgramFiles") { s = s.replace("$PROGRAMFILES", &pf); }
         if let Ok(pf64) = std::env::var("ProgramW6432") { s = s.replace("$PROGRAMFILES64", &pf64); }
+        if let Ok(pf) = std::env::var("ProgramFiles") { s = s.replace("$PROGRAMFILES", &pf); }
         if let Ok(ad) = std::env::var("APPDATA")      { s = s.replace("$APPDATA", &ad); }
         if let Ok(la) = std::env::var("LOCALAPPDATA") { s = s.replace("$LOCALAPPDATA", &la); }
         if let Ok(tmp) = std::env::var("TEMP")        { s = s.replace("$TEMP", &tmp); }
@@ -758,7 +927,7 @@ fn init_file_logger(ctx: &InstallContext) -> Option<FileLogger> {
     let path_raw = config.path.as_ref()?;
     let file_name = config.file_name.as_ref()?;
 
-    let dir = PathBuf::from(resolve_vars_with_install_dir(path_raw, &ctx.install_dir));
+    let dir = PathBuf::from(resolve_vars_with_install_dir(path_raw, &ctx.install_dir, &ctx.variables));
     let mut file_path = dir.clone();
     file_path.push(file_name);
 
@@ -785,4 +954,16 @@ fn first_reason_line(raw: &str) -> String {
 
 fn looks_like_file_path(value: &str) -> bool {
     value.contains('\\') || value.contains('/') || value.contains(':') || value.starts_with('.')
+}
+
+fn normalize_declared_var_key(key: &str) -> Option<String> {
+    let trimmed = key.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    let normalized = trimmed.trim_start_matches('$');
+    if normalized.is_empty() {
+        return None;
+    }
+    Some(normalized.to_string())
 }
