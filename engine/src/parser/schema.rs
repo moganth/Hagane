@@ -26,6 +26,7 @@ pub struct LoggingConfig {
     pub file_name: Option<String>,
     pub timestamp: Option<bool>,
     pub include_raw_os_error: Option<bool>,
+    pub slow_step_warn_sec: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -218,9 +219,6 @@ pub enum InstallStep {
     CopyFile(CopyFileStep),
     DeleteFile(DeleteFileStep),
     CreateDir(CreateDirStep),
-    LogUi(LogUiStep),
-    LogFile(LogFileStep),
-    LogBoth(LogBothStep),
     Registry(RegistryStep),
     RegisterUninstall(RegisterUninstallStep),
     RegisterApp(RegisterAppStep),
@@ -234,21 +232,10 @@ pub enum InstallStep {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LogUiStep {
-    pub message: String,
-    pub level: Option<LogLevel>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LogFileStep {
-    pub message: String,
-    pub level: Option<LogLevel>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LogBothStep {
-    pub message: String,
-    pub level: Option<LogLevel>,
+pub struct InlineLogSpec {
+    pub both: Option<String>,
+    pub ui: Option<String>,
+    pub file: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -258,6 +245,7 @@ pub struct ExtractStep {
     pub destination: String,
     /// Only extract if this component id is selected
     pub component: Option<String>,
+    pub log: Option<InlineLogSpec>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -267,16 +255,19 @@ pub struct CopyFileStep {
     #[serde(default)]
     pub overwrite: bool,
     pub component: Option<String>,
+    pub log: Option<InlineLogSpec>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeleteFileStep {
     pub path: String,
+    pub log: Option<InlineLogSpec>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateDirStep {
     pub path: String,
+    pub log: Option<InlineLogSpec>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -288,6 +279,7 @@ pub struct RegistryStep {
     pub value_name: Option<String>,
     pub value_type: Option<RegistryValueType>,
     pub value_data: Option<serde_json::Value>,
+    pub log: Option<InlineLogSpec>,
 }
 
 /// High-level uninstall registration helper.
@@ -312,6 +304,7 @@ pub struct RegisterUninstallStep {
     pub no_modify: bool,
     #[serde(default = "default_true")]
     pub no_repair: bool,
+    pub log: Option<InlineLogSpec>,
 }
 
 /// High-level app registry helper.
@@ -324,6 +317,7 @@ pub struct RegisterAppStep {
     #[serde(alias = "inst_loc", alias = "Inst_loc")]
     pub install_location: String,
     pub version: String,
+    pub log: Option<InlineLogSpec>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -356,6 +350,7 @@ pub struct ShortcutStep {
     pub arguments: Option<String>,
     pub working_dir: Option<String>,
     pub component: Option<String>,
+    pub log: Option<InlineLogSpec>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -377,6 +372,7 @@ pub struct EnvVarStep {
     pub operation: String,
     /// Only apply this env var step if the given component id is selected
     pub component: Option<String>,
+    pub log: Option<InlineLogSpec>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -387,6 +383,7 @@ pub struct ServiceStep {
     pub executable: Option<String>,
     pub start_type: Option<String>,
     pub description: Option<String>,
+    pub log: Option<InlineLogSpec>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -406,6 +403,7 @@ pub struct RunProgramStep {
     #[serde(default = "default_true")]
     pub wait: bool,
     pub component: Option<String>,
+    pub log: Option<InlineLogSpec>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -422,11 +420,13 @@ pub struct RunPowerShellStep {
     /// Timeout in seconds for wait=true mode
     pub timeout_sec: Option<u64>,
     pub component: Option<String>,
+    pub log: Option<InlineLogSpec>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WriteUninstallerStep {
     pub path: String,
+    pub log: Option<InlineLogSpec>,
 }
 
 // ── Uninstall config ──────────────────────────────────────────────────────────

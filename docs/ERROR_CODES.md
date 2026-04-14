@@ -1,97 +1,72 @@
 # Hagane Installer Error Codes and Logging Guide
 
-This document defines the stable v1 error codes and how to use manual logging in `installer.yaml`.
+This document defines stable v1 error codes and logging behavior in `installer.yaml`.
 
 ## Goals
 
 - Show actionable install failures to users.
-- Keep installer logging manual and author-controlled.
+- Keep logging behavior deterministic across auto and manual modes.
 - Provide consistent error codes for support and troubleshooting.
 
-## Manual Logging and PowerShell
+## Logging Modes and PowerShell
 
-Hagane supports three logging/execution actions in `steps` and `uninstall.extra_steps`:
+Hagane supports inline step logging and PowerShell execution in `steps` and `uninstall.extra_steps`:
 
-- `log_ui`: writes a message to the installer progress log UI.
-- `log_file`: writes a message to the installer log file.
-- `log_both`: writes the same message to both installer progress UI and log file.
+- `log.ui`: writes a message to the installer progress log UI.
+- `log.file`: writes a message to the installer log file.
+- `log.both`: writes the same message to both installer progress UI and log file.
 - `run_powershell`: execute PowerShell scripts with error classification.
 
 ### Logging Configuration Block
 
-Add a top-level `logging` block. This block is **required** if any step uses the `log_file` or `log_both` action:
+Add a top-level `logging` block. This block is **required** if any step uses inline `log.file` or `log.both`:
 
 ```yaml
 logging:
-  mode: manual_only              # "auto" or "manual_only" (default: auto)
-  path: "$INSTDIR\\logs"         # Directory to store log files (required for log_file/log_both actions)
-  file_name: "installation.log"  # Log file name (required for log_file/log_both actions)
+  mode: auto                    # "auto" or "manual_only" (default: auto)
+  path: "{{INSTDIR}}/logs"        # Directory to store log files (required for log.file/log.both)
+  file_name: "installation.log"  # Log file name (required for log.file/log.both)
   timestamp: true                # Prefix each log line with ISO timestamp (default: true)
   include_raw_os_error: false    # Include raw OS error details in auto-logged errors (default: false)
+  slow_step_warn_sec: 10         # Warn threshold in seconds for long-running steps
 ```
 
 #### Logging Configuration Parameters
 
 | Parameter | Type | Default | Required? | Notes |
 |-----------|------|---------|-----------|-------|
-| `mode` | string | `auto` | No | Set to `manual_only` to disable automatic error logging. Only `log_ui`, `log_file`, and `log_both` actions are recorded. Set to `auto` to automatically log all errors with error codes. |
-| `path` | string | — | Yes (if using `log_file`/`log_both`) | Installation directory must be resolvable. Supports `{{INSTDIR}}`, `{{PROGRAMFILES}}`, `{{APPDATA}}`, `{{LOCALAPPDATA}}` (legacy `$...` also works). |
-| `file_name` | string | — | Yes (if using `log_file`/`log_both`) | Name of the log file (e.g., `installation.log`, `setup.log`). |
+| `mode` | string | `auto` | No | `auto` logs lifecycle messages (start/warn/success) and classified failures. `manual_only` logs only explicit inline `log` messages during normal execution. |
+| `path` | string | — | Yes (if using `log.file`/`log.both`) | Installation directory must be resolvable. Supports `{{INSTDIR}}`, `{{PROGRAMFILES}}`, `{{APPDATA}}`, `{{LOCALAPPDATA}}` (legacy `$...` also works). |
+| `file_name` | string | — | Yes (if using `log.file`/`log.both`) | Name of the log file (e.g., `installation.log`, `setup.log`). |
 | `timestamp` | boolean | `true` | No | If `true`, each log line is prefixed with ISO 8601 timestamp (e.g., `2026-04-12T14:32:01.234Z`). |
 | `include_raw_os_error` | boolean | `false` | No | If `true`, automatic error classification includes raw Windows OS error details (may expose implementation details). |
+| `slow_step_warn_sec` | integer | `10` | No | Threshold in seconds for slow-step warning lines. Must be greater than 0. |
 
-### `log_ui` Action
+### Inline `log` Block
 
-Display a message in the installer's progress log UI. Useful for informing users of what is happening.
-
-```yaml
-- action: log_ui
-  message: "Preparing installation..."
-  level: info
-```
-
-#### `log_ui` Parameters
-
-| Parameter | Type | Default | Required? | Notes |
-|-----------|------|---------|-----------|-------|
-| `message` | string | — | **Yes** | The message text to display. Must be non-empty. Markdown is not supported. |
-| `level` | string | `info` | No | Log level: `info`, `warn`, or `error`. Controls visual presentation (colors/icons in progress log). |
-
-### `log_file` Action
-
-Write a message to the installation log file. Useful for detailed audit trails and troubleshooting.
+Attach logging to an executable step:
 
 ```yaml
-- action: log_file
-  message: "Install started for component set: core,docs"
-  level: info
+- action: extract
+  log:
+    both: "Preparing installation..."
+  archive: "payload.zst"
+  destination: "{{INSTDIR}}"
 ```
 
-#### `log_file` Parameters
+Use exactly one key under `log`:
 
-| Parameter | Type | Default | Required? | Notes |
-|-----------|------|---------|-----------|-------|
-| `message` | string | — | **Yes** | The message text to write. Must be non-empty. Supports variables ($INSTDIR, etc.). |
-| `level` | string | `info` | No | Log level: `info`, `warn`, or `error`. Determines prefix in log file. |
+- `both`
+- `ui`
+- `file`
 
-### `log_both` Action
+Log level is automatic:
 
-Write one message to both the installer progress log UI and installation log file.
+- Start-of-step log: `info`
+- Long-running step notice: `warn`
+- Failures: `error`
 
-```yaml
-- action: log_both
-  message: "Preparing installation..."
-  level: info
-```
-
-#### `log_both` Parameters
-
-| Parameter | Type | Default | Required? | Notes |
-|-----------|------|---------|-----------|-------|
-| `message` | string | — | **Yes** | Message written to both UI and file outputs. Must be non-empty. Supports variables ($INSTDIR, etc.). |
-| `level` | string | `info` | No | Log level: `info`, `warn`, or `error`. Applied to both outputs. |
-
-**Note**: The `logging` block with `path` and `file_name` must be defined at the manifest top level for `log_file` and `log_both` actions to work.
+**Note**: The `logging` block with `path` and `file_name` must be defined at the manifest top level for `log.file` and `log.both` to work.
 
 ## Conditional Step Execution with Components
 
@@ -243,8 +218,8 @@ When an installation step fails and logging is enabled (default `mode: auto`), t
 - Invalid environment scope (`scope` must be `user` or `system`)
 - Invalid environment operation (`operation` must be `set`, `append`, or `prepend`)
 - `run_powershell` action with neither `script` nor `file` provided, or both provided
-- `log_file` action used without `logging` block configuration
-- `logging.path` or `logging.file_name` missing/empty when `log_file` actions are present
+- Inline `log.file`/`log.both` used without `logging` block configuration
+- `logging.path` or `logging.file_name` missing/empty when inline file logging is used
 
 **Typical fix:** Review the error reason and correct the manifest YAML. Re-run `hagane build` to re-validate.
 
@@ -586,7 +561,7 @@ app:
 
 logging:
   mode: auto                  # "auto" (default) or "manual_only"
-  path: "$INSTDIR\\logs"
+  path: "{{INSTDIR}}/logs"
   file_name: "installation.log"
   timestamp: true
   include_raw_os_error: false
@@ -600,52 +575,38 @@ pages:
   - type: finish
 
 steps:
-  # Informational logging
-  - action: log_ui
-    level: info
-    message: "Creating installation directory"
-
   # Create directory
   - action: create_dir
-    path: "$INSTDIR"
-
-  # Log success
-  - action: log_ui
-    level: info
-    message: "Installation directory created successfully"
-
-  # File-based logging (audit trail)
-  - action: log_file
-    level: info
-    message: "Installation started for $INSTDIR"
+    log:
+      ui: "Creating installation directory"
+    path: "{{INSTDIR}}"
 
   # Extract archives
   - action: extract
+    log:
+      file: "Installation started for {{INSTDIR}}"
     archive: "app_binaries.zst"
-    destination: "$INSTDIR\\bin"
-
-  # Log extraction success
-  - action: log_file
-    level: info
-    message: "Binaries extracted to $INSTDIR\\bin"
+    destination: "{{INSTDIR}}/bin"
 
   # Copy configuration
   - action: copy_file
-    source: "$INSTDIR\\bin\\default.config"
-    destination: "$INSTDIR\\app.config"
+    log:
+      file: "Binaries extracted to {{INSTDIR}}/bin"
+    source: "{{INSTDIR}}/bin/default.config"
+    destination: "{{INSTDIR}}/app.config"
     overwrite: false
 
   # Set up environment variable
   - action: env_var
     name: "MY_APP_HOME"
-    value: "$INSTDIR"
+    value: "{{INSTDIR}}"
     scope: user
     operation: set
 
   # Run post-install script
   - action: run_powershell
     script: |
-      $appPath = "$INSTDIR"
+      $appPath = "{{INSTDIR}}"
       Write-Host "Configuring application at $appPath"
       # Perform configuration tasks
       exit 0
@@ -660,16 +621,13 @@ steps:
     key: "Software\\Acme\\MyApp"
     value_name: "InstallDir"
     value_type: SZ
-    value_data: "$INSTDIR"
-
-  # Log completion
-  - action: log_file
-    level: info
-    message: "Installation completed successfully"
+    value_data: "{{INSTDIR}}"
 
   # Write uninstaller
   - action: write_uninstaller
-    path: "$INSTDIR\\Uninstall.exe"
+    log:
+      file: "Installation completed successfully"
+    path: "{{INSTDIR}}/Uninstall.exe"
 ```
 
 ### Error Handling and Troubleshooting Pattern
@@ -713,7 +671,7 @@ If users report an error code:
 
 ## Logging Configuration Best Practices
 
-1. **Always include logging block** if you use `log_file` actions
+1. **Always include logging block** if you use inline `log.file` or `log.both`
 2. **Use mode: auto** (default) for automatic error classification — provides rich context
 3. **Use mode: manual_only** only if you want to suppress automatic logging and log everything yourself
 4. **Set timestamp: true** for debugging sequences of steps
@@ -724,5 +682,5 @@ If users report an error code:
 
 - **Stable v1 Codes**: These 15 codes are stable and will not change in v1. New failure types will receive new code families.
 - **Field/Value changes**: The `field`, `value`, `reason`, and `fix` sections may be enhanced but will maintain semantic compatibility.
-- **Variable Support**: The variable list ($INSTDIR, $PROGRAMFILES, etc.) is fixed v1. New variables will only be added in v2+.
+- **Variable Support**: The variable list ({{INSTDIR}}, {{PROGRAMFILES}}, etc.) is fixed v1. New variables will only be added in v2+.
 - **Scope/Operation Enums**: Environment scope and operation values are fixed v1 (user, system; set, append, prepend).

@@ -358,9 +358,6 @@ All checks run **in parallel** via Rayon the moment the requirements page loads.
 | `copy_file` | Copy file with optional overwrite + backup |
 | `delete_file` | Delete a file |
 | `create_dir` | Create directory (and parents) |
-| `log_ui` | Log to installer UI only |
-| `log_file` | Log to installer file only |
-| `log_both` | Log to both installer UI and file |
 | `registry` | Write/delete registry keys and values |
 | `register_uninstall` | High-level Add/Remove Programs registration (expands internally) |
 | `register_app` | High-level app settings registration (`InstallDir` + `Version`) |
@@ -369,6 +366,8 @@ All checks run **in parallel** via Rayon the moment the requirements page loads.
 | `service` | Install/start/stop/delete Windows services |
 | `run_program` | Execute a program (optionally wait) |
 | `write_uninstaller` | Write the auto-generated uninstaller |
+
+Each executable step can also include an inline `log` block with one target key: `both`, `ui`, or `file`.
 
 ---
 
@@ -425,30 +424,49 @@ Legacy `$INSTDIR` / `$PROGRAMFILES` style is also supported for existing manifes
 
 ## Logging and Error Codes
 
-The installer supports optional logging to the progress UI and to a log file, plus automatic error code classification for failed steps.
+The installer supports two logging modes:
+
+- `auto`: lifecycle logging is generated automatically for each executed step (start, slow-step warn, success in file logs, and classified failures).
+- `manual_only`: only explicit inline `log` messages are emitted during normal step execution.
+
+In both modes, classified failure lines and rollback errors are still emitted when a step fails.
 
 ### Logging Configuration
 
-Add a top-level `logging` block to enable file logging:
+Add a top-level `logging` block to control mode and file output:
 
 ```yaml
 logging:
   mode: auto
-  path: "$INSTDIR\\logs"
+  path: "{{INSTDIR}}/logs"
   file_name: "installation.log"
   timestamp: true
   include_raw_os_error: false
+  slow_step_warn_sec: 10
 ```
 
-Use `mode: manual_only` if you want only explicit `log_ui`, `log_file`, and `log_both` actions to write messages.
+- `path` and `file_name` are required when using inline `log.file` or `log.both`.
+- `slow_step_warn_sec` controls when long-running steps produce a warning.
+- When file logging is enabled, completion messages stay in the file log but are not echoed into the UI log box.
 
-### Logging Actions
+### Inline Step Logging
 
-| action | Purpose |
-|---|---|
-| `log_ui` | Write a message to the installer progress log UI |
-| `log_file` | Write a message to the installation log file |
-| `log_both` | Write the same message to both progress log UI and installation log file |
+```yaml
+steps:
+  - action: extract
+    log:
+      both: "Extracting core payload"
+    archive: "payload.zst"
+    destination: "{{INSTDIR}}"
+```
+
+Rules:
+
+- `log` is optional for each step.
+- Provide exactly one target key: `both`, `ui`, or `file`.
+- Inline log messages are emitted at `info` level.
+
+For a full behavior matrix and end-to-end examples, see [LOGGING.md](LOGGING.md).
 
 ### PowerShell Action
 

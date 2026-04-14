@@ -87,7 +87,6 @@ function onProgress(e) {
   if (bar)   bar.style.width = e.percent + '%';
   if (label) label.textContent = e.label;
   if (pct)   pct.textContent = e.percent + '%';
-  onLogLine(e.label, false);
 }
 
 function onLogLine(text, isError = false) {

@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use crate::parser::schema::{InstallerManifest, PageType, InstallStep};
+use crate::parser::schema::{InlineLogSpec, InstallerManifest, PageType, InstallStep};
 
 /// Validates a parsed manifest for logical consistency.
 /// Returns Ok(()) or a descriptive error.
@@ -106,39 +106,40 @@ fn validate_components(manifest: &InstallerManifest) -> Result<()> {
 }
 
 fn validate_steps(manifest: &InstallerManifest) -> Result<()> {
+    if let Some(logging) = &manifest.logging {
+        if let Some(threshold) = logging.slow_step_warn_sec {
+            if threshold == 0 {
+                bail!("HG-YAML-001: logging.slow_step_warn_sec must be greater than 0");
+            }
+        }
+    }
+
     let has_file_logging_step = manifest
         .steps
         .iter()
-        .any(|s| matches!(s, InstallStep::LogFile(_) | InstallStep::LogBoth(_)));
+        .any(|s| {
+            inline_log_spec(s)
+                    .map(|log| log.file.is_some() || log.both.is_some())
+                    .unwrap_or(false)
+        });
     if has_file_logging_step {
         let Some(logging) = &manifest.logging else {
-            bail!("HG-YAML-001: 'logging' block is required when using action 'log_file' or 'log_both'");
+            bail!("HG-YAML-001: 'logging' block is required when using inline log.file or log.both");
         };
         if logging.path.as_deref().unwrap_or(" ").trim().is_empty() {
-            bail!("HG-YAML-001: logging.path must be set when using action 'log_file' or 'log_both'");
+            bail!("HG-YAML-001: logging.path must be set when using inline log.file or log.both");
         }
         if logging.file_name.as_deref().unwrap_or(" ").trim().is_empty() {
-            bail!("HG-YAML-001: logging.file_name must be set when using action 'log_file' or 'log_both'");
+            bail!("HG-YAML-001: logging.file_name must be set when using inline log.file or log.both");
         }
     }
 
     for (i, step) in manifest.steps.iter().enumerate() {
+        if let Some(spec) = inline_log_spec(step) {
+            validate_inline_log(i, spec)?;
+        }
+
         match step {
-            InstallStep::LogUi(s) => {
-                if s.message.trim().is_empty() {
-                    bail!("HG-YAML-001: Step {} action 'log_ui' requires a non-empty message", i);
-                }
-            }
-            InstallStep::LogFile(s) => {
-                if s.message.trim().is_empty() {
-                    bail!("HG-YAML-001: Step {} action 'log_file' requires a non-empty message", i);
-                }
-            }
-            InstallStep::LogBoth(s) => {
-                if s.message.trim().is_empty() {
-                    bail!("HG-YAML-001: Step {} action 'log_both' requires a non-empty message", i);
-                }
-            }
             InstallStep::Registry(r) => {
                 let valid_hives = ["HKLM", "HKCU", "HKCR", "HKU", "HKCC"];
                 if !valid_hives.contains(&r.hive.as_str()) {
@@ -217,5 +218,48 @@ fn validate_steps(manifest: &InstallerManifest) -> Result<()> {
             _ => {}
         }
     }
+    Ok(())
+}
+
+fn inline_log_spec(step: &InstallStep) -> Option<&InlineLogSpec> {
+    match step {
+        InstallStep::Extract(s) => s.log.as_ref(),
+        InstallStep::CopyFile(s) => s.log.as_ref(),
+        InstallStep::DeleteFile(s) => s.log.as_ref(),
+        InstallStep::CreateDir(s) => s.log.as_ref(),
+        InstallStep::Registry(s) => s.log.as_ref(),
+        InstallStep::RegisterUninstall(s) => s.log.as_ref(),
+        InstallStep::RegisterApp(s) => s.log.as_ref(),
+        InstallStep::Shortcut(s) => s.log.as_ref(),
+        InstallStep::EnvVar(s) => s.log.as_ref(),
+        InstallStep::Service(s) => s.log.as_ref(),
+        InstallStep::RunProgram(s) => s.log.as_ref(),
+        InstallStep::RunPowerShell(s) => s.log.as_ref(),
+        InstallStep::WriteUninstaller(s) => s.log.as_ref(),
+    }
+}
+
+fn validate_inline_log(step_index: usize, spec: &InlineLogSpec) -> Result<()> {
+    let present = [spec.both.as_ref(), spec.ui.as_ref(), spec.file.as_ref()]
+        .into_iter()
+        .flatten()
+        .count();
+
+    if present != 1 {
+        bail!(
+            "HG-YAML-001: Step {} inline 'log' must contain exactly one of: both, ui, file",
+            step_index
+        );
+    }
+
+    if let Some(msg) = spec.both.as_ref().or(spec.ui.as_ref()).or(spec.file.as_ref()) {
+        if msg.trim().is_empty() {
+            bail!(
+                "HG-YAML-001: Step {} inline 'log' message must be non-empty",
+                step_index
+            );
+        }
+    }
+
     Ok(())
 }
