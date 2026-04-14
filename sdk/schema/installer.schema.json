@@ -105,6 +105,41 @@
         }
       }
     },
+    "logging": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["auto", "manual_only"],
+          "default": "auto",
+          "description": "Logging mode. auto emits lifecycle logs automatically. manual_only emits only explicit inline log messages."
+        },
+        "path": {
+          "type": "string",
+          "description": "Directory for log file output. Required when using inline log.file or log.both."
+        },
+        "file_name": {
+          "type": "string",
+          "description": "Log file name. Required when using inline log.file or log.both."
+        },
+        "timestamp": {
+          "type": "boolean",
+          "default": true,
+          "description": "Prefix log lines with local timestamp."
+        },
+        "include_raw_os_error": {
+          "type": "boolean",
+          "default": false,
+          "description": "Reserved for advanced diagnostics compatibility."
+        },
+        "slow_step_warn_sec": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Warn threshold in seconds for long-running steps. Default is 10."
+        }
+      }
+    },
     "steps": {
       "type": "array",
       "minItems": 1,
@@ -114,12 +149,22 @@
         "properties": {
           "action": {
             "type": "string",
-            "enum": ["extract", "copy_file", "delete_file", "create_dir", "log_ui", "log_file", "log_both", "registry", "register_uninstall", "register_app", "shortcut", "env_var", "service", "run_program", "run_powershell", "write_uninstaller"]
+            "enum": ["extract", "copy_file", "delete_file", "create_dir", "registry", "register_uninstall", "register_app", "shortcut", "env_var", "service", "run_program", "run_powershell", "write_uninstaller"]
           },
           "archive":      { "type": "string", "description": "Archive name registered during build (extract)." },
           "destination":  { "type": "string" },
           "source":       { "type": "string" },
           "path":         { "type": "string" },
+          "log": {
+            "type": "object",
+            "description": "Optional inline step logging. Use exactly one of: both, ui, file.",
+            "additionalProperties": false,
+            "properties": {
+              "both": { "type": "string", "description": "Write this message to both UI and file before executing the step." },
+              "ui": { "type": "string", "description": "Write this message to UI before executing the step." },
+              "file": { "type": "string", "description": "Write this message to file before executing the step." }
+            }
+          },
           "overwrite":    { "type": "boolean", "default": false },
           "component":    { "type": "string", "description": "Only run this step if this component ID is selected." },
           "operation":    { "type": "string", "enum": ["write", "delete", "create_key", "delete_key", "install", "start", "stop"] },

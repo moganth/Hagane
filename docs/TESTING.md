@@ -180,10 +180,11 @@ default_install_dir: "C:\\Program Files\\MyCompany\\MyApp"  # Custom path
 Use the following checks to verify the implemented logging and error code behavior:
 
 1. Add a `logging` block with `path` and `file_name` to your test manifest.
-2. Add at least one logging step (`log_ui`, `log_file`, or `log_both`).
-3. Confirm the installer writes a log file in the configured location for `log_file`/`log_both`.
-4. Trigger a known failure, such as a missing archive, to confirm the installer emits an `HG-*` code.
-5. Confirm `run_powershell` failures classify correctly for syntax errors, non-zero exit, timeout, and access denied cases.
+2. Set `logging.mode` to `auto` and run once to verify lifecycle logs are emitted automatically.
+3. Switch to `logging.mode: manual_only`, add at least one inline `log` block, and verify only explicit inline messages are emitted during normal execution.
+4. Confirm the installer writes a log file in the configured location.
+5. Trigger a known failure, such as a missing archive, to confirm the installer emits an `HG-*` code.
+6. Confirm `run_powershell` failures classify correctly for syntax errors, non-zero exit, timeout, and access denied cases.
 
 Example test output should include lines like:
 
@@ -248,19 +249,19 @@ If you want to test the logging pipeline directly, add these steps to the templa
 ```yaml
 logging:
   mode: auto
-  path: "$TEMP\\MyAppLogs"
+  path: "{{TEMP}}/MyAppLogs"
   file_name: "installation.log"
   timestamp: true
+  slow_step_warn_sec: 5
 
 steps:
-  - action: log_both
-    message: "Starting install"
-    level: info
-
   - action: run_powershell
     script: "Write-Host 'Testing PowerShell action'"
     wait: true
     fail_on_nonzero: true
+
+  - action: create_dir
+    path: "{{INSTDIR}}"
 ```
 
 ---

@@ -8,8 +8,9 @@ pub mod shortcuts;
 use anyhow::{Context, Result};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
+use std::time::Instant;
 use crate::parser::schema::{
-    InstallStep, LogLevel, LoggingConfig, LoggingMode, RegisterAppStep, RegisterUninstallStep, RegistryOperation,
+    InlineLogSpec, InstallStep, LogLevel, LoggingConfig, LoggingMode, RegisterAppStep, RegisterUninstallStep, RegistryOperation,
     RegistryValueType, RunPowerShellStep,
 };
 use rollback::RollbackJournal;
@@ -71,6 +72,24 @@ impl StepRunner {
             on_progress(i, total, &progress_label);
             log::info!("Step {}/{}: {}", i + 1, total, label);
 
+            if let Some(reason) = self.step_skip_reason(step) {
+                if !self.manual_only_logging {
+                    self.emit_auto_log(
+                        LogLevel::Info,
+                        &format!("Skipping step {}/{}: {} ({})", i + 1, total, label, reason),
+                    )?;
+                }
+                continue;
+            }
+
+            if self.manual_only_logging || inline_log_spec(step).is_some() {
+                self.emit_inline_log(step)?;
+            } else {
+                self.emit_auto_log(LogLevel::Info, &format!("Starting step {}/{}: {}", i + 1, total, label))?;
+            }
+
+            let step_started = Instant::now();
+
             if let Err(e) = self.run_step(step) {
                 let classified = self.classify_step_error(i + 1, step, &e);
                 log::error!("Step {} failed: {}", i + 1, classified);
@@ -83,6 +102,14 @@ impl StepRunner {
                 }
                 return Err(anyhow::anyhow!(classified)
                     .context(format!("Step {}/{} failed: {}", i + 1, total, label)));
+            }
+
+            self.emit_warn_if_slow(step, &label, step_started.elapsed())?;
+
+            if !self.manual_only_logging {
+                let completion_msg = format!("Completed step {}/{}: {}", i + 1, total, label);
+                let to_ui = self.file_logger.is_none();
+                self.emit_log(LogLevel::Info, &completion_msg, to_ui, true)?;
             }
         }
         on_progress(total, total, "Done");
@@ -116,31 +143,6 @@ impl StepRunner {
             InstallStep::CreateDir(s) => {
                 let p = PathBuf::from(self.resolve_vars_path(&s.path)?);
                 files::create_dir(&p, &mut self.journal)?;
-            }
-
-            InstallStep::LogUi(s) => {
-                let msg = self.resolve_vars(&s.message);
-                match s.level.clone().unwrap_or(LogLevel::Info) {
-                    LogLevel::Info => log::info!("{}", msg),
-                    LogLevel::Warn => log::warn!("{}", msg),
-                    LogLevel::Error => log::error!("{}", msg),
-                }
-            }
-
-            InstallStep::LogFile(s) => {
-                let msg = self.resolve_vars(&s.message);
-                self.write_log_file(s.level.clone().unwrap_or(LogLevel::Info), &msg)?;
-            }
-
-            InstallStep::LogBoth(s) => {
-                let msg = self.resolve_vars(&s.message);
-                let level = s.level.clone().unwrap_or(LogLevel::Info);
-                match level {
-                    LogLevel::Info => log::info!("{}", msg),
-                    LogLevel::Warn => log::warn!("{}", msg),
-                    LogLevel::Error => log::error!("{}", msg),
-                }
-                self.write_log_file(level, &msg)?;
             }
 
             InstallStep::Registry(s) => {
@@ -233,11 +235,12 @@ impl StepRunner {
         if !self.manual_only_logging {
             return default_label.to_string();
         }
-        match step {
-            InstallStep::LogUi(s) => self.resolve_vars(&s.message),
-            InstallStep::LogBoth(s) => self.resolve_vars(&s.message),
-            _ => String::new(),
+        if let Some(spec) = inline_log_spec(step) {
+            if let Some(msg) = spec.ui.as_ref().or(spec.both.as_ref()) {
+                return self.resolve_vars(msg);
+            }
         }
+        String::new()
     }
 
     fn run_powershell(&self, step: &RunPowerShellStep) -> Result<()> {
@@ -339,6 +342,15 @@ impl StepRunner {
         }
     }
 
+    fn step_skip_reason(&self, step: &InstallStep) -> Option<String> {
+        let component = step_component(step)?;
+        if self.component_active(Some(component)) {
+            None
+        } else {
+            Some(format!("component '{}' is not selected", component))
+        }
+    }
+
     /// Resolve installer variables in a string:
     /// $INSTDIR / {{INSTDIR}}, $PROGRAMFILES / {{PROGRAMFILES}}, $PROGRAMFILES64 / {{PROGRAMFILES64}},
     /// $APPDATA / {{APPDATA}}, $LOCALAPPDATA / {{LOCALAPPDATA}}, $TEMP / {{TEMP}}, $WINDIR / {{WINDIR}}
@@ -366,7 +378,7 @@ impl StepRunner {
     fn write_log_file(&self, level: LogLevel, message: &str) -> Result<()> {
         let Some(logger) = &self.file_logger else {
             return Err(anyhow::anyhow!(
-                "HG-YAML-001: logging.path and logging.file_name must be configured for action 'log_file'"
+                "HG-YAML-001: logging.path and logging.file_name must be configured when using inline log.file or log.both"
             ));
         };
 
@@ -661,6 +673,78 @@ impl StepRunner {
 
         Ok(())
     }
+
+    fn emit_inline_log(&self, step: &InstallStep) -> Result<()> {
+        let Some(spec) = inline_log_spec(step) else {
+            return Ok(());
+        };
+
+        if let Some(msg) = &spec.both {
+            self.emit_log(LogLevel::Info, msg, true, true)?;
+        } else if let Some(msg) = &spec.ui {
+            self.emit_log(LogLevel::Info, msg, true, false)?;
+        } else if let Some(msg) = &spec.file {
+            self.emit_log(LogLevel::Info, msg, false, true)?;
+        }
+        Ok(())
+    }
+
+    fn emit_warn_if_slow(&self, step: &InstallStep, label: &str, elapsed: std::time::Duration) -> Result<()> {
+        if elapsed.as_secs() < self.slow_warn_threshold_secs() {
+            return Ok(());
+        }
+
+        let warn_msg = format!("{} is taking longer than expected ({}s)", label, elapsed.as_secs());
+
+        if self.manual_only_logging {
+            let Some(spec) = inline_log_spec(step) else {
+                return Ok(());
+            };
+
+            if spec.both.is_some() {
+                self.emit_log(LogLevel::Warn, &warn_msg, true, true)?;
+            } else if spec.ui.is_some() {
+                self.emit_log(LogLevel::Warn, &warn_msg, true, false)?;
+            } else if spec.file.is_some() {
+                self.emit_log(LogLevel::Warn, &warn_msg, false, true)?;
+            }
+        } else {
+            self.emit_auto_log(LogLevel::Warn, &warn_msg)?;
+        }
+
+        Ok(())
+    }
+
+    fn emit_auto_log(&self, level: LogLevel, raw_message: &str) -> Result<()> {
+        self.emit_log(level, raw_message, true, self.file_logger.is_some())
+    }
+
+    fn slow_warn_threshold_secs(&self) -> u64 {
+        self.ctx
+            .logging
+            .as_ref()
+            .and_then(|cfg| cfg.slow_step_warn_sec)
+            .filter(|v| *v > 0)
+            .unwrap_or(10)
+    }
+
+    fn emit_log(&self, level: LogLevel, raw_message: &str, to_ui: bool, to_file: bool) -> Result<()> {
+        let msg = self.resolve_vars(raw_message);
+
+        if to_ui {
+            match level {
+                LogLevel::Info => log::info!("{}", msg),
+                LogLevel::Warn => log::warn!("{}", msg),
+                LogLevel::Error => log::error!("{}", msg),
+            }
+        }
+
+        if to_file {
+            self.write_log_file(level, &msg)?;
+        }
+
+        Ok(())
+    }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -829,9 +913,6 @@ fn step_label(step: &InstallStep) -> String {
         InstallStep::CopyFile(s)      => format!("Copying {}", s.destination),
         InstallStep::DeleteFile(s)    => format!("Deleting {}", s.path),
         InstallStep::CreateDir(s)     => format!("Creating directory {}", s.path),
-        InstallStep::LogUi(s)         => s.message.clone(),
-        InstallStep::LogFile(_)       => "Writing installer log".to_string(),
-        InstallStep::LogBoth(s)       => s.message.clone(),
         InstallStep::Registry(s)          => format!("Writing registry {}\\{}", s.hive, s.key),
         InstallStep::RegisterUninstall(s) => format!("Registering uninstall entry {}\\{}", s.hive, s.key),
         InstallStep::RegisterApp(s)       => format!("Registering app settings {}\\{}", s.hive, s.key),
@@ -850,9 +931,6 @@ fn step_action(step: &InstallStep) -> &'static str {
         InstallStep::CopyFile(_) => "copy_file",
         InstallStep::DeleteFile(_) => "delete_file",
         InstallStep::CreateDir(_) => "create_dir",
-        InstallStep::LogUi(_) => "log_ui",
-        InstallStep::LogFile(_) => "log_file",
-        InstallStep::LogBoth(_) => "log_both",
         InstallStep::Registry(_) => "registry",
         InstallStep::RegisterUninstall(_) => "register_uninstall",
         InstallStep::RegisterApp(_) => "register_app",
@@ -999,4 +1077,40 @@ fn normalize_declared_var_key(key: &str) -> Option<String> {
         return None;
     }
     Some(normalized.to_string())
+}
+
+fn inline_log_spec(step: &InstallStep) -> Option<&InlineLogSpec> {
+    match step {
+        InstallStep::Extract(s) => s.log.as_ref(),
+        InstallStep::CopyFile(s) => s.log.as_ref(),
+        InstallStep::DeleteFile(s) => s.log.as_ref(),
+        InstallStep::CreateDir(s) => s.log.as_ref(),
+        InstallStep::Registry(s) => s.log.as_ref(),
+        InstallStep::RegisterUninstall(s) => s.log.as_ref(),
+        InstallStep::RegisterApp(s) => s.log.as_ref(),
+        InstallStep::Shortcut(s) => s.log.as_ref(),
+        InstallStep::EnvVar(s) => s.log.as_ref(),
+        InstallStep::Service(s) => s.log.as_ref(),
+        InstallStep::RunProgram(s) => s.log.as_ref(),
+        InstallStep::RunPowerShell(s) => s.log.as_ref(),
+        InstallStep::WriteUninstaller(s) => s.log.as_ref(),
+    }
+}
+
+fn step_component(step: &InstallStep) -> Option<&str> {
+    match step {
+        InstallStep::Extract(s) => s.component.as_deref(),
+        InstallStep::CopyFile(s) => s.component.as_deref(),
+        InstallStep::DeleteFile(_) => None,
+        InstallStep::CreateDir(_) => None,
+        InstallStep::Registry(_) => None,
+        InstallStep::RegisterUninstall(_) => None,
+        InstallStep::RegisterApp(_) => None,
+        InstallStep::Shortcut(s) => s.component.as_deref(),
+        InstallStep::EnvVar(s) => s.component.as_deref(),
+        InstallStep::Service(_) => None,
+        InstallStep::RunProgram(s) => s.component.as_deref(),
+        InstallStep::RunPowerShell(s) => s.component.as_deref(),
+        InstallStep::WriteUninstaller(_) => None,
+    }
 }

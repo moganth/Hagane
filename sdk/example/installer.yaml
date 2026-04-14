@@ -27,11 +27,12 @@ variables:
   APP_REG_KEY: "SOFTWARE/{{COMPANY_PRODUCT}}"
 
 logging:
-  mode: manual_only
-  path: "$LOG_DIR"
+  mode: auto
+  path: "{{LOG_DIR}}"
   file_name: "installation.log"
   timestamp: true
   include_raw_os_error: false
+  slow_step_warn_sec: 10
 
 theme:
   accent_color: "#0F6CBD"
@@ -165,48 +166,23 @@ components:
     selected: false
 
 steps:
-  # -- Manual logging examples (error codes are emitted automatically) -------
-  - action: log_both
-    level: info
-    message: "Manifest loaded and validated"
-
   # -- Create install directory -----------------------------------------------
-  - action: log_both
-    level: info
-    message: "Resolving installation path"
-
   - action: create_dir
-    path: "$INSTDIR"
-
-  - action: log_both
-    level: info
-    message: "Preparing logs directory"
+    path: "{{INSTDIR}}"
 
   - action: create_dir
     path: "{{LOG_DIR}}"
 
   # -- Extract main payload ---------------------------------------------------
-  - action: log_both
-    level: info
-    message: "Extracting core payload"
-
   - action: extract
     archive: "payload.zst"
     destination: "{{INSTDIR}}"
     component: core
 
-  - action: log_both
-    level: info
-    message: "Extracting documentation payload"
-
   - action: extract
     archive: "docs.zst"
     destination: "{{INSTDIR}}/docs"
     component: docs
-
-  - action: log_both
-    level: info
-    message: "Extracting sample payload"
 
   - action: extract
     archive: "samples.zst"
@@ -214,10 +190,6 @@ steps:
     component: samples
 
   # -- Registry - Add/Remove Programs entry ---------------------------------
-  - action: log_both
-    level: info
-    message: "Writing uninstall registry entries"
-
   - action: register_uninstall
     hive: HKLM
     key: "{{UNINSTALL_KEY}}"
@@ -231,10 +203,6 @@ steps:
     no_repair: true
 
   # -- App registry settings -------------------------------------------------
-  - action: log_both
-    level: info
-    message: "Writing application registry settings"
-
   - action: register_app
     hive: HKLM
     key: "{{APP_REG_KEY}}"
@@ -242,10 +210,6 @@ steps:
     version: "2.1.0"
 
   # -- Shortcuts -------------------------------------------------------------
-  - action: log_both
-    level: info
-    message: "Creating shortcuts"
-
   - action: shortcut
     target: "{{APP_EXE}}"
     location: desktop
@@ -271,10 +235,6 @@ steps:
     component: docs
 
   # -- CLI tools - add to PATH -----------------------------------------------
-  - action: log_both
-    level: info
-    message: "Updating PATH for command line tools"
-
   - action: env_var
     name: PATH
     value: "{{INSTDIR}}/bin"
@@ -282,10 +242,6 @@ steps:
     operation: append
 
   # -- PowerShell example step -----------------------------------------------
-  - action: log_both
-    level: info
-    message: "Running post-install PowerShell check"
-
   - action: run_powershell
     script: "Write-Host 'MyApp post-install validation completed'"
     wait: true
@@ -293,10 +249,6 @@ steps:
     timeout_sec: 30
 
   # -- Write uninstaller -----------------------------------------------------
-  - action: log_both
-    level: info
-    message: "Writing uninstaller"
-
   - action: write_uninstaller
     path: "{{INSTDIR}}/uninstall.exe"
 

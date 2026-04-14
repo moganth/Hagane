@@ -2,12 +2,27 @@
 
 app:
   name: "Hagane"
-  version: "0.1.2"
+  version: "0.1.3"
   publisher: "Installer Engine"
   description: "Command-line installer builder for the Installer Engine workspace."
-  default_install_dir: "$PROGRAMFILES64\\Hagane"
+  default_install_dir: "{{INSTALL_ROOT}}"
   registry_key: "InstallerEngine\\Hagane"
   require_admin: true
+
+variables:
+  INSTALL_ROOT: "{{PROGRAMFILES64}}/Hagane"
+  LOG_DIR: "{{INSTDIR}}/logs"
+  HAGANE_EXE: "{{INSTDIR}}/bin/hagane.exe"
+  UNINSTALL_KEY: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Hagane"
+  APP_REG_KEY: "SOFTWARE\\InstallerEngine\\Hagane"
+
+logging:
+  mode: auto
+  path: "{{LOG_DIR}}"
+  file_name: "installation.log"
+  timestamp: true
+  include_raw_os_error: false
+  slow_step_warn_sec: 10
 
 pages:
   - type: welcome
@@ -44,68 +59,45 @@ components:
 
 steps:
   - action: create_dir
-    path: "$INSTDIR"
+    path: "{{INSTDIR}}"
 
   - action: create_dir
-    path: "$INSTDIR\\bin"
+    path: "{{INSTDIR}}/bin"
 
   - action: extract
     archive: "payload.zst"
-    destination: "$INSTDIR"
+    destination: "{{INSTDIR}}"
 
-  - action: registry
-    operation: write
+  - action: register_uninstall
     hive: HKLM
-    key: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Hagane"
-    value_name: "DisplayName"
-    value_type: SZ
-    value_data: "Hagane"
+    key: "{{UNINSTALL_KEY}}"
+    name: "Hagane"
+    version: "0.1.3"
+    publisher: "Installer Engine"
+    inst_loc: "{{INSTDIR}}"
+    uninstall: "{{INSTDIR}}/uninstall.exe"
+    no_modify: true
+    no_repair: true
 
-  - action: registry
-    operation: write
+  - action: register_app
     hive: HKLM
-    key: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Hagane"
-    value_name: "DisplayVersion"
-    value_type: SZ
-    value_data: "0.1.2"
-
-  - action: registry
-    operation: write
-    hive: HKLM
-    key: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Hagane"
-    value_name: "Publisher"
-    value_type: SZ
-    value_data: "Installer Engine"
-
-  - action: registry
-    operation: write
-    hive: HKLM
-    key: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Hagane"
-    value_name: "InstallLocation"
-    value_type: SZ
-    value_data: "$INSTDIR"
-
-  - action: registry
-    operation: write
-    hive: HKLM
-    key: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Hagane"
-    value_name: "UninstallString"
-    value_type: SZ
-    value_data: "$INSTDIR\\uninstall.exe"
+    key: "{{APP_REG_KEY}}"
+    inst_loc: "{{INSTDIR}}"
+    version: "0.1.3"
 
   - action: env_var
     name: "Path"
-    value: "$INSTDIR\\bin"
+    value: "{{INSTDIR}}/bin"
     scope: "user"
     operation: "append"
     component: "user_path"
 
   - action: env_var
     name: "Path"
-    value: "$INSTDIR\\bin"
+    value: "{{INSTDIR}}/bin"
     scope: "system"
     operation: "append"
     component: "system_path"
 
   - action: write_uninstaller
-    path: "$INSTDIR\\uninstall.exe"
+    path: "{{INSTDIR}}/uninstall.exe"

@@ -121,14 +121,15 @@ Fix:
 
 ### Installer error codes are not visible
 
-Cause: the manifest does not enable file logging, or the error happened before the installer reached the step runner.
+Cause: file logging is not configured, the destination is not writable, or the error happened before the installer reached the step runner.
 
 Fix:
 
 1. Add a top-level `logging` block to `installer.yaml`.
-2. Use `mode: auto` unless you explicitly want manual-only logging.
-3. Keep `log_file` output in a user-writable path during testing, such as `$TEMP`.
-4. Check [ERROR_CODES.md](ERROR_CODES.md) for the full code list and fix guidance.
+2. Use `mode: auto` for lifecycle logs, or `mode: manual_only` for explicit inline-only execution logs.
+3. When using inline `log.file` or `log.both`, ensure `logging.path` and `logging.file_name` are set.
+4. Use a writable path during testing, such as `{{TEMP}}`.
+5. Check [LOGGING.md](LOGGING.md) for behavior details and [ERROR_CODES.md](ERROR_CODES.md) for code-level troubleshooting.
 
 Variable syntax note:
 
@@ -153,7 +154,7 @@ Fix:
 
 - Add `logging.path` and `logging.file_name` to the manifest.
 - Use a writable location during development.
-- Confirm the `log_file` action message is non-empty.
+- Confirm inline `log.file` messages are non-empty.
 
 ## Release Checklist
 
