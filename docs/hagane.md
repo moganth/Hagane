@@ -126,15 +126,15 @@ Cause: file logging is not configured, the destination is not writable, or the e
 Fix:
 
 1. Add a top-level `logging` block to `installer.yaml`.
-2. Use `mode: auto` for lifecycle logs, or `mode: manual_only` for explicit inline-only execution logs.
-3. When using inline `log.file` or `log.both`, ensure `logging.path` and `logging.file_name` are set.
+2. Use `mode: auto` for lifecycle logs, or `mode: manual_only` to suppress normal lifecycle logging.
+3. For file logs, ensure `logging.path` and `logging.file_name` are set.
 4. Use a writable path during testing, such as `{{TEMP}}`.
 5. Check [LOGGING.md](LOGGING.md) for behavior details and [ERROR_CODES.md](ERROR_CODES.md) for code-level troubleshooting.
 
 Variable syntax note:
 
 - Preferred manifest variable syntax is `{{KEY}}` (for example `{{INSTDIR}}/logs`).
-- Legacy `$KEY` syntax remains supported for backward compatibility.
+- Use `{{KEY}}` syntax consistently in new manifests.
 
 ### PowerShell step fails with access denied
 
@@ -154,7 +154,7 @@ Fix:
 
 - Add `logging.path` and `logging.file_name` to the manifest.
 - Use a writable location during development.
-- Confirm inline `log.file` messages are non-empty.
+- Confirm the destination path is writable by the installer process.
 
 ## Release Checklist
 

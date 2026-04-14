@@ -1,6 +1,6 @@
 # Hagane Logging Guide
 
-This guide explains exactly how installer logging works, what auto mode does, what manual_only mode does, and how to choose between them.
+This guide explains exactly how installer logging works with the `install` DSL, what `auto` mode does, what `manual_only` mode does, and how to choose between them.
 
 ## What logging controls
 
@@ -34,7 +34,7 @@ Field meanings:
 
 ### Auto mode
 
-In `mode: auto`, Hagane emits lifecycle logs for every executed step:
+In `mode: auto`, Hagane emits lifecycle logs for every compiled install operation:
 
 - Start of step: info
 - Slow step (elapsed >= slow_step_warn_sec): warn
@@ -45,21 +45,15 @@ When file logging is configured, completion lines remain in the log file but are
 
 Skip behavior in auto mode:
 
-- If a step has `component` and that component is not selected, the step is skipped.
+- If a compiled operation has `component` and that component is not selected, the operation is skipped.
 - Hagane emits an info skip line showing the reason.
-
-Inline `log` blocks in auto mode:
-
-- If a step has inline `log`, that explicit message is used as the start message for that step.
-- If no inline `log` is present, Hagane emits a default start message.
 
 ### Manual-only mode
 
-In `mode: manual_only`, normal execution logs are explicit:
+In `mode: manual_only`, normal execution logs are suppressed:
 
 - Hagane does not auto-emit lifecycle start/success/skip messages.
-- Only inline `log` blocks produce normal step log messages.
-- Slow-step warnings are emitted only for steps that have inline `log`.
+- Slow-step warnings are not emitted for normal operations.
 
 Important: failures are still always logged.
 
@@ -68,32 +62,15 @@ Important: failures are still always logged.
 
 This keeps troubleshooting reliable even when normal logs are fully manual.
 
-## Inline step log block
+## Install DSL logging scope
 
-You can attach a `log` object to executable steps.
-Use exactly one of:
-
-- `log.ui`
-- `log.file`
-- `log.both`
-
-Example:
-
-```yaml
-steps:
-  - action: extract
-    log:
-      both: "Extracting core files"
-    archive: "payload.zst"
-    destination: "{{INSTDIR}}"
-```
+The top-level `install` DSL does not expose per-operation inline `log` blocks. Logging is controlled by `logging.mode` and emitted from the compiled execution plan.
 
 Rules:
 
-- `log.ui`: writes to UI only.
-- `log.file`: writes to file only (requires logging.path + logging.file_name).
-- `log.both`: writes to both UI and file (requires logging.path + logging.file_name).
-- Inline log messages are emitted at info level.
+- File logging requires both `logging.path` and `logging.file_name`.
+- `auto` mode gives lifecycle visibility with minimal YAML.
+- `manual_only` is best when you only want failure-classification output during install execution.
 
 ## Recommended usage patterns
 
@@ -108,16 +85,18 @@ logging:
   file_name: "installation.log"
   slow_step_warn_sec: 10
 
-steps:
-  - action: create_dir
-    path: "{{INSTDIR}}"
+install:
+  setup:
+    create_dirs:
+      - "{{INSTDIR}}"
 
-  - action: extract
-    archive: "payload.zst"
-    destination: "{{INSTDIR}}"
+  components:
+    core:
+      archive: "payload.zst"
+      target: "{{INSTDIR}}"
 
-  - action: write_uninstaller
-    path: "{{INSTDIR}}/uninstall.exe"
+  finalize:
+    write_uninstaller: "{{INSTDIR}}/uninstall.exe"
 ```
 
 What you get:
@@ -126,9 +105,9 @@ What you get:
 - Automatic slow-step warnings
 - Automatic classified failures
 
-### Pattern B: Manual narrative logs
+### Pattern B: Failure-focused logs
 
-Use this when you want tightly curated user-facing wording.
+Use this when you only want deterministic classified failures during install execution.
 
 ```yaml
 logging:
@@ -136,22 +115,22 @@ logging:
   path: "{{TEMP}}/MyAppLogs"
   file_name: "installation.log"
 
-steps:
-  - action: create_dir
-    log:
-      both: "Preparing installation directory"
-    path: "{{INSTDIR}}"
+install:
+  setup:
+    create_dirs:
+      - "{{INSTDIR}}"
 
-  - action: extract
-    log:
-      both: "Deploying application payload"
-    archive: "payload.zst"
-    destination: "{{INSTDIR}}"
+  components:
+    core:
+      archive: "payload.zst"
+      target: "{{INSTDIR}}"
+
+  finalize:
+    write_uninstaller: "{{INSTDIR}}/uninstall.exe"
 ```
 
 What you get:
 
-- Only the messages you wrote in inline `log`
 - No automatic lifecycle chatter for successful execution
 - Still gets classified error lines on failure
 
@@ -176,9 +155,9 @@ Failure output (both modes):
 
 ## Validation rules to remember
 
-- If any step uses `log.file` or `log.both`, top-level `logging.path` and `logging.file_name` are required.
+- File logging always requires top-level `logging.path` and `logging.file_name`.
 - `logging.slow_step_warn_sec` must be greater than 0 when present.
-- For `run_powershell`, exactly one of `script` or `file` must be set.
+- For hooks, `run.command` and `run.shell` are required.
 
 ## Quick decision guide
 
@@ -190,6 +169,6 @@ Use `auto` when:
 
 Use `manual_only` when:
 
-- You need strict editorial control over visible normal logs.
-- You want to minimize log volume and only show selected messages.
-- You are building a highly curated install narrative.
+- You want minimal normal logging output.
+- You rely on HG error codes and rollback logs for diagnostics.
+- You are validating error handling behavior.

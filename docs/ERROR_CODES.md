@@ -8,24 +8,20 @@ This document defines stable v1 error codes and logging behavior in `installer.y
 - Keep logging behavior deterministic across auto and manual modes.
 - Provide consistent error codes for support and troubleshooting.
 
-## Logging Modes and PowerShell
+## Logging Modes and Hooks
 
-Hagane supports inline step logging and PowerShell execution in `steps` and `uninstall.extra_steps`:
-
-- `log.ui`: writes a message to the installer progress log UI.
-- `log.file`: writes a message to the installer log file.
-- `log.both`: writes the same message to both installer progress UI and log file.
-- `run_powershell`: execute PowerShell scripts with error classification.
+Hagane logging is configured globally and applies to the compiled operations from `install`.
+Post-install commands are defined in `install.hooks.post_install`.
 
 ### Logging Configuration Block
 
-Add a top-level `logging` block. This block is **required** if any step uses inline `log.file` or `log.both`:
+Add a top-level `logging` block:
 
 ```yaml
 logging:
   mode: auto                    # "auto" or "manual_only" (default: auto)
-  path: "{{INSTDIR}}/logs"        # Directory to store log files (required for log.file/log.both)
-  file_name: "installation.log"  # Log file name (required for log.file/log.both)
+  path: "{{INSTDIR}}/logs"        # Directory to store log files
+  file_name: "installation.log"  # Log file name
   timestamp: true                # Prefix each log line with ISO timestamp (default: true)
   include_raw_os_error: false    # Include raw OS error details in auto-logged errors (default: false)
   slow_step_warn_sec: 10         # Warn threshold in seconds for long-running steps
@@ -35,51 +31,31 @@ logging:
 
 | Parameter | Type | Default | Required? | Notes |
 |-----------|------|---------|-----------|-------|
-| `mode` | string | `auto` | No | `auto` logs lifecycle messages (start/warn/success) and classified failures. `manual_only` logs only explicit inline `log` messages during normal execution. |
-| `path` | string | — | Yes (if using `log.file`/`log.both`) | Installation directory must be resolvable. Supports `{{INSTDIR}}`, `{{PROGRAMFILES}}`, `{{APPDATA}}`, `{{LOCALAPPDATA}}` (legacy `$...` also works). |
-| `file_name` | string | — | Yes (if using `log.file`/`log.both`) | Name of the log file (e.g., `installation.log`, `setup.log`). |
+| `mode` | string | `auto` | No | `auto` logs lifecycle messages (start/warn/success) and classified failures. `manual_only` suppresses normal lifecycle logging during execution. |
+| `path` | string | — | Recommended | Installation directory must be resolvable. Supports `{{INSTDIR}}`, `{{PROGRAMFILES}}`, `{{APPDATA}}`, `{{LOCALAPPDATA}}`. |
+| `file_name` | string | — | Recommended | Name of the log file (e.g., `installation.log`, `setup.log`). |
 | `timestamp` | boolean | `true` | No | If `true`, each log line is prefixed with ISO 8601 timestamp (e.g., `2026-04-12T14:32:01.234Z`). |
 | `include_raw_os_error` | boolean | `false` | No | If `true`, automatic error classification includes raw Windows OS error details (may expose implementation details). |
 | `slow_step_warn_sec` | integer | `10` | No | Threshold in seconds for slow-step warning lines. Must be greater than 0. |
 
-### Inline `log` Block
+### Install DSL Logging Behavior
 
-Attach logging to an executable step:
+Log level is automatic in `mode: auto`:
 
-```yaml
-- action: extract
-  log:
-    both: "Preparing installation..."
-  archive: "payload.zst"
-  destination: "{{INSTDIR}}"
-```
-
-Use exactly one key under `log`:
-
-- `both`
-- `ui`
-- `file`
-
-Log level is automatic:
-
-- Start-of-step log: `info`
-- Long-running step notice: `warn`
+- Start-of-operation log: `info`
+- Long-running operation notice: `warn`
 - Failures: `error`
 
-**Note**: The `logging` block with `path` and `file_name` must be defined at the manifest top level for `log.file` and `log.both` to work.
+**Note**: When file logging is desired, set both `logging.path` and `logging.file_name`.
 
-## Conditional Step Execution with Components
+## Conditional Execution with Components
 
-Many steps support a `component` field for conditional execution. Steps marked with a component are **skipped** if that component is not selected by the user during installation.
+Component-based operations are skipped if that component is not selected by the user during installation.
 
-### Supported Actions with Component Field
+### Supported DSL Locations with `component`
 
-- `extract`
-- `copy_file`
-- `env_var`
-- `shortcut`
-- `run_program`
-- `run_powershell`
+- `install.system.shortcuts[*].component`
+- `install.system.path.component`
 
 ### Example: Component-Based Installation
 
@@ -98,84 +74,84 @@ components:
     required: false
     selected: false
 
-steps:
-  # Always extracting core binaries
-  - action: extract
-    archive: "core.zst"
-    destination: "$INSTDIR"
-    component: core    # Runs if 'core' is selected (always, since required: true)
+install:
+  components:
+    core:
+      archive: "core.zst"
+      target: "{{INSTDIR}}"
+    docs:
+      archive: "docs.zst"
+      target: "{{INSTDIR}}/docs"
+    dev_tools:
+      archive: "devtools.zst"
+      target: "{{INSTDIR}}/devtools"
 
-  # Conditionally extract documentation
-  - action: extract
-    archive: "docs.zst"
-    destination: "$INSTDIR\\docs"
-    component: docs    # Runs only if user selected 'docs'
-
-  # Conditionally extract developer tools
-  - action: extract
-    archive: "devtools.zst"
-    destination: "$INSTDIR\\devtools"
-    component: dev_tools  # Runs only if user selected 'dev_tools'
-
-  # Conditionally set environment variable
-  - action: env_var
-    name: "DEV_TOOLS_PATH"
-    value: "$INSTDIR\\devtools\\bin"
-    scope: user
-    operation: prepend
-    component: dev_tools  # Only set if developer tools installed
+  system:
+    shortcuts:
+      - name: "Developer Shell"
+        target: "{{INSTDIR}}/devtools/shell.exe"
+        location: start_menu
+        component: dev_tools
+    path:
+      add: "{{INSTDIR}}/devtools/bin"
+      scope: user
+      component: dev_tools
 ```
 
-## PowerShell Execution Action
+## Post-Install Command Hooks
 
-The `run_powershell` action executes PowerShell scripts as install steps with automatic error classification.
+`install.hooks.post_install` executes commands with automatic error classification.
 
-### Inline Script Execution
+### PowerShell Hook Execution
 
-Execute a PowerShell script inline:
+Execute a PowerShell command:
 
 ```yaml
-- action: run_powershell
-  script: |
-    Write-Host "Hello from installer"
-    [Environment]::SetEnvironmentVariable("MY_VAR", "value", "User")
-  wait: true
-  fail_on_nonzero: true
-  timeout_sec: 30
+install:
+  hooks:
+    post_install:
+      - run:
+          command: |
+            Write-Host "Hello from installer"
+            [Environment]::SetEnvironmentVariable("MY_VAR", "value", "User")
+          shell: powershell
+          wait: true
+          fail_on_nonzero: true
+          timeout_sec: 30
 ```
 
-### Script File Execution
+### Program Hook Execution
 
-Execute a PowerShell script from a file (embedded in payload or on disk):
+Execute a normal process command:
 
 ```yaml
-- action: run_powershell
-  file: "$INSTDIR\\scripts\\post_install.ps1"
-  arguments: "-Mode Setup -Verbose"
-  wait: true
-  fail_on_nonzero: true
-  timeout_sec: 60
-  component: "advanced_module"
+install:
+  hooks:
+    post_install:
+      - run:
+          command: "{{INSTDIR}}/bin/post_install.exe --mode setup"
+          shell: program
+          wait: true
+          fail_on_nonzero: true
+          timeout_sec: 60
 ```
 
-#### `run_powershell` Parameters
+#### `run` Parameters
 
 | Parameter | Type | Default | Required? | Notes |
 |-----------|------|---------|-----------|-------|
-| `script` | string | — | One of `script` or `file` | Inline PowerShell code to execute. Mutually exclusive with `file`. |
-| `file` | string | — | One of `script` or `file` | Path to a .ps1 file. Supports variables ($INSTDIR, $APPDATA, etc.). Mutually exclusive with `script`. |
-| `arguments` | string | — | No | Command-line arguments to pass to the script. For file-based scripts, appended as parameters. |
+| `command` | string | — | Yes | Command text to execute. For PowerShell, this is script content; for program mode, this is the command line. |
+| `shell` | string | — | Yes | `powershell` or `program`. |
 | `wait` | boolean | `true` | No | If `true`, the installer waits for the script to complete before continuing. If `false`, script runs in background. |
 | `fail_on_nonzero` | boolean | `true` | No | If `true`, a non-zero exit code from the script fails the entire installation. If `false`, non-zero exits are ignored. |
 | `timeout_sec` | number | (none) | No | Maximum execution time in seconds. If the script exceeds this time and `wait=true`, it's terminated and classified as `HG-PS-004` (timeout). |
-| `component` | string | — | No | Component ID for conditional execution. Script only runs if the specified component is selected. |
 
-#### PowerShell Execution Notes
+#### Hook Execution Notes
 
 - **Error Action Preference**: Scripts are automatically wrapped with `$ErrorActionPreference='Stop'` to ensure deterministic error codes.
 - **Elevation**: If the installer runs with admin elevation, scripts execute with the same privileges.
-- **Output**: Script output is captured and included in automatic error classification (HG-PS-001 through HG-PS-005).
-- **Working Directory**: Scripts inherit the installer's working directory ($INSTDIR).
+- **Output**: Command output is captured and included in automatic error classification (HG-PS-001 through HG-PS-005 when using PowerShell).
+- **Working Directory**: Hooks inherit the installer's working directory (`{{INSTDIR}}`).
 
 ## Error Line Format
 
@@ -190,9 +166,9 @@ When an installation step fails and logging is enabled (default `mode: auto`), t
 | Component | Description | Example |
 |-----------|-------------|---------|
 | `CODE` | 9-character stable v1 error code (HG-XXXX-NNN) | `HG-EXTRACT-001` |
-| `step` | Step number in the `steps` array (1-indexed) | `step=4` |
-| `action` | The step action type | `action=extract` |
-| `field` | The problematic field in the step configuration | `field=archive` |
+| `step` | Compiled operation index (1-indexed) | `step=4` |
+| `action` | The operation action type | `action=extract` |
+| `field` | The problematic field in the operation configuration | `field=archive` |
 | `value` | The value of that field (may be truncated) | `value=docs.zst` |
 | `reason` | Root cause of the failure (auto-classified) | `reason="archive 'docs.zst' is missing from embedded payload"` |
 | `fix` | Recommended action to resolve the error | `fix="Run hagane build again and ensure the archive source folder exists near installer.yaml."` |
@@ -217,9 +193,8 @@ When an installation step fails and logging is enabled (default `mode: auto`), t
 - Invalid registry hive name (not one of: HKLM, HKCU, HKCR, HKU, HKCC)
 - Invalid environment scope (`scope` must be `user` or `system`)
 - Invalid environment operation (`operation` must be `set`, `append`, or `prepend`)
-- `run_powershell` action with neither `script` nor `file` provided, or both provided
-- Inline `log.file`/`log.both` used without `logging` block configuration
-- `logging.path` or `logging.file_name` missing/empty when inline file logging is used
+- Missing or malformed `install` block
+- Hook with missing `run.command` or `run.shell`
 
 **Typical fix:** Review the error reason and correct the manifest YAML. Re-run `hagane build` to re-validate.
 
@@ -574,60 +549,40 @@ pages:
   - type: install
   - type: finish
 
-steps:
-  # Create directory
-  - action: create_dir
-    log:
-      ui: "Creating installation directory"
-    path: "{{INSTDIR}}"
+install:
+  setup:
+    create_dirs:
+      - "{{INSTDIR}}"
+      - "{{INSTDIR}}/logs"
 
-  # Extract archives
-  - action: extract
-    log:
-      file: "Installation started for {{INSTDIR}}"
-    archive: "app_binaries.zst"
-    destination: "{{INSTDIR}}/bin"
+  components:
+    core:
+      archive: "app_binaries.zst"
+      target: "{{INSTDIR}}/bin"
 
-  # Copy configuration
-  - action: copy_file
-    log:
-      file: "Binaries extracted to {{INSTDIR}}/bin"
-    source: "{{INSTDIR}}/bin/default.config"
-    destination: "{{INSTDIR}}/app.config"
-    overwrite: false
+  system:
+    register_app:
+      hive: HKCU
+      key: "Software/Acme/MyApp"
+      version: "1.0.0"
+      install_location: "{{INSTDIR}}"
 
-  # Set up environment variable
-  - action: env_var
-    name: "MY_APP_HOME"
-    value: "{{INSTDIR}}"
-    scope: user
-    operation: set
+    path:
+      add: "{{INSTDIR}}/bin"
+      scope: user
 
-  # Run post-install script
-  - action: run_powershell
-    script: |
-      $appPath = "{{INSTDIR}}"
-      Write-Host "Configuring application at $appPath"
-      # Perform configuration tasks
-      exit 0
-    wait: true
-    fail_on_nonzero: true
-    timeout_sec: 60
+  hooks:
+    post_install:
+      - run:
+          command: |
+            Write-Host "Configuring application at {{INSTDIR}}"
+          shell: powershell
+          wait: true
+          fail_on_nonzero: true
+          timeout_sec: 60
 
-  # Registry operation (with admin elevation if needed)
-  - action: registry
-    operation: write
-    hive: HKCU
-    key: "Software\\Acme\\MyApp"
-    value_name: "InstallDir"
-    value_type: SZ
-    value_data: "{{INSTDIR}}"
-
-  # Write uninstaller
-  - action: write_uninstaller
-    log:
-      file: "Installation completed successfully"
-    path: "{{INSTDIR}}/Uninstall.exe"
+  finalize:
+    write_uninstaller: "{{INSTDIR}}/Uninstall.exe"
 ```
 
 ### Error Handling and Troubleshooting Pattern
@@ -663,19 +618,18 @@ If users report an error code:
    - Update payload layout or ensure proper extraction order
    - For elevation issues: Set `app.require_admin: true`
 6. **Re-build and re-test:**
-   - Run `hagane build --manifest installer.yaml`
-   - Run `hagane run installer.yaml` to build the installer
+  - Run `hagane run installer.yaml --release` to build the installer
    - Test the installer in silence mode: `installer-setup.exe /S`
    - Check `%TEMP%\HaganeInstall\logs\installation.log` for detailed error output
 7. **Iterate** until the error no longer appears
 
 ## Logging Configuration Best Practices
 
-1. **Always include logging block** if you use inline `log.file` or `log.both`
+1. **Include a top-level logging block** when you need file output.
 2. **Use mode: auto** (default) for automatic error classification — provides rich context
-3. **Use mode: manual_only** only if you want to suppress automatic logging and log everything yourself
+3. **Use mode: manual_only** only if you want to suppress normal lifecycle logs
 4. **Set timestamp: true** for debugging sequences of steps
-5. **Store logs in user-writable location** like `$TEMP` for non-admin testing, `$INSTDIR` for normal installs
+5. **Store logs in user-writable location** like `{{TEMP}}` for non-admin testing, `{{INSTDIR}}` for normal installs
 6. **Review logs after test failures** to extract error codes and diagnose issues
 
 ## Compatibility Notes
