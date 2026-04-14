@@ -57,47 +57,41 @@ components:
     required: false
     selected: false
 
-steps:
-  - action: create_dir
-    path: "{{INSTDIR}}"
+install:
+  setup:
+    create_dirs:
+      - "{{INSTDIR}}"
+      - "{{INSTDIR}}/bin"
 
-  - action: create_dir
-    path: "{{INSTDIR}}/bin"
+  components:
+    user_path:
+      archive: "payload.zst"
+      target: "{{INSTDIR}}"
+    system_path:
+      archive: "payload.zst"
+      target: "{{INSTDIR}}"
 
-  - action: extract
-    archive: "payload.zst"
-    destination: "{{INSTDIR}}"
+  system:
+    register_app:
+      key: "{{APP_REG_KEY}}"
+      hive: HKLM
+      version: "0.1.3"
+      install_location: "{{INSTDIR}}"
 
-  - action: register_uninstall
-    hive: HKLM
-    key: "{{UNINSTALL_KEY}}"
-    name: "Hagane"
-    version: "0.1.3"
-    publisher: "Installer Engine"
-    inst_loc: "{{INSTDIR}}"
-    uninstall: "{{INSTDIR}}/uninstall.exe"
-    no_modify: true
-    no_repair: true
+    register_uninstall:
+      key: "{{UNINSTALL_KEY}}"
+      hive: HKLM
+      name: "Hagane"
+      version: "0.1.3"
+      publisher: "Installer Engine"
+      install_location: "{{INSTDIR}}"
+      uninstall: "{{INSTDIR}}/uninstall.exe"
+      no_modify: true
+      no_repair: true
 
-  - action: register_app
-    hive: HKLM
-    key: "{{APP_REG_KEY}}"
-    inst_loc: "{{INSTDIR}}"
-    version: "0.1.3"
+    path:
+      add: "{{INSTDIR}}/bin"
+      scope: system
 
-  - action: env_var
-    name: "Path"
-    value: "{{INSTDIR}}/bin"
-    scope: "user"
-    operation: "append"
-    component: "user_path"
-
-  - action: env_var
-    name: "Path"
-    value: "{{INSTDIR}}/bin"
-    scope: "system"
-    operation: "append"
-    component: "system_path"
-
-  - action: write_uninstaller
-    path: "{{INSTDIR}}/uninstall.exe"
+  finalize:
+    write_uninstaller: "{{INSTDIR}}/uninstall.exe"

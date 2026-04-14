@@ -1,7 +1,7 @@
 # Installer Engine Documentation
 
 Installer Engine is a YAML-driven Windows installer framework built in Rust.
-It combines a native backend (requirements checks, install steps, rollback) with a WebView2 UI layer and the `hagane` CLI for packaging and compilation.
+It combines a native backend (requirements checks, install plan execution, rollback) with a WebView2 UI layer and the `hagane` CLI for packaging and compilation.
 
 ## Why
 
@@ -26,7 +26,7 @@ app:
   version: "1.0.0"
   publisher: "Your Company"
   logo: "assets/logo.png"
-  default_install_dir: "$PROGRAMFILES64\\YourCompany\\MyApp"
+  default_install_dir: "{{PROGRAMFILES64}}/YourCompany/MyApp"
 
 theme:
   accent_color: "#0078D4"
@@ -51,16 +51,24 @@ requirements:
     min_mb: 200
     label: "200 MB free space"
 
-steps:
-  - action: extract
-    archive: "payload.zst"
-    destination: "$INSTDIR"
-  - action: shortcut
-    target: "$INSTDIR\\MyApp.exe"
-    location: desktop
-    name: "MyApp"
-  - action: write_uninstaller
-    path: "$INSTDIR\\uninstall.exe"
+install:
+  setup:
+    create_dirs:
+      - "{{INSTDIR}}"
+
+  components:
+    core:
+      archive: "payload.zst"
+      target: "{{INSTDIR}}"
+
+  system:
+    shortcuts:
+      - name: "MyApp"
+        target: "{{INSTDIR}}/MyApp.exe"
+        location: desktop
+
+  finalize:
+    write_uninstaller: "{{INSTDIR}}/uninstall.exe"
 ```
 
 ### 2. Place your payload
@@ -266,7 +274,7 @@ theme:
 
 If you are using this engine to ship your own app installer:
 
-- You **must** create your own `installer.yaml` (app name, pages, steps, requirements, etc.).
+- You **must** create your own `installer.yaml` (app metadata, pages, requirements, and `install` plan).
 - You do **not** ship `installer.yaml` to end users — it is embedded into the generated setup EXE at build time.
 - `installer.schema.json` is optional at runtime, but strongly recommended during authoring for IDE validation/autocomplete.
 
@@ -350,24 +358,20 @@ All checks run **in parallel** via Rayon the moment the requirements page loads.
 
 ---
 
-## Available Step Actions
+## Install DSL Blocks
 
-| action | Description |
+The installer now uses a required top-level `install` block (legacy top-level `steps` is rejected).
+
+| block | Purpose |
 |---|---|
-| `extract` | Decompress Zstd+tar archive to destination |
-| `copy_file` | Copy file with optional overwrite + backup |
-| `delete_file` | Delete a file |
-| `create_dir` | Create directory (and parents) |
-| `registry` | Write/delete registry keys and values |
-| `register_uninstall` | High-level Add/Remove Programs registration (expands internally) |
-| `register_app` | High-level app settings registration (`InstallDir` + `Version`) |
-| `shortcut` | Create .lnk shortcut (desktop/start menu/startup) |
-| `env_var` | Set/append/prepend to environment variables |
-| `service` | Install/start/stop/delete Windows services |
-| `run_program` | Execute a program (optionally wait) |
-| `write_uninstaller` | Write the auto-generated uninstaller |
-
-Each executable step can also include an inline `log` block with one target key: `both`, `ui`, or `file`.
+| `install.setup.create_dirs` | Creates required directories before extraction |
+| `install.components.<id>` | Maps each component to an archive and destination target |
+| `install.system.register_app` | Writes app registration metadata |
+| `install.system.register_uninstall` | Writes Add/Remove Programs metadata |
+| `install.system.shortcuts` | Creates desktop/start-menu/startup shortcuts |
+| `install.system.path` | Adds a directory to `PATH` (user/system scope) |
+| `install.hooks.post_install` | Runs post-install hooks (`powershell` or `program`) |
+| `install.finalize.write_uninstaller` | Writes the generated uninstaller executable |
 
 ---
 
@@ -387,20 +391,31 @@ app:
   default_install_dir: "{{INSTALL_ROOT}}"
   registry_key: "{{COMPANY_PRODUCT}}"
 
-steps:
-  - action: registry
-    operation: write
-    hive: HKLM
-    key: "{{APP_REG_KEY}}"
-    value_name: "InstallDir"
-    value_type: SZ
-    value_data: "{{INSTDIR}}"
+install:
+  setup:
+    create_dirs:
+      - "{{INSTDIR}}"
+
+  components:
+    core:
+      archive: "payload.zst"
+      target: "{{INSTDIR}}"
+
+  system:
+    register_app:
+      hive: HKLM
+      key: "{{APP_REG_KEY}}"
+      install_location: "{{INSTDIR}}"
+      version: "2.1.0"
+
+  finalize:
+    write_uninstaller: "{{INSTDIR}}/uninstall.exe"
 ```
 
 Rules:
 
 - Variable keys should use `A-Z`, `0-9`, and `_` (optionally prefixed with `$`).
-  - Preferred syntax is `{{KEY}}` (for example `{{INSTDIR}}`), with `$KEY` kept for backward compatibility.
+  - Preferred syntax is `{{KEY}}` (for example `{{INSTDIR}}`).
   - Built-in variables cannot be overridden: `{{INSTDIR}}`, `{{PROGRAMFILES}}`, `{{PROGRAMFILES64}}`, `{{APPDATA}}`, `{{LOCALAPPDATA}}`, `{{TEMP}}`, `{{WINDIR}}`.
 - Declared variables can reference other declared variables.
 
@@ -418,7 +433,7 @@ Rules:
 | `{{TEMP}}` | Temp directory |
 | `{{WINDIR}}` | `C:\Windows` |
 
-Legacy `$INSTDIR` / `$PROGRAMFILES` style is also supported for existing manifests.
+Use `{{KEY}}` syntax in new manifests for consistent schema validation.
 
 ---
 
@@ -427,7 +442,7 @@ Legacy `$INSTDIR` / `$PROGRAMFILES` style is also supported for existing manifes
 The installer supports two logging modes:
 
 - `auto`: lifecycle logging is generated automatically for each executed step (start, slow-step warn, success in file logs, and classified failures).
-- `manual_only`: only explicit inline `log` messages are emitted during normal step execution.
+- `manual_only`: normal lifecycle logging is suppressed during step execution.
 
 In both modes, classified failure lines and rollback errors are still emitted when a step fails.
 
@@ -445,51 +460,43 @@ logging:
   slow_step_warn_sec: 10
 ```
 
-- `path` and `file_name` are required when using inline `log.file` or `log.both`.
+- Set both `path` and `file_name` when you want file logging enabled.
 - `slow_step_warn_sec` controls when long-running steps produce a warning.
 - When file logging is enabled, completion messages stay in the file log but are not echoed into the UI log box.
 
-### Inline Step Logging
+### Install Logging Notes
 
-```yaml
-steps:
-  - action: extract
-    log:
-      both: "Extracting core payload"
-    archive: "payload.zst"
-    destination: "{{INSTDIR}}"
-```
+In the current `install` DSL, logging is controlled primarily by top-level `logging.mode`:
 
-Rules:
-
-- `log` is optional for each step.
-- Provide exactly one target key: `both`, `ui`, or `file`.
-- Inline log messages are emitted at `info` level.
+- `auto` emits lifecycle logs for compiled install operations.
+- `manual_only` suppresses normal lifecycle logs and keeps failure logging deterministic.
 
 For a full behavior matrix and end-to-end examples, see [LOGGING.md](LOGGING.md).
 
 ### PowerShell Action
 
-The `run_powershell` action executes scripts with deterministic error handling.
+Use `install.hooks.post_install` to run commands with deterministic error handling.
 
 ```yaml
-steps:
-  - action: run_powershell
-    script: |
-      Write-Host "Hello from installer"
-    wait: true
-    fail_on_nonzero: true
-    timeout_sec: 30
+install:
+  hooks:
+    post_install:
+      - run:
+          command: |
+            Write-Host "Hello from installer"
+          shell: powershell
+          wait: true
+          fail_on_nonzero: true
+          timeout_sec: 30
 ```
 
 Supported parameters:
 
-- `script` or `file` (exactly one required)
-- `arguments`
+- `command`
+- `shell` (`powershell` or `program`)
 - `wait`
 - `fail_on_nonzero`
 - `timeout_sec`
-- `component`
 
 ### Stable Error Codes
 
@@ -515,11 +522,11 @@ See [ERROR_CODES.md](ERROR_CODES.md) for the full field-by-field format and fix 
 
 ---
 
-## Conditional Step Execution
+## Conditional Install Execution
 
-Several actions support a `component` field. If the component is not selected, the step is skipped.
+Component selection is now controlled through `install.components` and per-entry `component` fields under system blocks.
 
-Supported actions include `extract`, `copy_file`, `env_var`, `shortcut`, `run_program`, and `run_powershell`.
+Supported `component` fields include `install.system.shortcuts[*].component` and `install.system.path.component`.
 
 ```yaml
 components:
@@ -528,11 +535,18 @@ components:
     required: false
     selected: true
 
-steps:
-  - action: extract
-    archive: "docs.zst"
-    destination: "$INSTDIR\\docs"
-    component: docs
+install:
+  components:
+    docs:
+      archive: "docs.zst"
+      target: "{{INSTDIR}}/docs"
+
+  system:
+    shortcuts:
+      - name: "Documentation"
+        target: "{{INSTDIR}}/docs/manual.txt"
+        location: start_menu
+        component: docs
 ```
 
 ---
@@ -543,20 +557,22 @@ Use high-level actions to avoid repetitive registry write blocks.
 
 ### `register_uninstall`
 
-For Add/Remove Programs metadata, use one `register_uninstall` step:
+For Add/Remove Programs metadata, use `install.system.register_uninstall`:
 
 ```yaml
-- action: register_uninstall
-  hive: HKLM
-  key: "$UNINSTALL_KEY"
-  name: "MyApp 2.1.0"
-  version: "2.1.0"
-  publisher: "Acme Corporation"
-  inst_loc: "$INSTDIR"
-  uninstall: "$INSTDIR\\uninstall.exe"
-  estimated_size_kb: 180224
-  no_modify: true
-  no_repair: true
+install:
+  system:
+    register_uninstall:
+      hive: HKLM
+      key: "{{UNINSTALL_KEY}}"
+      name: "MyApp 2.1.0"
+      version: "2.1.0"
+      publisher: "Acme Corporation"
+      install_location: "{{INSTDIR}}"
+      uninstall: "{{INSTDIR}}/uninstall.exe"
+      estimated_size_kb: 180224
+      no_modify: true
+      no_repair: true
 ```
 
 This expands internally into writes for:
@@ -570,23 +586,20 @@ This expands internally into writes for:
 - `NoModify`
 - `NoRepair`
 
-Aliases supported for readability:
-
-- `name` -> `display_name`
-- `version` -> `display_version`
-- `inst_loc` -> `install_location`
-- `uninstall` -> `uninstall_string`
+Preferred fields in the DSL are `install_location` and `uninstall`.
 
 ### `register_app`
 
-For app settings, use one concise block:
+For app settings, use `install.system.register_app`:
 
 ```yaml
-- action: register_app
-  hive: HKLM
-  key: "$APP_REG_KEY"
-  inst_loc: "$INSTDIR"
-  version: "2.1.0"
+install:
+  system:
+    register_app:
+      hive: HKLM
+      key: "{{APP_REG_KEY}}"
+      install_location: "{{INSTDIR}}"
+      version: "2.1.0"
 ```
 
 This writes:
@@ -646,6 +659,15 @@ cargo build --release -p builder  # just hagane
 cargo build -p builder --bin hagane --release 
 Copy-Item .\target\release\hagane.exe .\hagane\payload\bin\hagane.exe -Force 
 cargo run -p builder --bin hagane -- run hagane/installer.yaml --release
+```
+
+## Useful Commands
+
+```powershell
+reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\AcmeMyApp" /s
+reg query "HKLM\SOFTWARE\Acme\MyApp" /s
+reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Hagane" /s
+reg query "HKLM\SOFTWARE\InstallerEngine\Hagane" /s
 ```
 
 ## Notes

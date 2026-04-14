@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 // ── Top-level manifest ────────────────────────────────────────────────────────
 
@@ -12,9 +12,117 @@ pub struct InstallerManifest {
     pub requirements: Option<Vec<Requirement>>,
     pub components: Option<Vec<Component>>,
     pub logging: Option<LoggingConfig>,
+    pub install: InstallDsl,
+    #[serde(default, rename = "steps")]
+    pub legacy_steps: Option<Vec<InstallStep>>,
+    #[serde(skip_deserializing, default)]
     pub steps: Vec<InstallStep>,
     pub uninstall: Option<UninstallConfig>,
     pub silent: Option<SilentConfig>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstallDsl {
+    pub setup: InstallSetupDsl,
+    pub components: BTreeMap<String, InstallComponentDsl>,
+    pub system: InstallSystemDsl,
+    pub hooks: Option<InstallHooksDsl>,
+    pub finalize: InstallFinalizeDsl,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstallSetupDsl {
+    pub create_dirs: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstallComponentDsl {
+    pub archive: String,
+    pub target: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstallSystemDsl {
+    pub register_app: Option<InstallRegisterAppDsl>,
+    pub register_uninstall: Option<InstallRegisterUninstallDsl>,
+    pub shortcuts: Option<Vec<InstallShortcutDsl>>,
+    pub path: Option<InstallPathDsl>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstallRegisterAppDsl {
+    pub key: Option<String>,
+    pub hive: Option<String>,
+    pub name: Option<String>,
+    pub version: Option<String>,
+    pub publisher: Option<String>,
+    pub install_location: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstallRegisterUninstallDsl {
+    pub key: String,
+    pub hive: Option<String>,
+    pub name: Option<String>,
+    pub version: Option<String>,
+    pub publisher: Option<String>,
+    pub install_location: Option<String>,
+    pub uninstall: Option<String>,
+    pub estimated_size_kb: Option<u32>,
+    pub no_modify: Option<bool>,
+    pub no_repair: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstallShortcutDsl {
+    pub name: String,
+    pub target: String,
+    pub location: ShortcutLocation,
+    pub description: Option<String>,
+    pub icon: Option<String>,
+    pub arguments: Option<String>,
+    pub working_dir: Option<String>,
+    pub component: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstallPathDsl {
+    pub add: String,
+    pub scope: Option<String>,
+    pub component: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstallHooksDsl {
+    pub post_install: Option<Vec<InstallHookStepDsl>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstallHookStepDsl {
+    pub run: InstallRunHookDsl,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstallRunHookDsl {
+    pub command: String,
+    pub shell: InstallHookShell,
+    #[serde(default = "default_true")]
+    pub wait: bool,
+    #[serde(default = "default_true")]
+    pub fail_on_nonzero: bool,
+    pub timeout_sec: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum InstallHookShell {
+    Powershell,
+    Program,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstallFinalizeDsl {
+    pub write_uninstaller: String,
 }
 
 // ── Logging ──────────────────────────────────────────────────────────────────

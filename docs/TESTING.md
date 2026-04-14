@@ -12,20 +12,20 @@ cargo build --release
 
 ---
 
-## 1️⃣ Build the `iebuild` CLI Tool
+## 1️⃣ Build the `hagane` CLI Tool
 
 ```powershell
 cd c:\Users\monip\code\Installer-Engine
 cargo build --release -p builder
 ```
 
-Output: `target/release/iebuild.exe`
+Output: `target/release/hagane.exe`
 
 ---
 
 ## 2️⃣ Prepare Payload (Example Installer)
 
-The builder compresses directories referenced in your `installer.yaml` steps. For the example, you need:
+The builder compresses directories referenced in your `install.components` block. For the example, you need:
 
 ### Create minimal test payload:
 
@@ -33,7 +33,7 @@ The builder compresses directories referenced in your `installer.yaml` steps. Fo
 cd c:\Users\monip\code\Installer-Engine\sdk\example
 
 # Create payload directories
-mkdir -Force payload doc samples
+mkdir -Force payload docs samples
 
 # Add dummy files (required for archives to exist)
 echo "MyApp version 2.1.0" > payload\version.txt
@@ -65,12 +65,8 @@ sdk/example/
 ```powershell
 cd c:\Users\monip\code\Installer-Engine\sdk\example
 
-# Build with default compression level 9
-..\..\target\release\iebuild.exe --manifest installer.yaml --build
-
-# Or with custom options:
-# --compression-level 19  (higher = smaller but slower)
-# --verbose         (show all files during compression)
+# Build installer using the current manifest
+..\..\target\release\hagane.exe run installer.yaml --release
 ```
 
 ### What it does:
@@ -78,7 +74,7 @@ cd c:\Users\monip\code\Installer-Engine\sdk\example
 1. ✅ Loads and validates `installer.yaml`
 2. ✅ Loads assets (logo, banner, icon)
 3. ✅ Compresses payload directories (payload/, docs/, samples/)
-4. ✅ Generates `runner/src/generated/embedded.rs` with all assets
+4. ✅ Generates runtime embedded artifacts
 5. ✅ Runs `cargo build --release` to compile the final `.exe`
 
 ### Output:
@@ -170,9 +166,11 @@ echo "test" > payload\test.txt
 
 ### Installation path issues
 
-Edit `installer.yaml`:
+Edit `app.default_install_dir` in `installer.yaml`:
+
 ```yaml
-default_install_dir: "C:\\Program Files\\MyCompany\\MyApp"  # Custom path
+app:
+  default_install_dir: "{{PROGRAMFILES64}}/MyCompany/MyApp"
 ```
 
 ### Logging and error code validation
@@ -181,10 +179,10 @@ Use the following checks to verify the implemented logging and error code behavi
 
 1. Add a `logging` block with `path` and `file_name` to your test manifest.
 2. Set `logging.mode` to `auto` and run once to verify lifecycle logs are emitted automatically.
-3. Switch to `logging.mode: manual_only`, add at least one inline `log` block, and verify only explicit inline messages are emitted during normal execution.
+3. Switch to `logging.mode: manual_only` and verify normal lifecycle messages are suppressed.
 4. Confirm the installer writes a log file in the configured location.
 5. Trigger a known failure, such as a missing archive, to confirm the installer emits an `HG-*` code.
-6. Confirm `run_powershell` failures classify correctly for syntax errors, non-zero exit, timeout, and access denied cases.
+6. Confirm `install.hooks.post_install` failures classify correctly for syntax errors, non-zero exit, timeout, and access denied cases.
 
 Example test output should include lines like:
 
@@ -214,26 +212,31 @@ pages:
   - type: install
   - type: finish
 
-steps:
-  - action: create_dir
-    path: "{{INSTDIR}}"
-  
-  - action: registry
-    operation: write
-    hive: HKCU
-    key: "Software\\MyCompany\\HelloWorld"
-    value_name: "Installed"
-    value_type: SZ
-    value_data: "1.0.0"
-  
-  - action: write_uninstaller
-    path: "{{INSTDIR}}/uninstall.exe"
+install:
+  setup:
+    create_dirs:
+      - "{{INSTDIR}}"
+
+  components:
+    core:
+      archive: "payload.zst"
+      target: "{{INSTDIR}}"
+
+  system:
+    register_app:
+      hive: HKCU
+      key: "Software/MyCompany/HelloWorld"
+      version: "1.0.0"
+      install_location: "{{INSTDIR}}"
+
+  finalize:
+    write_uninstaller: "{{INSTDIR}}/uninstall.exe"
 ```
 
 ### 2. Build:
 
 ```powershell
-iebuild.exe --manifest installer.yaml --build
+hagane.exe run installer.yaml --release
 ```
 
 ### 3. Test:
@@ -244,7 +247,7 @@ target/release/HelloWorld-setup.exe
 
 ### Logging-focused Quick Start
 
-If you want to test the logging pipeline directly, add these steps to the template:
+If you want to test the logging pipeline directly, add logging and a post-install hook:
 
 ```yaml
 logging:
@@ -254,34 +257,30 @@ logging:
   timestamp: true
   slow_step_warn_sec: 5
 
-steps:
-  - action: run_powershell
-    script: "Write-Host 'Testing PowerShell action'"
-    wait: true
-    fail_on_nonzero: true
-
-  - action: create_dir
-    path: "{{INSTDIR}}"
+install:
+  hooks:
+    post_install:
+      - run:
+          command: "Write-Host 'Testing PowerShell action'"
+          shell: powershell
+          wait: true
+          fail_on_nonzero: true
 ```
 
 ---
 
-## Build Optimization
+## Build Notes
 
-### Smaller file size:
+Use release mode for shipping builds:
 
 ```powershell
-iebuild.exe --manifest installer.yaml --compression-level 22 --build
+hagane.exe run installer.yaml --release
 ```
 
-- Level 1-9: Fast compression, larger output
-- Level 10-19: Balanced
-- Level 20-22: Maximum compression (slower)
-
-### Faster build:
+For rapid local iteration, run without `--release` from source during development:
 
 ```powershell
-iebuild.exe --manifest installer.yaml --compression-level 1 --build
+cargo run -p builder --bin hagane -- run installer.yaml
 ```
 
 ---
@@ -309,7 +308,7 @@ Verify these work on your system by:
 ### Capture build logs:
 
 ```powershell
-iebuild.exe --manifest installer.yaml --verbose --build 2>&1 | Tee-Object build.log
+hagane.exe run installer.yaml --release 2>&1 | Tee-Object build.log
 ```
 
 ### Check embedded.rs:
