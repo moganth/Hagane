@@ -1,0 +1,61 @@
+name: Deploy Docs to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    # Only run when relevant files change — skip if only Rust source changed
+    paths:
+      - "docs/**"
+      - "assets/hagane-cli/**"
+      - "site/generate_site.py"
+  workflow_dispatch: # allow manual trigger from the Actions tab
+
+# Grant the GITHUB_TOKEN the permissions needed by deploy-pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one deployment at a time; don't cancel an in-progress deploy
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  # ── Job 1: generate the site ────────────────────────────────────────────────
+  generate:
+    name: Generate site
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run site generator
+        run: python site/generate_site.py
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Upload the whole site/ directory as the Pages root
+          path: site/
+
+  # ── Job 2: deploy to GitHub Pages ──────────────────────────────────────────
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: generate
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
