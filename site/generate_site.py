@@ -526,32 +526,49 @@ hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
   color: var(--text-muted); background: var(--code-bg);
   border: 1px solid var(--border); border-radius: 4px; padding: 3px 9px;
 }
-.header-ascii-art {
-  font-family: 'Courier New', monospace;
-  font-size: 5.5px; line-height: 1.3;
-  color: var(--brand);
-  text-shadow: 0 0 10px rgba(200,100,30,0.45);
-  margin: 0; padding: 0;
-  white-space: pre;
-  opacity: 0.9;
-  user-select: none;
-  pointer-events: none;
-}
+.download-wrapper { position: relative; }
 .header-download {
   display: inline-flex; align-items: center; gap: 5px;
-  background: var(--brand);
-  color: #fff;
-  text-decoration: none;
+  background: var(--brand); color: #fff;
+  border: none; cursor: pointer; font-family: inherit;
   font-size: 12px; font-weight: 600;
-  padding: 6px 14px;
-  border-radius: 6px;
-  letter-spacing: 0.3px;
-  white-space: nowrap;
+  padding: 6px 14px; border-radius: 6px;
+  letter-spacing: 0.3px; white-space: nowrap;
   transition: background 0.15s, box-shadow 0.15s;
 }
 .header-download:hover {
   background: var(--brand-glow);
   box-shadow: 0 0 14px rgba(200,100,30,0.5);
+}
+.download-menu {
+  display: none; position: absolute;
+  top: calc(100% + 8px); right: 0; min-width: 210px;
+  background: #141414; border: 1px solid var(--border-light);
+  border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  z-index: 200; overflow: hidden; padding: 6px 0;
+}
+.download-wrapper.open .download-menu { display: block; }
+.download-menu-item {
+  display: flex; align-items: center; padding: 9px 16px;
+  color: var(--text); text-decoration: none;
+  font-size: 13px; gap: 8px; transition: background 0.1s;
+}
+.download-menu-item::before { content: "\2193"; color: var(--brand); }
+.download-menu-item:hover { background: var(--card-bg); color: #fff; text-decoration: none; }
+.download-menu-loading { padding: 10px 16px; color: var(--text-muted); font-size: 12px; }
+.intro-ascii-art {
+  float: right;
+  font-family: 'Courier New', monospace;
+  font-size: 9px; line-height: 1.35;
+  color: var(--brand);
+  text-shadow: 0 0 14px rgba(200,100,30,0.5);
+  margin: 0 0 24px 40px;
+  padding: 20px 24px;
+  white-space: pre;
+  background: rgba(200,100,30,0.03);
+  border: 1px solid rgba(200,100,30,0.15);
+  border-radius: 8px;
+  user-select: none;
 }
 .mobile-menu-btn {
   display: none; background: none; border: 1px solid var(--border);
@@ -747,7 +764,7 @@ figcaption { font-size: 12px; color: var(--text-muted); margin-top: 6px; text-al
   .mobile-menu-btn { display: block; }
   h1 { font-size: 1.75rem; }
   h2 { font-size: 1.25rem; }
-  .header-ascii-art { display: none; }
+  .intro-ascii-art { float: none; margin: 0 auto 24px; display: block; }
 }
 @media (max-width: 600px) {
   .content { padding: 24px 16px 60px; }
@@ -792,6 +809,47 @@ function updateActiveLink() {
 
 window.addEventListener('scroll', updateActiveLink, { passive: true });
 updateActiveLink();
+
+// ─── Download version picker ───
+function toggleDownloadMenu() {
+  var wrapper = document.getElementById('downloadWrapper');
+  var isOpen = wrapper.classList.toggle('open');
+  if (isOpen && !wrapper.dataset.loaded) {
+    wrapper.dataset.loaded = '1';
+    loadReleases();
+  }
+}
+function loadReleases() {
+  fetch('https://api.github.com/repos/moganth/Hagane/releases')
+    .then(function(r) { return r.json(); })
+    .then(function(releases) {
+      var menu = document.getElementById('downloadMenu');
+      var loading = document.getElementById('downloadLoading');
+      if (loading) loading.remove();
+      releases.forEach(function(rel) {
+        var asset = (rel.assets || []).find(function(a) { return a.name === 'hagane-setup.exe'; });
+        if (!asset) return;
+        var item = document.createElement('a');
+        item.className = 'download-menu-item';
+        item.href = asset.browser_download_url;
+        item.textContent = rel.tag_name + (rel.prerelease ? '  (pre-release)' : '');
+        menu.appendChild(item);
+      });
+      if (!menu.querySelector('.download-menu-item')) {
+        menu.innerHTML = '<span class="download-menu-loading">No releases found</span>';
+      }
+    })
+    .catch(function() {
+      var loading = document.getElementById('downloadLoading');
+      if (loading) loading.textContent = 'Failed to load — check connection';
+    });
+}
+document.addEventListener('click', function(e) {
+  var wrapper = document.getElementById('downloadWrapper');
+  if (wrapper && !wrapper.contains(e.target)) {
+    wrapper.classList.remove('open');
+  }
+});
 """
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -817,13 +875,12 @@ HTML_SHELL = """\
     <span class="logo-tag">Installer Engine</span>
   </a>
   <div class="header-spacer"></div>
-  <pre class="header-ascii-art" aria-hidden="true">&#x2588;&#x2588;&#x2557;  &#x2588;&#x2588;&#x2557; &#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2557;  &#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2557;  &#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2557; &#x2588;&#x2588;&#x2588;&#x2557;   &#x2588;&#x2588;&#x2557;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2557;
-&#x2588;&#x2588;&#x2551;  &#x2588;&#x2588;&#x2551;&#x2588;&#x2588;&#x2554;&#x2550;&#x2550;&#x2588;&#x2588;&#x2557;&#x2588;&#x2588;&#x2554;&#x2550;&#x2550;&#x2550;&#x2550;&#x255D; &#x2588;&#x2588;&#x2554;&#x2550;&#x2550;&#x2588;&#x2588;&#x2557;&#x2588;&#x2588;&#x2588;&#x2588;&#x2557;  &#x2588;&#x2588;&#x2551;&#x2588;&#x2588;&#x2554;&#x2550;&#x2550;&#x2550;&#x2550;&#x255D;
-&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2551;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2551;&#x2588;&#x2588;&#x2551;  &#x2588;&#x2588;&#x2588;&#x2557;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2551;&#x2588;&#x2588;&#x2554;&#x2588;&#x2588;&#x2557; &#x2588;&#x2588;&#x2551;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2557;
-&#x2588;&#x2588;&#x2554;&#x2550;&#x2550;&#x2588;&#x2588;&#x2551;&#x2588;&#x2588;&#x2554;&#x2550;&#x2550;&#x2588;&#x2588;&#x2551;&#x2588;&#x2588;&#x2551;   &#x2588;&#x2588;&#x2551;&#x2588;&#x2588;&#x2554;&#x2550;&#x2550;&#x2588;&#x2588;&#x2551;&#x2588;&#x2588;&#x2551;&#x255A;&#x2588;&#x2588;&#x2557;&#x2588;&#x2588;&#x2551;&#x2588;&#x2588;&#x2554;&#x2550;&#x2550;&#x255D;
-&#x2588;&#x2588;&#x2551;  &#x2588;&#x2588;&#x2551;&#x2588;&#x2588;&#x2551;  &#x2588;&#x2588;&#x2551;&#x255A;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2554;&#x255D;&#x2588;&#x2588;&#x2551;  &#x2588;&#x2588;&#x2551;&#x2588;&#x2588;&#x2551; &#x255A;&#x2588;&#x2588;&#x2588;&#x2588;&#x2551;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2557;
-&#x255A;&#x2550;&#x255D;  &#x255A;&#x2550;&#x255D;&#x255A;&#x2550;&#x255D;  &#x255A;&#x2550;&#x255D; &#x255A;&#x2550;&#x2550;&#x2550;&#x2550;&#x2550;&#x255D; &#x255A;&#x2550;&#x255D;  &#x255A;&#x2550;&#x255D;&#x255A;&#x2550;&#x255D;  &#x255A;&#x2550;&#x2550;&#x2550;&#x255D;&#x255A;&#x2550;&#x2550;&#x2550;&#x2550;&#x2550;&#x2550;&#x255D;</pre>
-  <a class="header-download" href="https://github.com/moganth/Hagane/releases/latest/download/hagane-setup.exe">&#8595; Download</a>
+  <div class="download-wrapper" id="downloadWrapper">
+    <button class="header-download" onclick="toggleDownloadMenu()">&#8595; Download</button>
+    <div class="download-menu" id="downloadMenu">
+      <span class="download-menu-loading" id="downloadLoading">Loading releases&#8230;</span>
+    </div>
+  </div>
   <span class="header-version">v{version}</span>
 </header>
 
@@ -835,6 +892,12 @@ HTML_SHELL = """\
 </aside>
 
 <main class="content" id="main-content">
+<pre class="intro-ascii-art" aria-hidden="true">██╗  ██╗ █████╗  ██████╗  █████╗ ███╗   ██╗███████╗
+██║  ██║██╔══██╗██╔════╝ ██╔══██╗████╗  ██║██╔════╝
+███████║███████║██║  ███╗███████║██╔██╗ ██║█████╗  
+██╔══██║██╔══██║██║   ██║██╔══██║██║╚██╗██║██╔══╝  
+██║  ██║██║  ██║╚██████╔╝██║  ██║██║ ╚████║███████╗
+╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝</pre>
 {sections}
   <footer class="site-footer">
     <p>Hagane Installer Engine &mdash; v{version} &mdash; Built with Rust &amp; WebView2</p>
