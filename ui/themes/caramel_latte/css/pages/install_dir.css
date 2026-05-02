@@ -1,39 +1,36 @@
 /* ── Caramel Latte · install_dir.css ── */
 
-.field label { color: #5e3a22 !important; font-weight: 600 !important; }
+.field label {
+  color: var(--text) !important;
+  font-weight: 600 !important;
+}
 
 .input {
-  background: #fff9f2 !important;
-  border-color: rgba(130, 88, 59, 0.35) !important;
-  color: #3b241a !important;
-  border-radius: 7px !important;
+  background: color-mix(in srgb, var(--bg) 90%, white 10%) !important;
+  border-color: color-mix(in srgb, var(--accent) 25%, var(--border) 75%) !important;
+  color: var(--text) !important;
+  border-radius: var(--radius) !important;
 }
+
 .input:focus {
-  border-color: #a5653f !important;
-  box-shadow: 0 0 0 3px rgba(165, 101, 63, 0.14) !important;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent) !important;
   outline: none !important;
 }
 
 .disk-info {
-  background: linear-gradient(180deg, #fff8ef 0%, #f5e5d0 100%) !important;
-  border-color: rgba(152, 103, 69, 0.28) !important;
-  border-radius: 10px !important;
-  box-shadow: 0 4px 14px rgba(110, 70, 40, 0.08) !important;
+  background: color-mix(in srgb, var(--bg-alt) 80%, var(--bg) 20%) !important;
+  border-color: color-mix(in srgb, var(--accent) 25%, var(--border) 75%) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--accent-dark) 8%, transparent) !important;
 }
-.disk-stat-label {
-  color: #a07050 !important;
-  letter-spacing: .07em !important;
-}
-.disk-stat-value { color: #4a2e1a !important; }
-.disk-stat-value.warn { color: #b04a1a !important; }
 
-.disk-bar-wrap {
-  background: rgba(152, 103, 69, 0.18) !important;
-  border-radius: 4px !important;
+.disk-stat-label {
+  color: var(--text-muted) !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+  font-size: 11px !important;
 }
-.disk-bar {
-  background: linear-gradient(90deg, #c8824a 0%, #8f5532 100%) !important;
-}
-.disk-bar.warn {
-  background: linear-gradient(90deg, #d4622a 0%, #a03018 100%) !important;
-}
+
+.disk-stat-value { color: var(--text) !important; }
+.disk-stat-value.warn { color: var(--error) !important; }

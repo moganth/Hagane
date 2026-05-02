@@ -1,27 +1,33 @@
 /* ── Caramel Latte · summary.css ── */
 
 .summary-box {
-  background: #fff9f2 !important;
-  border-color: rgba(152, 103, 69, 0.26) !important;
-  border-radius: 12px !important;
-  box-shadow: 0 12px 28px rgba(112, 74, 46, 0.09) !important;
+  background: color-mix(in srgb, var(--bg-alt) 75%, var(--bg) 25%) !important;
+  border-color: color-mix(in srgb, var(--accent) 25%, var(--border) 75%) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--accent-dark) 10%, transparent) !important;
   overflow: hidden !important;
 }
+
 .summary-row {
-  border-bottom-color: rgba(152, 103, 69, 0.16) !important;
+  border-bottom-color: color-mix(in srgb, var(--border) 80%, var(--accent) 20%) !important;
 }
+
 .summary-key {
-  background: rgba(255, 245, 232, 0.92) !important;
-  color: #7c5a46 !important;
-  font-family: Georgia, 'Times New Roman', serif !important;
+  background: color-mix(in srgb, var(--bg-alt) 70%, var(--border) 30%) !important;
+  color: var(--text-muted) !important;
+  font-family: var(--font) !important;
 }
-.summary-val { color: #3b281d !important; }
+
+.summary-val {
+  color: var(--text) !important;
+  font-family: var(--font) !important;
+}
 
 .ready-note {
-  background: linear-gradient(180deg, #fff7ee 0%, #f8e8d7 100%) !important;
-  border-color: rgba(152, 103, 69, 0.34) !important;
-  color: #7c5135 !important;
-  border-radius: 10px !important;
+  background: var(--accent-light) !important;
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border) 65%) !important;
+  color: var(--accent-dark) !important;
+  border-radius: var(--radius) !important;
   position: relative;
   padding-left: 42px !important;
 }

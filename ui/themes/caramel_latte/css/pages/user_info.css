@@ -1,19 +1,23 @@
 /* ── Caramel Latte · user_info.css ── */
 
-.field label { color: #5e3a22 !important; font-weight: 600 !important; }
+.field label {
+  color: var(--text) !important;
+  font-weight: 600 !important;
+}
 
 .input,
 textarea,
 select.input {
-  background: #fffdf8 !important;
-  border-color: rgba(132, 92, 67, 0.36) !important;
-  color: #3b241a !important;
-  border-radius: 7px !important;
+  background: color-mix(in srgb, var(--bg) 90%, white 10%) !important;
+  border-color: color-mix(in srgb, var(--accent) 25%, var(--border) 75%) !important;
+  color: var(--text) !important;
+  border-radius: var(--radius) !important;
 }
+
 .input:focus,
 textarea:focus,
 select.input:focus {
-  border-color: #a5653f !important;
-  box-shadow: 0 0 0 3px rgba(165, 101, 63, 0.14) !important;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent) !important;
   outline: none !important;
 }

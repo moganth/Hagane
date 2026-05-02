@@ -1,11 +1,13 @@
-/* ── Caramel Latte · progress.css ── */
+/* ── Caramel Latte · progress.css ────────────────────────────────────────────
+   UI chrome uses CSS vars. Brew illustration keeps warm neutral illustration
+   values since it is purely decorative artwork, not UI color.
+   ──────────────────────────────────────────────────────────────────────────── */
 
-/* Progress page hides banner/footer — it's a full-bleed brew scene */
+/* Progress page hides banner/footer — full-bleed brew scene */
 .banner  { display: none !important; }
 .footer  { display: none !important; }
 
 .content {
-  /* Override the global card shape — progress is full bleed, no card */
   border-radius: 0 !important;
   border: none !important;
   box-shadow: none !important;
@@ -18,33 +20,37 @@
   gap: 8px;
 }
 .content::before { display: none !important; }
+.content::after  { display: none !important; }
 
 .page-title {
   font-size: 26px !important;
   line-height: 1.05 !important;
   font-weight: 800 !important;
-  letter-spacing: .02em !important;
-  color: #4b2f20 !important;
-  font-family: Georgia, 'Times New Roman', serif !important;
+  letter-spacing: 0.02em !important;
+  color: var(--text) !important;
+  font-family: var(--font) !important;
 }
+
 .progress-header {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 12px;
 }
+
 .progress-label {
   font-size: 14px;
   line-height: 1.2;
-  color: #8f5f43;
+  color: var(--text-muted) !important;
   font-weight: 600;
 }
+
 .progress-pct {
   font-size: 18px;
   line-height: 1;
   font-weight: 800;
-  color: #a86641;
-  font-family: Georgia, 'Times New Roman', serif !important;
+  color: var(--accent) !important;
+  font-family: var(--font) !important;
 }
 
 .progress-grid {
@@ -59,10 +65,10 @@
 /* ── Brew panel card ── */
 .brew-panel {
   min-height: 0;
-  border: 1px solid rgba(151, 104, 71, .32);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border) 72%);
   border-radius: 18px;
-  background: linear-gradient(180deg, #fff9f3 0%, #f7e8d6 100%);
-  box-shadow: 0 10px 22px rgba(117, 77, 51, .12);
+  background: color-mix(in srgb, var(--bg) 85%, white 15%);
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--accent-dark) 12%, transparent);
   padding: 10px;
   overflow: hidden;
   display: flex;
@@ -77,7 +83,237 @@
   flex: 1;
   min-height: 0;
 }
+
 .brew-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--text-muted) !important;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-family: var(--font) !important;
+  padding: 2px 6px;
+}
+
+/* ── Brew stage illustration (warm neutrals are intentional illustration art) ── */
+.brew-stage {
+  position: relative;
+  flex: 1;
+  min-height: 104px;
+  border-radius: 16px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 12% 14%, rgba(255, 248, 230, 0.55), transparent 22%),
+    radial-gradient(circle at 88% 18%, rgba(255, 244, 215, 0.50), transparent 24%),
+    radial-gradient(circle at 50% 20%, rgba(255, 255, 255, 0.95), transparent 30%),
+    linear-gradient(180deg, #fff8ef 0%, #f2dfc8 100%);
+  border: 1px solid rgba(163, 113, 78, 0.22);
+}
+
+.brew-stage::before {
+  content: '';
+  position: absolute;
+  left: 22px; top: 22px;
+  width: 44px; height: 66px;
+  border-radius: 8px 8px 18px 18px;
+  background: linear-gradient(180deg, rgba(255, 233, 170, 0.72) 0%, rgba(255, 199, 123, 0.22) 100%);
+  box-shadow: 0 0 26px rgba(255, 198, 112, 0.46);
+  opacity: 0.78;
+}
+
+.brew-stage::after {
+  content: '';
+  position: absolute;
+  right: 18px; bottom: 10px;
+  width: 120px; height: 18px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(94, 56, 34, 0.14) 0%, rgba(84, 48, 28, 0.03) 100%);
+  transform: skewX(-16deg);
+}
+
+/* ── Steam ── */
+.steam {
+  position: absolute;
+  left: 50%; bottom: 58px;
+  width: 64px; height: 62px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.8));
+}
+.steam span {
+  position: absolute;
+  bottom: 0;
+  width: 16px; height: 46px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 245, 233, 0.35) 58%, rgba(255, 255, 255, 0));
+  animation: steamRise 2.7s infinite ease-in-out;
+  opacity: 0.95;
+  transform-origin: 50% 100%;
+}
+.steam span:nth-child(1) { left: 0;    animation-delay: 0s;    }
+.steam span:nth-child(2) { left: 22px; height: 58px; animation-delay: 0.35s; }
+.steam span:nth-child(3) { left: 44px; height: 48px; animation-delay: 0.7s;  }
+.steam span:nth-child(4) { left: 66px; height: 40px; animation-delay: 1.05s; }
+@keyframes steamRise {
+  0%   { transform: translateY(0) scale(0.74) rotate(-4deg); opacity: 0; }
+  20%  { opacity: 0.95; }
+  55%  { transform: translateY(-24px) scale(1.08) rotate(4deg); opacity: 0.8; }
+  100% { transform: translateY(-52px) scale(1.46) rotate(-2deg); opacity: 0; }
+}
+
+/* ── Cup (illustration) ── */
+.cup-wrap {
+  position: absolute;
+  left: 50%; bottom: 14px;
+  width: 244px; max-width: 90%; height: 72px;
+  transform: translateX(-50%);
+}
+.cup {
+  position: absolute;
+  left: 50%; bottom: 0;
+  width: 166px; height: 52px;
+  transform: translateX(-50%);
+  border: 5px solid #7A3B1E;
+  border-bottom-width: 8px;
+  border-radius: 0 0 24px 24px;
+  background: linear-gradient(180deg, #fffaf4 0%, #f5e2cd 100%);
+  box-shadow: inset 0 8px 16px rgba(133, 90, 58, 0.14);
+}
+.cup::before {
+  content: '';
+  position: absolute;
+  right: -30px; top: 10px;
+  width: 30px; height: 30px;
+  border: 5px solid #7A3B1E;
+  border-left-color: transparent;
+  border-bottom-color: transparent;
+  border-radius: 50%;
+  transform: rotate(15deg);
+}
+.cup::after {
+  content: '';
+  position: absolute;
+  left: 50%; bottom: -14px;
+  width: 112px; height: 12px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: rgba(120, 78, 53, 0.20);
+  filter: blur(2px);
+}
+
+/* ── Coffee fill ── */
+.cup-fill {
+  position: absolute;
+  left: 8px; right: 8px; bottom: 8px;
+  height: 0;
+  border-radius: 0 0 24px 24px;
+  background: linear-gradient(180deg, #e3b083 0%, #c78653 42%, #7A3B1E 100%);
+  transition: height 0.35s ease;
+  overflow: hidden;
+  box-shadow: inset 0 12px 14px rgba(255, 255, 255, 0.10);
+}
+.cup-fill::before {
+  content: '';
+  position: absolute;
+  left: -14%; top: -6px;
+  width: 132%; height: 18px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 16px 50%,  rgba(255, 249, 242, 0.98) 0 7px, transparent 8px),
+    radial-gradient(circle at 38px 50%,  rgba(255, 249, 242, 0.85) 0 6px, transparent 7px),
+    radial-gradient(circle at 64px 50%,  rgba(255, 249, 242, 0.97) 0 7px, transparent 8px),
+    radial-gradient(circle at 92px 50%,  rgba(255, 249, 242, 0.88) 0 6px, transparent 7px),
+    radial-gradient(circle at 118px 50%, rgba(255, 249, 242, 0.95) 0 7px, transparent 8px);
+  animation: foamDrift 2.1s infinite linear;
+  opacity: 0.98;
+}
+@keyframes foamDrift {
+  from { transform: translateX(0); }
+  to   { transform: translateX(15px); }
+}
+
+/* ── Coffee beans ── */
+.cup-crumbs {
+  position: absolute;
+  inset: auto 24px 26px;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+  opacity: 0.94;
+}
+.cup-crumbs i {
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #6e4026 0 36%, #2d1a12 72%);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+  animation: beanPulse 1.8s infinite ease-in-out;
+}
+.cup-crumbs i:nth-child(2) { animation-delay: 0.28s; }
+.cup-crumbs i:nth-child(3) { animation-delay: 0.56s; }
+@keyframes beanPulse {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%       { transform: translateY(-2px) scale(1.1); }
+}
+
+/* ── Caption & status (CSS vars) ── */
+.brew-caption {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted) !important;
+  padding: 0 6px;
+}
+.brew-caption strong {
+  font-size: 16px;
+  line-height: 1;
+  color: var(--accent) !important;
+  font-family: var(--font) !important;
+}
+
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted) !important;
+  font-weight: 600;
+  padding: 2px 6px;
+}
+
+.spinner {
+  display: inline-block;
+  width: 16px; height: 16px;
+  border: 2px solid color-mix(in srgb, var(--accent) 25%, var(--border) 75%);
+  border-top-color: var(--accent) !important;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Buttons on progress page ── */
+#btn-next {
+  background: linear-gradient(180deg, var(--accent) 0%, var(--accent-dark) 100%) !important;
+  border-color: var(--accent-dark) !important;
+  color: #fff !important;
+}
+#btn-cancel {
+  color: var(--text-muted) !important;
+  border-color: transparent !important;
+  background: transparent !important;
+}
+
+@media (max-width: 680px) {
+  .progress-grid { grid-template-columns: 1fr; }
+  .brew-stage { min-height: 108px; }
+  .page-title { font-size: 22px !important; }
+  .progress-label { font-size: 13px; }
+}
   display: flex;
   justify-content: space-between;
   align-items: center;

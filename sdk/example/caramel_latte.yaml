@@ -10,7 +10,7 @@ app:
   website: "https://example.com"
   support_url: "https://example.com/support"
   logo: "assets/logo.png"
-  banner: "assets/banner.png"
+  banner: "assets/banner.gif"
   icon: "assets/icon.ico"
   default_install_dir: "{{INSTALL_ROOT}}"
   registry_key: "{{COMPANY_PRODUCT}}"
@@ -36,22 +36,22 @@ logging:
 
 theme:
   preset: "caramel_latte"
-  accent_color: "#B9764D"
-  accent_dark_color: "#8F5A3A"
-  accent_light_color: "#F7E6D4"
-  background_color: "#F5E7D7"
-  surface_color: "#FFF7EE"
-  text_color: "#33241B"
-  text_muted_color: "#785E4D"
-  border_color: "#D8BCA6"
-  success_color: "#8F5A3A"
-  success_bg_color: "#F7E9D9"
-  error_color: "#A14E2D"
-  error_bg_color: "#FFF2E8"
-  progress_color: "#B9764D"
-  progress_light_color: "#E4B07F"
-  font_family: "'Trebuchet MS', 'Segoe UI', sans-serif"
-  border_radius: 10
+  accent_color: "#A0522D"
+  accent_dark_color: "#7A3B1E"
+  accent_light_color: "#F5E6D3"
+  background_color: "#FDF6EE"
+  surface_color: "#F5EAD8"
+  text_color: "#3B2314"
+  text_muted_color: "#8B6347"
+  border_color: "#D4B896"
+  success_color: "#5A7A3A"
+  success_bg_color: "#EFF5E8"
+  error_color: "#8B2500"
+  error_bg_color: "#FCF0EB"
+  progress_color: "#A0522D"
+  progress_light_color: "#E8C9A8"
+  font_family: "'Georgia', 'Palatino Linotype', serif"
+  border_radius: 12
   window_width: 780
   window_height: 540
   banner_position: top

@@ -1,29 +1,43 @@
 /* ── Caramel Latte · error.css ── */
 
-/* Banner shifts from warm brown to burnt-red on error pages */
+/* On error pages, banner shifts toward error color */
 .banner,
 .brand-tile {
-  background: linear-gradient(120deg, #9e3e22 0%, #7a2d18 58%, #5e2010 100%) !important;
+  background: linear-gradient(120deg,
+    color-mix(in srgb, var(--error) 60%, var(--accent-dark) 40%) 0%,
+    color-mix(in srgb, var(--error) 80%, black 20%) 58%,
+    color-mix(in srgb, var(--error) 90%, black 10%) 100%) !important;
 }
 
-.error-icon { filter: sepia(0.4) saturate(1.1) hue-rotate(-8deg); }
+.banner-art {
+  background: linear-gradient(120deg,
+    color-mix(in srgb, var(--error) 55%, var(--accent-dark) 45%) 0%,
+    color-mix(in srgb, var(--error) 75%, black 25%) 100%) !important;
+}
 
-.error-title { color: #7b3014 !important; }
-.error-sub   { color: #8a5040 !important; }
+.error-icon {
+  filter: sepia(0.3) saturate(1.2) hue-rotate(-5deg);
+  font-size: 68px !important;
+}
+
+.error-title { color: var(--error) !important; }
+.error-sub   { color: var(--text-muted) !important; }
 
 .error-detail {
-  background: #2a1208 !important;
-  border-color: #5a2810 !important;
+  background: #1a0c04 !important;
+  border-color: color-mix(in srgb, var(--error) 40%, var(--border) 60%) !important;
   color: #f3c8a0 !important;
-  border-radius: 10px !important;
+  border-radius: var(--radius) !important;
+  font-family: 'Cascadia Code', 'Consolas', monospace !important;
 }
+
 .error-detail::-webkit-scrollbar-thumb {
-  background: rgba(180, 90, 50, 0.4) !important;
+  background: color-mix(in srgb, var(--error) 35%, var(--border) 65%) !important;
 }
 
 .rollback-note {
-  background: linear-gradient(180deg, #fff8ef 0%, #f5e8d8 100%) !important;
-  border-color: rgba(152, 103, 69, 0.28) !important;
-  color: #7a5036 !important;
-  border-radius: 10px !important;
+  background: var(--accent-light) !important;
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border) 70%) !important;
+  color: var(--accent-dark) !important;
+  border-radius: var(--radius) !important;
 }

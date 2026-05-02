@@ -1,72 +1,332 @@
-:root {
-  --caramel-shadow: 0 18px 34px rgba(83, 51, 32, 0.2);
-  --caramel-border: rgba(117, 77, 52, 0.22);
-}
+/* ── Caramel Latte · global.css ────────────────────────────────────────────────
+   All colors come from CSS vars injected by applyTheme() from the YAML manifest.
+   No hardcoded hex here — every value references a var so the palette is
+   controlled entirely from caramel_latte.yaml.
+   ──────────────────────────────────────────────────────────────────────────── */
 
+/* Body / page background — warm parchment gradient */
 html, body {
   background:
-    radial-gradient(circle at 16% -12%, rgba(255, 223, 156, 0.42), transparent 28%),
-    radial-gradient(circle at 84% -10%, rgba(255, 218, 146, 0.34), transparent 25%),
-    linear-gradient(180deg, #f8eddc 0%, #f0dcc6 100%) !important;
+    radial-gradient(ellipse at 20% 0%,  rgba(224, 180, 130, 0.28) 0%, transparent 45%),
+    radial-gradient(ellipse at 80% 0%,  rgba(210, 160, 100, 0.22) 0%, transparent 40%),
+    radial-gradient(ellipse at 50% 100%, rgba(180, 130, 80,  0.14) 0%, transparent 50%),
+    var(--bg) !important;
+  font-family: var(--font) !important;
+  color: var(--text) !important;
 }
 
+/* ── Content card ── */
 .content {
-  border-radius: 16px !important;
-  border: 1px solid var(--caramel-border) !important;
   background:
-    linear-gradient(180deg, rgba(255, 251, 245, 0.96) 0%, rgba(250, 238, 223, 0.95) 100%) !important;
-  box-shadow: var(--caramel-shadow) !important;
+    linear-gradient(160deg,
+      color-mix(in srgb, var(--bg) 97%, white 3%) 0%,
+      color-mix(in srgb, var(--bg-alt) 90%, var(--bg) 10%) 100%) !important;
+  border-radius: var(--radius) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow:
+    0 2px 8px  color-mix(in srgb, var(--accent-dark) 12%, transparent),
+    0 12px 32px color-mix(in srgb, var(--accent-dark) 8%, transparent) !important;
   position: relative;
   overflow: hidden;
 }
 
-.content::before {
+/* Subtle warm glow at bottom edge of card */
+.content::after {
   content: '';
   position: absolute;
-  left: -8%;
-  right: -8%;
-  bottom: 0;
-  height: 42px;
-  background: linear-gradient(180deg, rgba(133, 84, 54, 0), rgba(122, 76, 48, 0.16));
+  inset: auto 0 0 0;
+  height: 40px;
+  background: linear-gradient(to top, color-mix(in srgb, var(--accent) 8%, transparent), transparent);
   pointer-events: none;
 }
 
-.footer {
-  border-top: 1px solid rgba(136, 90, 61, 0.3) !important;
-  background: linear-gradient(180deg, #f8e9d7 0%, #f1ddc6 100%) !important;
+/* ── Banner ── */
+.banner {
+  background: linear-gradient(120deg,
+    var(--accent-dark) 0%,
+    color-mix(in srgb, var(--accent-dark) 70%, var(--accent) 30%) 55%,
+    var(--accent) 100%) !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent-dark) 60%, black 40%) !important;
 }
 
+.brand-tile {
+  background: linear-gradient(145deg,
+    color-mix(in srgb, var(--accent-dark) 80%, black 20%) 0%,
+    var(--accent-dark) 100%) !important;
+}
+
+.banner-logo-ph {
+  background: rgba(255, 255, 255, 0.18) !important;
+  border-radius: 10px !important;
+}
+
+.banner-art {
+  background: linear-gradient(120deg,
+    var(--accent-dark) 0%,
+    color-mix(in srgb, var(--accent-dark) 55%, var(--accent) 45%) 60%,
+    color-mix(in srgb, var(--accent) 80%, #c8864a 20%) 100%) !important;
+}
+
+/* ── Footer ── */
+.footer {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--bg-alt) 95%, var(--bg) 5%) 0%,
+    var(--bg-alt) 100%) !important;
+  border-top: 1px solid var(--border) !important;
+}
+
+/* ── Primary button — caramel gradient ── */
 .btn-primary {
-  background: linear-gradient(180deg, #b9764d 0%, #a5653f 100%) !important;
-  border-color: #965636 !important;
+  background: linear-gradient(180deg,
+    var(--accent) 0%,
+    var(--accent-dark) 100%) !important;
+  border-color: var(--accent-dark) !important;
+  color: #fff !important;
+  font-family: var(--font) !important;
+  letter-spacing: 0.01em !important;
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--accent-dark) 35%, transparent) !important;
+  transition: background 0.18s, box-shadow 0.18s, transform 0.12s !important;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(180deg, #a86641 0%, #945638 100%) !important;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--accent) 80%, var(--accent-dark) 20%) 0%,
+    color-mix(in srgb, var(--accent-dark) 90%, black 10%) 100%) !important;
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--accent-dark) 45%, transparent) !important;
 }
 
-.btn-secondary,
+.btn-primary:active:not(:disabled) {
+  transform: translateY(1px) !important;
+}
+
+/* ── Secondary / ghost buttons ── */
+.btn-secondary {
+  background: color-mix(in srgb, var(--bg-alt) 80%, var(--bg) 20%) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+  font-family: var(--font) !important;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent-light) 60%, var(--bg-alt) 40%) !important;
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border) 60%) !important;
+}
+
 .btn-ghost {
-  border-color: rgba(124, 86, 61, 0.35) !important;
-  background: rgba(255, 246, 235, 0.85) !important;
+  background: transparent !important;
+  color: var(--text-muted) !important;
+  border-color: transparent !important;
+  font-family: var(--font) !important;
 }
 
-.banner,
-.brand-tile {
-  background: linear-gradient(120deg, #8f5a3a 0%, #753f26 58%, #5f321e 100%) !important;
+.btn-ghost:hover:not(:disabled) {
+  color: var(--text) !important;
+  background: color-mix(in srgb, var(--accent-light) 40%, transparent) !important;
 }
 
+/* ── Text inputs ── */
+.input,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+textarea {
+  background: color-mix(in srgb, var(--bg) 90%, white 10%) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  color: var(--text) !important;
+  font-family: var(--font) !important;
+  transition: border-color 0.18s, box-shadow 0.18s !important;
+}
+
+.input:focus,
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+textarea:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent) !important;
+  outline: none !important;
+}
+
+/* ── Checkboxes / radios accent ── */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--accent) !important;
+}
+
+/* ── Page titles ── */
 .page-title,
-.title,
+.hero-title,
 .finish-title,
 .error-title {
-  color: #583525 !important;
-  font-family: Georgia, 'Times New Roman', serif !important;
+  color: var(--text) !important;
+  font-family: var(--font) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.01em !important;
 }
 
+/* ── Muted text / subtitles ── */
 .page-desc,
-.subtitle,
+.hero-sub,
 .finish-sub,
-.error-sub {
-  color: #81614b !important;
+.error-sub,
+.subtitle {
+  color: var(--text-muted) !important;
+  font-family: var(--font) !important;
+  line-height: 1.7 !important;
 }
+
+/* ── Summary / info boxes ── */
+.summary-box,
+.info-box,
+.disk-info,
+.options-box {
+  background: color-mix(in srgb, var(--bg-alt) 85%, var(--bg) 15%) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+}
+
+.summary-key {
+  background: color-mix(in srgb, var(--bg-alt) 70%, var(--border) 30%) !important;
+  color: var(--text-muted) !important;
+  font-family: var(--font) !important;
+}
+
+.summary-val {
+  color: var(--text) !important;
+  font-family: var(--font) !important;
+}
+
+/* ── Ready / info note ── */
+.ready-note {
+  background: var(--accent-light) !important;
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border) 65%) !important;
+  color: var(--accent-dark) !important;
+  border-radius: var(--radius) !important;
+}
+
+/* ── Requirement rows ── */
+.req-row {
+  background: var(--bg) !important;
+  border-color: var(--border) !important;
+  border-radius: var(--radius) !important;
+}
+
+.req-row.pass {
+  background: var(--success-bg) !important;
+  border-color: color-mix(in srgb, var(--success) 30%, var(--border) 70%) !important;
+}
+
+.req-row.fail {
+  background: var(--error-bg) !important;
+  border-color: color-mix(in srgb, var(--error) 30%, var(--border) 70%) !important;
+}
+
+.status-banner.ok {
+  background: var(--success-bg) !important;
+  border-color: color-mix(in srgb, var(--success) 30%, var(--border) 70%) !important;
+  color: var(--success) !important;
+}
+
+.status-banner.fail {
+  background: var(--error-bg) !important;
+  border-color: color-mix(in srgb, var(--error) 30%, var(--border) 70%) !important;
+  color: var(--error) !important;
+}
+
+/* ── Component rows ── */
+.comp-row {
+  background: var(--bg) !important;
+  border-color: var(--border) !important;
+  border-radius: var(--radius) !important;
+}
+
+.comp-row:hover:not(.required) {
+  background: var(--accent-light) !important;
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border) 50%) !important;
+}
+
+.comp-row.selected {
+  background: var(--accent-light) !important;
+  border-color: var(--accent) !important;
+}
+
+.tree-root {
+  background: color-mix(in srgb, var(--bg-alt) 80%, var(--bg) 20%) !important;
+  border-color: var(--border) !important;
+}
+
+/* ── Disk bar ── */
+.disk-bar {
+  background: linear-gradient(90deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 70%, var(--accent-light) 30%) 100%) !important;
+  border-radius: 20px !important;
+}
+
+.disk-bar-wrap {
+  background: var(--border) !important;
+  border-radius: 20px !important;
+}
+
+/* ── License box ── */
+.license-box {
+  background: color-mix(in srgb, var(--bg-alt) 70%, var(--bg) 30%) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+  border-radius: var(--radius) !important;
+}
+
+/* ── Scrollbars ── */
+::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--accent) 30%, var(--border) 70%);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--accent) 55%, var(--border) 45%);
+}
+
+/* ── Spinner ── */
+.spinner {
+  border-top-color: var(--accent) !important;
+  border-color: var(--border) !important;
+  border-top-color: var(--accent) !important;
+}
+
+/* ── Progress bar ── */
+.progress-bar {
+  background: linear-gradient(90deg, var(--progress) 0%, var(--progress-light) 100%) !important;
+}
+
+.progress-wrap {
+  background: var(--bg-alt) !important;
+  border-color: var(--border) !important;
+}
+
+/* ── Custom page widget labels ── */
+.widget-label,
+.field-label,
+label {
+  color: var(--text) !important;
+  font-family: var(--font) !important;
+}
+
+.help-text {
+  color: var(--text-muted) !important;
+}
+
+/* ── Cancel modal ── */
+#cancel-modal-overlay > div {
+  background: var(--bg) !important;
+  border-color: var(--border) !important;
+  box-shadow: 0 16px 40px color-mix(in srgb, var(--accent-dark) 30%, transparent) !important;
+  border-radius: var(--radius) !important;
+}
+
+/* ── Page fade-in animation ── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.content { animation: fadeIn 0.22s ease !important; }
