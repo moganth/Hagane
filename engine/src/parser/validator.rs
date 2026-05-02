@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use crate::parser::schema::{InlineLogSpec, InstallerManifest, PageType, InstallStep};
+use crate::parser::schema::{CustomWidget, InlineLogSpec, InstallStep, InstallerManifest, PageType};
 
 /// Validates a parsed manifest for logical consistency.
 /// Returns Ok(()) or a descriptive error.
@@ -91,12 +91,82 @@ fn validate_pages(manifest: &InstallerManifest) -> Result<()> {
     if !has_install {
         bail!("HG-YAML-001: pages must include at least one page of type 'install'");
     }
+    let mut custom_ids = std::collections::HashSet::new();
+    for (index, page) in manifest.pages.iter().enumerate() {
+        if matches!(page.page_type, PageType::Custom) {
+            let id = page.id.as_deref().map(str::trim).filter(|v| !v.is_empty());
+            let Some(id) = id else {
+                bail!("HG-YAML-001: pages[{}] custom pages must define a non-empty id", index);
+            };
+            if !custom_ids.insert(id.to_string()) {
+                bail!("HG-YAML-001: duplicate custom page id '{}'", id);
+            }
+            if page.custom_html.as_deref().map(str::trim).filter(|v| !v.is_empty()).is_none()
+                && !page.widgets.as_ref().map(|w| !w.is_empty()).unwrap_or(false)
+            {
+                bail!("HG-YAML-001: custom page '{}' must define either custom_html or widgets", id);
+            }
+            validate_custom_page_widgets(id, page.widgets.as_deref())?;
+        }
+    }
     // If requirements are defined, a requirements page should exist
     if manifest.requirements.is_some() {
         let has_req_page = manifest.pages.iter().any(|p| p.page_type == PageType::Requirements);
         if !has_req_page {
             log::warn!("Requirements are defined but no 'requirements' page is listed — checks will still run silently");
         }
+    }
+    Ok(())
+}
+
+fn validate_custom_page_widgets(page_id: &str, widgets: Option<&[CustomWidget]>) -> Result<()> {
+    let Some(widgets) = widgets else { return Ok(()); };
+    let mut widget_ids = std::collections::HashSet::new();
+
+    for (index, widget) in widgets.iter().enumerate() {
+        match widget {
+            CustomWidget::Label(_) => {}
+            CustomWidget::TextInput(spec) | CustomWidget::MultilineInput(spec) => {
+                validate_widget_id_and_bind(page_id, index, &spec.id, spec.bind_to.as_deref())?;
+            }
+            CustomWidget::Checkbox(spec) => {
+                validate_widget_id_and_bind(page_id, index, &spec.id, spec.bind_to.as_deref())?;
+            }
+            CustomWidget::RadioGroup(spec) | CustomWidget::Dropdown(spec) => {
+                validate_widget_id_and_bind(page_id, index, &spec.id, spec.bind_to.as_deref())?;
+                if spec.options.is_empty() {
+                    bail!("HG-YAML-001: custom page '{}' widget '{}' must define at least one option", page_id, spec.id);
+                }
+            }
+            CustomWidget::FolderPicker(spec) => {
+                validate_widget_id_and_bind(page_id, index, &spec.id, spec.bind_to.as_deref())?;
+            }
+        }
+
+        let widget_id = match widget {
+            CustomWidget::Label(_) => None,
+            CustomWidget::TextInput(spec) | CustomWidget::MultilineInput(spec) => Some(&spec.id),
+            CustomWidget::Checkbox(spec) => Some(&spec.id),
+            CustomWidget::RadioGroup(spec) | CustomWidget::Dropdown(spec) => Some(&spec.id),
+            CustomWidget::FolderPicker(spec) => Some(&spec.id),
+        };
+
+        if let Some(id) = widget_id {
+            if !widget_ids.insert(id.clone()) {
+                bail!("HG-YAML-001: custom page '{}' has duplicate widget id '{}'", page_id, id);
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn validate_widget_id_and_bind(page_id: &str, index: usize, widget_id: &str, bind_to: Option<&str>) -> Result<()> {
+    if widget_id.trim().is_empty() {
+        bail!("HG-YAML-001: custom page '{}' widget[{}] must define a non-empty id", page_id, index);
+    }
+    if bind_to.map(str::trim).filter(|v| !v.is_empty()).is_none() {
+        bail!("HG-YAML-001: custom page '{}' widget '{}' must define bind_to", page_id, widget_id);
     }
     Ok(())
 }

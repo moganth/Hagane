@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use crate::parser::schema::{InstallerManifest, PageType};
+use crate::parser::schema::{CustomWidget, InstallerManifest, PageDefinition, PageType};
 use crate::requirements::CheckResult;
 
 // ── Pages ─────────────────────────────────────────────────────────────────────
@@ -18,6 +18,7 @@ pub enum Page {
     Install,
     Finish,
     Error,
+    Custom(String),
 }
 
 impl From<&PageType> for Page {
@@ -33,6 +34,7 @@ impl From<&PageType> for Page {
             PageType::Install      => Page::Install,
             PageType::Finish       => Page::Finish,
             PageType::Error        => Page::Error,
+            PageType::Custom       => Page::Custom("custom".to_string()),
         }
     }
 }
@@ -93,6 +95,9 @@ pub struct InstallerState {
     // Navigation
     pub pages: Vec<Page>,
     pub current_page_index: usize,
+    #[serde(skip)]
+    page_definitions: Vec<PageDefinition>,
+    pub current_page_definition: Option<PageDefinition>,
 
     // App info (subset forwarded to UI)
     pub app_name: String,
@@ -123,6 +128,7 @@ pub struct InstallerState {
     pub progress_light_color: String,
     pub font_family: String,
     pub border_radius: u8,
+    pub theme_preset: String,
     pub window_width: u32,
     pub window_height: u32,
 
@@ -132,6 +138,7 @@ pub struct InstallerState {
     pub selected_components: HashSet<String>,
     pub license: LicenseState,
     pub user_info: UserInfoState,
+    pub custom_values: HashMap<String, String>,
 
     // Requirements
     pub requirement_results: Vec<CheckResult>,
@@ -155,7 +162,12 @@ pub struct InstallerState {
 
 impl InstallerState {
     pub fn from_manifest(manifest: &InstallerManifest) -> Self {
-        let pages: Vec<Page> = manifest.pages.iter().map(|p| Page::from(&p.page_type)).collect();
+        let page_definitions = manifest.pages.clone();
+        let pages: Vec<Page> = page_definitions
+            .iter()
+            .enumerate()
+            .map(|(index, page)| page_to_runtime_page(page, index))
+            .collect();
 
         let install_dir = manifest.app.default_install_dir.clone()
             .unwrap_or_else(|| {
@@ -185,9 +197,15 @@ impl InstallerState {
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
+        let custom_values = collect_custom_defaults(&page_definitions);
+
+        let current_page_definition = page_definitions.first().cloned();
+
         Self {
             pages,
             current_page_index: 0,
+            page_definitions,
+            current_page_definition,
 
             app_name:        manifest.app.name.clone(),
             app_version:     manifest.app.version.clone(),
@@ -215,6 +233,7 @@ impl InstallerState {
             progress_light_color: theme.and_then(|t| t.progress_light_color.clone()).unwrap_or("#EBF3FB".into()),
             font_family:       theme.and_then(|t| t.font_family.clone()).unwrap_or("Segoe UI, sans-serif".into()),
             border_radius:     theme.and_then(|t| t.border_radius).unwrap_or(6),
+            theme_preset:      theme.and_then(|t| t.preset.clone()).unwrap_or("default".into()),
             window_width:      theme.and_then(|t| t.window_width).unwrap_or(780),
             window_height:     theme.and_then(|t| t.window_height).unwrap_or(540),
 
@@ -223,6 +242,7 @@ impl InstallerState {
             selected_components,
             license:   LicenseState::default(),
             user_info: UserInfoState::default(),
+            custom_values,
 
             requirement_results: Vec::new(),
             requirements_passed: true,
@@ -251,6 +271,7 @@ impl InstallerState {
             Page::Finish | Page::Error => false,
             Page::License => self.license.accepted,
             Page::Requirements => self.requirements_passed,
+            Page::Custom(_) => self.custom_page_is_valid(),
             _ => true,
         }
     }
@@ -258,6 +279,7 @@ impl InstallerState {
     pub fn go_next(&mut self) -> bool {
         if self.current_page_index + 1 < self.pages.len() {
             self.current_page_index += 1;
+            self.sync_current_page_definition();
             true
         } else {
             false
@@ -267,6 +289,7 @@ impl InstallerState {
     pub fn go_back(&mut self) -> bool {
         if self.current_page_index > 0 {
             self.current_page_index -= 1;
+            self.sync_current_page_definition();
             true
         } else {
             false
@@ -281,6 +304,7 @@ impl InstallerState {
     pub fn navigate_to(&mut self, page: Page) {
         if let Some(idx) = self.pages.iter().position(|p| p == &page) {
             self.current_page_index = idx;
+            self.sync_current_page_definition();
         }
     }
 
@@ -295,6 +319,134 @@ impl InstallerState {
         }
         v
     }
+
+    pub fn set_custom_value(&mut self, key: &str, value: String) {
+        self.custom_values.insert(key.to_string(), value);
+    }
+
+    fn sync_current_page_definition(&mut self) {
+        self.current_page_definition = self.page_definitions.get(self.current_page_index).cloned();
+    }
+
+    fn custom_page_is_valid(&self) -> bool {
+        let Some(page) = &self.current_page_definition else {
+            return true;
+        };
+
+        if !matches!(page.page_type, PageType::Custom) {
+            return true;
+        }
+
+        let Some(widgets) = page.widgets.as_ref() else {
+            return true;
+        };
+
+        for widget in widgets {
+            match widget {
+                CustomWidget::Label(_) => {}
+                CustomWidget::TextInput(spec) | CustomWidget::MultilineInput(spec) => {
+                    let Some(bind_to) = spec.bind_to.as_ref() else { return false; };
+                    let value = self.custom_values.get(bind_to).map(|v| v.trim()).unwrap_or("");
+                    if spec.required && value.is_empty() {
+                        return false;
+                    }
+                }
+                CustomWidget::Checkbox(spec) => {
+                    if spec.bind_to.is_none() {
+                        return false;
+                    }
+                }
+                CustomWidget::RadioGroup(spec) | CustomWidget::Dropdown(spec) => {
+                    let Some(bind_to) = spec.bind_to.as_ref() else { return false; };
+                    let value = self.custom_values.get(bind_to).map(|v| v.trim()).unwrap_or("");
+                    if spec.required && value.is_empty() {
+                        return false;
+                    }
+                    if !value.is_empty() && !spec.options.iter().any(|opt| opt.value == value) {
+                        return false;
+                    }
+                }
+                CustomWidget::FolderPicker(spec) => {
+                    let Some(bind_to) = spec.bind_to.as_ref() else { return false; };
+                    let value = self.custom_values.get(bind_to).map(|v| v.trim()).unwrap_or("");
+                    if spec.required && value.is_empty() {
+                        return false;
+                    }
+                    if spec.must_exist && !value.is_empty() && !std::path::Path::new(value).exists() {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        true
+    }
+}
+
+fn page_to_runtime_page(page: &PageDefinition, index: usize) -> Page {
+    match page.page_type {
+        PageType::Welcome => Page::Welcome,
+        PageType::License => Page::License,
+        PageType::Requirements => Page::Requirements,
+        PageType::InstallDir => Page::InstallDir,
+        PageType::Components => Page::Components,
+        PageType::UserInfo => Page::UserInfo,
+        PageType::Summary => Page::Summary,
+        PageType::Install => Page::Install,
+        PageType::Finish => Page::Finish,
+        PageType::Error => Page::Error,
+        PageType::Custom => Page::Custom(
+            page.id
+                .clone()
+                .filter(|id| !id.trim().is_empty())
+                .unwrap_or_else(|| format!("custom-{}", index + 1)),
+        ),
+    }
+}
+
+fn collect_custom_defaults(pages: &[PageDefinition]) -> HashMap<String, String> {
+    let mut values = HashMap::new();
+
+    for page in pages {
+        let Some(widgets) = page.widgets.as_ref() else {
+            continue;
+        };
+
+        for widget in widgets {
+            match widget {
+                CustomWidget::Label(_) => {}
+                CustomWidget::TextInput(spec) | CustomWidget::MultilineInput(spec) => {
+                    if let Some(bind_to) = spec.bind_to.as_ref() {
+                        if let Some(default) = spec.default.as_ref() {
+                            values.entry(bind_to.clone()).or_insert_with(|| default.clone());
+                        }
+                    }
+                }
+                CustomWidget::Checkbox(spec) => {
+                    if let Some(bind_to) = spec.bind_to.as_ref() {
+                        values.entry(bind_to.clone()).or_insert_with(|| spec.default.to_string());
+                    }
+                }
+                CustomWidget::RadioGroup(spec) | CustomWidget::Dropdown(spec) => {
+                    if let Some(bind_to) = spec.bind_to.as_ref() {
+                        let default = spec.default.clone().or_else(|| spec.options.first().map(|opt| opt.value.clone()));
+                        if let Some(default) = default {
+                            values.entry(bind_to.clone()).or_insert(default);
+                        }
+                    }
+                }
+                CustomWidget::FolderPicker(spec) => {
+                    if let Some(bind_to) = spec.bind_to.as_ref() {
+                        if let Some(default) = spec.default.as_ref() {
+                            values.entry(bind_to.clone()).or_insert_with(|| default.clone());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    values
 }
 
 fn resolve_manifest_vars(input: &str, declared_vars: &HashMap<String, String>) -> String {
