@@ -9,7 +9,7 @@ use std::{collections::HashMap, path::{Path, PathBuf}};
 
 /// hagane — Installer Engine CLI
 #[derive(Parser, Debug)]
-#[command(name = "hagane", version, about = "Installer Engine CLI")]
+#[command(name = "hagane", version, about = None)]
 struct Cli {
     #[command(subcommand)]
     command: Option<Command>,
@@ -35,9 +35,9 @@ struct Cli {
 enum Command {
     /// Package manifest + assets into runner/src/generated/embedded.rs
     Build {
-        /// Path to installer.yaml
-        #[arg(short, long, default_value = "hagane/installer.yaml")]
-        manifest: PathBuf,
+        /// Path to installer.yaml (auto-discovered if omitted)
+        #[arg(short, long)]
+        manifest: Option<PathBuf>,
 
         /// Output directory for embedded.rs (default: hagane/generated/)
         #[arg(short, long)]
@@ -54,9 +54,9 @@ enum Command {
 
     /// Compile the installer runner (uses generated embedded.rs)
     Pack {
-        /// Path to installer.yaml (used to determine output name)
-        #[arg(short, long, default_value = "installer.yaml")]
-        manifest: PathBuf,
+        /// Path to installer.yaml (auto-discovered if omitted)
+        #[arg(short, long)]
+        manifest: Option<PathBuf>,
 
         /// Build with cargo --release
         #[arg(long)]
@@ -65,9 +65,8 @@ enum Command {
 
     /// Build pipeline in one command: package + compile
     Run {
-        /// Path to installer.yaml
-        #[arg(default_value = "hagane/installer.yaml")]
-        manifest: PathBuf,
+        /// Path to installer.yaml (auto-discovered if omitted)
+        manifest: Option<PathBuf>,
 
         /// Output directory for embedded.rs (default: hagane/generated/)
         #[arg(short, long)]
@@ -89,20 +88,81 @@ enum Command {
 
 #[derive(Debug, Clone)]
 struct BuildOptions {
-    manifest: PathBuf,
+    manifest: Option<PathBuf>,
     output: Option<PathBuf>,
     compression_level: i32,
     verbose: bool,
 }
 
+fn print_banner() {
+    eprintln!();
+    eprintln!(
+        "\x1b[38;2;160;82;45m\
+██╗  ██╗ █████╗  ██████╗  █████╗ ███╗   ██╗███████╗\n\
+██║  ██║██╔══██╗██╔════╝ ██╔══██╗████╗  ██║██╔════╝\n\
+███████║███████║██║  ███╗███████║██╔██╗ ██║█████╗  \n\
+██╔══██║██╔══██║██║   ██║██╔══██║██║╚██╗██║██╔══╝  \n\
+██║  ██║██║  ██║╚██████╔╝██║  ██║██║ ╚████║███████╗\n\
+╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝\x1b[0m"
+    );
+    eprintln!("\x1b[38;2;139;99;71m  Installer Engine CLI  ·  v{}  ·  hagane --help for usage\x1b[0m", env!("CARGO_PKG_VERSION"));
+    eprintln!();
+}
+
+/// Enable ANSI escape processing on Windows cmd.exe / PowerShell legacy host.
+/// No-op on non-Windows or if already enabled.
+fn enable_ansi() {
+    #[cfg(windows)]
+    unsafe {
+        // STD_OUTPUT_HANDLE = -11i32 as u32, STD_ERROR_HANDLE = -12i32 as u32
+        const STD_OUTPUT_HANDLE: u32 = 0xFFFFFFF5u32;
+        const STD_ERROR_HANDLE: u32  = 0xFFFFFFF4u32;
+        const ENABLE_VIRTUAL_TERMINAL_PROCESSING: u32 = 0x0004;
+
+        #[allow(non_snake_case)]
+        extern "system" {
+            fn GetStdHandle(nStdHandle: u32) -> *mut std::ffi::c_void;
+            fn GetConsoleMode(hConsoleHandle: *mut std::ffi::c_void, lpMode: *mut u32) -> i32;
+            fn SetConsoleMode(hConsoleHandle: *mut std::ffi::c_void, dwMode: u32) -> i32;
+        }
+
+        for handle_id in [STD_OUTPUT_HANDLE, STD_ERROR_HANDLE] {
+            let h = GetStdHandle(handle_id);
+            if h.is_null() || h as isize == -1 { continue; }
+            let mut mode: u32 = 0;
+            if GetConsoleMode(h, &mut mode) != 0 {
+                SetConsoleMode(h, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+            }
+        }
+    }
+}
+
+fn display_len(s: &str) -> usize {
+    s.chars().count()
+}
+
 fn main() {
+    enable_ansi();
+
     env_logger::Builder::from_env(
         env_logger::Env::default().default_filter_or("info")
     ).init();
 
+    print_banner();
+
     let cli = Cli::parse();
     if let Err(e) = run(cli) {
-        log::error!("Build failed: {:#}", e);
+        let msg = format!("{:#}", e);
+        let lines: Vec<&str> = msg.lines().collect();
+        let inner_w = lines.iter().map(|l| display_len(l) + 4).max().unwrap_or(20).max(12);
+        let bar = "═".repeat(inner_w);
+        // ╔═ Error  = 9 display cols; repeat fills to inner_w+2 total (matching ╚bar╝)
+        eprintln!("\x1b[38;2;180;40;10m╔═ Error {}╗\x1b[0m", "═".repeat(inner_w.saturating_sub(8)));
+        for line in &lines {
+            let pad = inner_w - display_len(line) - 2;
+            eprintln!("\x1b[38;2;180;40;10m║\x1b[0m  {}{}\x1b[38;2;180;40;10m║\x1b[0m", line, " ".repeat(pad));
+        }
+        eprintln!("\x1b[38;2;180;40;10m╚{}╝\x1b[0m", bar);
         std::process::exit(1);
     }
 }
@@ -113,23 +173,23 @@ fn run(cli: Cli) -> Result<()> {
             run_build(BuildOptions { manifest, output, compression_level, verbose })?;
         }
         Some(Command::Pack { manifest, release }) => {
-            run_pack(&manifest, release)?;
+            run_pack(manifest.as_deref(), release)?;
         }
         Some(Command::Run { manifest, output, compression_level, release, verbose }) => {
             run_build(BuildOptions { manifest: manifest.clone(), output, compression_level, verbose })?;
-            run_pack(&manifest, release)?;
+            run_pack(manifest.as_deref(), release)?;
         }
         None => {
             // Legacy iebuild-compatible behavior.
             let opts = BuildOptions {
-                manifest: cli.manifest.unwrap_or_else(|| PathBuf::from("hagane/installer.yaml")),
+                manifest: cli.manifest,
                 output: cli.output,
                 compression_level: cli.compression_level.unwrap_or(9),
                 verbose: cli.verbose,
             };
             run_build(opts.clone())?;
             if cli.build {
-                run_pack(&opts.manifest, true)?;
+                run_pack(opts.manifest.as_deref(), true)?;
             }
         }
     }
@@ -138,7 +198,7 @@ fn run(cli: Cli) -> Result<()> {
 }
 
 fn run_build(args: BuildOptions) -> Result<()> {
-    let manifest_path = resolve_manifest_path(&args.manifest)?;
+    let manifest_path = resolve_manifest_path(args.manifest.as_deref())?;
     let workspace_root = resolve_backend_workspace(&manifest_path)?;
 
     if args.verbose {
@@ -215,7 +275,7 @@ fn run_build(args: BuildOptions) -> Result<()> {
     Ok(())
 }
 
-fn run_pack(manifest_path: &Path, release: bool) -> Result<()> {
+fn run_pack(manifest_path: Option<&Path>, release: bool) -> Result<()> {
     let manifest_path = resolve_manifest_path(manifest_path)?;
     let manifest = parser::load_from_file(&manifest_path)
         .context("Manifest load failed")?;
@@ -258,7 +318,8 @@ fn run_pack(manifest_path: &Path, release: bool) -> Result<()> {
     }
 
     cmd.args(["-p", "runner"])
-        .current_dir(&workspace_root);
+        .current_dir(&workspace_root)
+        .env("CARGO_TERM_COLOR", "always");
 
     let status = cmd.status().context("Failed to invoke cargo")?;
     if !status.success() {
@@ -609,7 +670,11 @@ fn normalize_manifest_yaml(raw_yaml: &str, manifest_dir: &Path) -> Result<String
     serde_yaml::to_string(&root).context("Failed to serialize preprocessed manifest")
 }
 
-fn resolve_manifest_path(input: &Path) -> Result<PathBuf> {
+fn resolve_manifest_path(input: Option<&Path>) -> Result<PathBuf> {
+    let Some(input) = input else {
+        return auto_discover_manifest();
+    };
+
     if input.exists() {
         return Ok(input.canonicalize().unwrap_or_else(|_| input.to_path_buf()));
     }
@@ -636,6 +701,77 @@ fn resolve_manifest_path(input: &Path) -> Result<PathBuf> {
         "Manifest not found: {}. Run from the manifest directory or pass --manifest with a valid path.",
         input.display()
     )
+}
+
+fn auto_discover_manifest() -> Result<PathBuf> {
+    let cwd = std::env::current_dir().context("Failed to get current directory")?;
+
+    // Collect ALL *.yaml / *.yml files in CWD first — never shortcut before this.
+    let mut yamls: Vec<PathBuf> = std::fs::read_dir(&cwd)
+        .context("Failed to read current directory")?
+        .filter_map(|e| e.ok())
+        .map(|e| e.path())
+        .filter(|p| {
+            p.is_file()
+                && p.extension()
+                    .map_or(false, |ext| ext.eq_ignore_ascii_case("yaml") || ext.eq_ignore_ascii_case("yml"))
+        })
+        .collect();
+    yamls.sort();
+
+    match yamls.len() {
+        1 => {
+            let found = yamls.into_iter().next().unwrap();
+            log::info!("Auto-discovered manifest: {}", found.display());
+            Ok(found.canonicalize().unwrap_or(found))
+        }
+        0 => {
+            // Fallback: hagane/installer.yaml (Hagane repo root convention, no YAMLs in CWD)
+            let hagane_installer = cwd.join("hagane").join("installer.yaml");
+            if hagane_installer.exists() {
+                log::info!("Auto-discovered manifest: {}", hagane_installer.display());
+                return Ok(hagane_installer.canonicalize().unwrap_or(hagane_installer));
+            }
+            bail!(
+                "No installer manifest found in current directory. \
+                Run from the directory containing your installer.yaml, \
+                or pass the path explicitly: hagane run <manifest.yaml>"
+            )
+        }
+        _ => {
+            let names: Vec<_> = yamls
+                .iter()
+                .filter_map(|p| p.file_name())
+                .map(|n| n.to_string_lossy().into_owned())
+                .collect();
+            let list_lines: Vec<String> = names.iter().map(|n| format!("  •  {}", n)).collect();
+            // Build warning box with correct width
+            let content_lines: Vec<String> = {
+                let mut v = vec![
+                    String::from("Multiple YAML manifests found — unable to auto-select."),
+                    String::new(),
+                    format!("Found in '{}':", cwd.display()),
+                ];
+                v.extend(list_lines);
+                v.push(String::new());
+                v.push(String::from("Fix: specify the manifest explicitly:"));
+                v.push(format!("Example:  hagane run {} --release", names.first().map(|s| s.as_str()).unwrap_or("installer.yaml")));
+                v
+            };
+            let inner_w = content_lines.iter().map(|l| display_len(l) + 4).max().unwrap_or(20).max(12);
+            let bar = "─".repeat(inner_w);
+            eprintln!();
+            // ┌─ Warning  = 11 display cols; repeat fills to inner_w+2 total
+            eprintln!("\x1b[38;2;200;140;0m┌─ Warning {}┐\x1b[0m", "─".repeat(inner_w.saturating_sub(10)));
+            for line in &content_lines {
+                let pad = inner_w - display_len(line) - 2;
+                eprintln!("\x1b[38;2;200;140;0m│\x1b[0m  {}{}\x1b[38;2;200;140;0m│\x1b[0m", line, " ".repeat(pad));
+            }
+            eprintln!("\x1b[38;2;200;140;0m└{}┘\x1b[0m", bar);
+            eprintln!();
+            std::process::exit(2);
+        }
+    }
 }
 
 fn normalize_win_path_for_tools(path: &Path) -> PathBuf {
