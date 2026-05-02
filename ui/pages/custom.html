@@ -1,0 +1,399 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Custom Page</title>
+<style>
+:root{--accent:#0078D4;--accent-dark:#005A9E;--accent-light:#EBF3FB;--bg:#fff;--bg-alt:#F5F5F5;--text:#1A1A1A;--text-muted:#6B6B6B;--border:#E0E0E0;--success:#107C10;--error:#C42B1C;--radius:6px;--font:'Segoe UI',system-ui,sans-serif}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:var(--font);font-size:14px;color:var(--text);background:var(--bg);overflow:hidden;user-select:none;-webkit-font-smoothing:antialiased}
+.root{display:flex;flex-direction:column;height:100vh}
+.banner{flex-shrink:0;display:flex;align-items:stretch;min-height:96px;background:var(--bg-alt);border-bottom:1px solid var(--border);overflow:hidden}
+.brand-tile{width:96px;min-width:96px;background:linear-gradient(135deg,var(--accent) 0%,var(--accent-dark) 100%);display:flex;align-items:center;justify-content:center}
+.banner-logo{width:48px;height:48px;object-fit:contain;display:none}
+.banner-logo-ph{width:48px;height:48px;background:rgba(255,255,255,.22);border-radius:8px}
+.banner-art{flex:1;background:linear-gradient(135deg,var(--accent) 0%,var(--accent-dark) 100%);background-size:cover;background-position:center}
+.content{flex:1;overflow-y:auto;padding:24px 28px;display:flex;flex-direction:column;gap:16px;animation:fadeIn .2s ease;min-height:0}
+.footer{flex-shrink:0;display:flex;justify-content:flex-end;align-items:center;gap:8px;padding:12px 20px;border-top:1px solid var(--border);background:var(--bg-alt)}
+.btn{display:inline-flex;align-items:center;justify-content:center;padding:7px 20px;border-radius:var(--radius);font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;border:1px solid transparent;min-width:90px;transition:background .15s,opacity .15s}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}.btn-primary:hover:not(:disabled){background:var(--accent-dark)}
+.btn-secondary{background:transparent;color:var(--text);border-color:var(--border)}.btn-secondary:hover:not(:disabled){background:var(--bg-alt)}
+.btn-ghost{background:transparent;color:var(--text-muted);border-color:transparent}.btn-ghost:hover{color:var(--text);background:var(--bg-alt)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.page-title{font-size:17px;font-weight:600}.page-desc{font-size:13px;color:var(--text-muted);line-height:1.5}
+.help-text{font-size:12px;color:var(--text-muted);line-height:1.5;margin-top:4px}
+.form{display:flex;flex-direction:column;gap:14px}
+.field{display:flex;flex-direction:column;gap:6px;padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:var(--bg-alt)}
+.field label{font-size:13px;font-weight:600}
+.field .meta{font-size:12px;color:var(--text-muted);line-height:1.45}
+.input,.textarea{padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-family:var(--font);font-size:14px;color:var(--text);background:var(--bg);outline:none;transition:border-color .15s,width .15s}
+.input:focus,.textarea:focus{border-color:var(--accent)}
+.row{display:flex;gap:8px;align-items:center}
+.row .input{flex:1}
+.widget-check{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+.widget-check input{width:16px;height:16px;accent-color:var(--accent)}
+.choice-list{display:flex;flex-direction:column;gap:8px}
+.choice-item{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);cursor:pointer}
+.choice-item input{margin-top:2px;accent-color:var(--accent)}
+.choice-title{font-size:13px;font-weight:600}
+.choice-desc{font-size:12px;color:var(--text-muted);line-height:1.45}
+.error-line{display:none;font-size:12px;color:var(--error);margin-top:6px}
+.label-box{padding:10px 12px;border:1px dashed var(--border);border-radius:10px;background:rgba(255,255,255,.55);font-size:13px;line-height:1.6;color:var(--text-muted)}
+.custom-html-slot{display:flex;flex-direction:column;gap:12px}
+</style></head><body>
+<div class="root">
+  <div class="banner">
+    <div class="brand-tile">
+      <img id="banner-logo" class="banner-logo" alt="">
+      <div id="banner-logo-ph" class="banner-logo-ph"></div>
+    </div>
+    <div id="banner-art" class="banner-art"></div>
+  </div>
+  <div class="content">
+    <div class="page-title" id="page-title">Custom Page</div>
+    <div class="page-desc" id="page-desc"></div>
+    <div id="custom-html-slot" class="custom-html-slot"></div>
+    <div id="form" class="form"></div>
+  </div>
+  <div class="footer">
+    <button id="btn-cancel" class="btn btn-ghost">Cancel</button>
+    <button id="btn-back" class="btn btn-secondary">← Back</button>
+    <button id="btn-next" class="btn btn-primary">Next →</button>
+  </div>
+</div>
+<script>
+let _state = null;
+let _page = null;
+let _values = {};
+let _errors = new Map();
+
+function send(type, payload = {}) {
+  const msg = JSON.stringify({ type, ...payload });
+  if (window.chrome && window.chrome.webview) {
+    window.chrome.webview.postMessage(msg);
+  }
+}
+
+function applyTheme(s) {
+  const r = document.documentElement;
+  r.style.setProperty('--accent', s.accent_color || '#0078D4');
+  r.style.setProperty('--accent-dark', s.accent_dark_color || '#005A9E');
+  r.style.setProperty('--accent-light', s.accent_light_color || '#EBF3FB');
+  r.style.setProperty('--bg', s.background_color || '#FFFFFF');
+  r.style.setProperty('--bg-alt', s.surface_color || '#F5F5F5');
+  r.style.setProperty('--text', s.text_color || '#1A1A1A');
+  r.style.setProperty('--text-muted', s.text_muted_color || '#6B6B6B');
+  r.style.setProperty('--border', s.border_color || '#E0E0E0');
+  r.style.setProperty('--radius', (s.border_radius ?? 6) + 'px');
+  r.style.setProperty('--font', s.font_family || "'Segoe UI',system-ui,sans-serif");
+  r.style.setProperty('--success', s.success_color || '#107C10');
+  r.style.setProperty('--error', s.error_color || '#C42B1C');
+  const iconAsset = s.logo_b64;
+  if (iconAsset) {
+    const l = document.getElementById('banner-logo');
+    if (l) {
+      l.src = (iconAsset.startsWith && iconAsset.startsWith('data:')) ? iconAsset : 'data:image/png;base64,' + iconAsset;
+      l.style.display = 'block';
+      const p = document.getElementById('banner-logo-ph');
+      if (p) p.style.display = 'none';
+    }
+  }
+  const bannerAsset = s.banner_b64;
+  if (bannerAsset) {
+    const art = document.getElementById('banner-art');
+    if (art) {
+      const src = (bannerAsset.startsWith && bannerAsset.startsWith('data:')) ? bannerAsset : 'data:image/png;base64,' + bannerAsset;
+      art.style.backgroundImage = 'url(' + src + ')';
+      art.style.backgroundSize = 'cover';
+      art.style.backgroundPosition = 'center';
+    }
+  }
+}
+
+function ensurePageState(s) {
+  const page = s.current_page_definition || null;
+  _page = page;
+  _state = s;
+  applyTheme(s);
+
+  const title = document.getElementById('page-title');
+  const desc = document.getElementById('page-desc');
+  const htmlSlot = document.getElementById('custom-html-slot');
+  const form = document.getElementById('form');
+
+  if (page) {
+    title.textContent = page.title || 'Custom Page';
+    desc.textContent = page.subtitle || '';
+  } else {
+    title.textContent = 'Custom Page';
+    desc.textContent = '';
+  }
+
+  htmlSlot.innerHTML = '';
+  form.innerHTML = '';
+  _errors.clear();
+  _values = Object.assign({}, s.custom_values || {});
+
+  if (page && page.custom_html && page.custom_html.trim()) {
+    htmlSlot.innerHTML = page.custom_html;
+    form.style.display = 'none';
+    htmlSlot.style.display = 'flex';
+  } else {
+    htmlSlot.style.display = 'none';
+    form.style.display = 'flex';
+    renderWidgets(form, page && Array.isArray(page.widgets) ? page.widgets : []);
+  }
+
+  updateNextState();
+}
+
+function renderWidgets(root, widgets) {
+  widgets.forEach(widget => {
+    const field = document.createElement('div');
+    field.className = 'field';
+
+    if (widget.type === 'label') {
+      const box = document.createElement('div');
+      box.className = 'label-box';
+      box.textContent = widget.text || '';
+      field.appendChild(box);
+      root.appendChild(field);
+      return;
+    }
+
+    const label = document.createElement('label');
+    label.textContent = widget.label || widget.id || widget.type;
+    if (widget.id) label.htmlFor = widget.id;
+    field.appendChild(label);
+
+    if (widget.help_text) {
+      const help = document.createElement('div');
+      help.className = 'help-text';
+      help.textContent = widget.help_text;
+      field.appendChild(help);
+    }
+
+    const error = document.createElement('div');
+    error.className = 'error-line';
+    error.dataset.for = widget.id || '';
+    field.appendChild(error);
+
+    const current = _values[widget.bind_to] ?? widget.default ?? (widget.type === 'checkbox' ? !!widget.default : '');
+
+    if (widget.type === 'checkbox') {
+      const row = document.createElement('label');
+      row.className = 'widget-check';
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.id = widget.id;
+      input.checked = String(current).toLowerCase() === 'true' || current === true;
+      input.addEventListener('change', () => {
+        setValue(widget, input.checked ? 'true' : 'false');
+      });
+      row.appendChild(input);
+      const span = document.createElement('span');
+      span.textContent = widget.label || widget.id;
+      row.appendChild(span);
+      field.innerHTML = '';
+      field.appendChild(row);
+      if (widget.help_text) {
+        const help = document.createElement('div');
+        help.className = 'help-text';
+        help.textContent = widget.help_text;
+        field.appendChild(help);
+      }
+      const err = document.createElement('div');
+      err.className = 'error-line';
+      err.dataset.for = widget.id || '';
+      field.appendChild(err);
+      root.appendChild(field);
+      if (widget.bind_to) {
+        _values[widget.bind_to] = input.checked ? 'true' : 'false';
+      }
+      return;
+    }
+
+    if (widget.type === 'radio_group' || widget.type === 'dropdown') {
+      if (widget.type === 'dropdown') {
+        const select = document.createElement('select');
+        select.id = widget.id;
+        select.className = 'input';
+        (widget.options || []).forEach(opt => {
+          const option = document.createElement('option');
+          option.value = opt.value;
+          option.textContent = opt.label || opt.value;
+          select.appendChild(option);
+        });
+        if (current) select.value = current;
+        select.addEventListener('change', () => setValue(widget, select.value));
+        field.appendChild(select);
+      } else {
+        const list = document.createElement('div');
+        list.className = 'choice-list';
+        (widget.options || []).forEach(opt => {
+          const item = document.createElement('label');
+          item.className = 'choice-item';
+          const input = document.createElement('input');
+          input.type = 'radio';
+          input.name = widget.id;
+          input.value = opt.value;
+          input.checked = current === opt.value;
+          input.addEventListener('change', () => setValue(widget, opt.value));
+          item.appendChild(input);
+          const meta = document.createElement('div');
+          const title = document.createElement('div');
+          title.className = 'choice-title';
+          title.textContent = opt.label || opt.value;
+          meta.appendChild(title);
+          if (opt.description) {
+            const desc = document.createElement('div');
+            desc.className = 'choice-desc';
+            desc.textContent = opt.description;
+            meta.appendChild(desc);
+          }
+          item.appendChild(meta);
+          list.appendChild(item);
+        });
+        field.appendChild(list);
+      }
+      root.appendChild(field);
+      if (widget.bind_to && current) {
+        _values[widget.bind_to] = String(current);
+      }
+      return;
+    }
+
+    if (widget.type === 'folder_picker') {
+      const row = document.createElement('div');
+      row.className = 'row';
+      const input = document.createElement('input');
+      input.id = widget.id;
+      input.className = 'input';
+      input.type = 'text';
+      input.placeholder = widget.placeholder || '';
+      input.value = current || '';
+      input.addEventListener('input', () => setValue(widget, input.value));
+      const browse = document.createElement('button');
+      browse.className = 'btn btn-secondary';
+      browse.textContent = 'Browse…';
+      browse.type = 'button';
+      browse.addEventListener('click', () => {
+        send('browse_folder', {
+          id: widget.id,
+          title: widget.browse_title || widget.label || 'Select folder',
+          initial_path: input.value || widget.default || ''
+        });
+      });
+      row.appendChild(input);
+      row.appendChild(browse);
+      field.appendChild(row);
+      root.appendChild(field);
+      if (widget.bind_to && current) {
+        _values[widget.bind_to] = String(current);
+      }
+      return;
+    }
+
+    const input = widget.type === 'multiline_input'
+      ? document.createElement('textarea')
+      : document.createElement('input');
+    if (widget.type === 'multiline_input') {
+      input.className = 'textarea';
+      input.rows = 5;
+    } else {
+      input.className = 'input';
+      input.type = widget.type === 'text_input' ? 'text' : 'password';
+      input.placeholder = widget.placeholder || '';
+    }
+    input.id = widget.id;
+    input.value = current || '';
+    input.addEventListener('input', () => setValue(widget, input.value));
+    field.appendChild(input);
+    root.appendChild(field);
+    if (widget.bind_to && current) {
+      _values[widget.bind_to] = String(current);
+    }
+  });
+}
+
+function setValue(widget, value) {
+  if (widget.bind_to) {
+    _values[widget.bind_to] = String(value);
+    send('set_custom_value', { id: widget.bind_to, value: String(value) });
+  }
+  validateCurrentPage();
+}
+
+function validateCurrentPage() {
+  const widgets = _page && Array.isArray(_page.widgets) ? _page.widgets : [];
+  let valid = true;
+  widgets.forEach(widget => {
+    const err = document.querySelector('.error-line[data-for="' + widget.id + '"]');
+    if (!err) return;
+    const value = widget.bind_to ? String(_values[widget.bind_to] ?? '').trim() : '';
+    let message = '';
+
+    if (widget.type === 'label') {
+      err.style.display = 'none';
+      return;
+    }
+
+    if ((widget.type === 'text_input' || widget.type === 'multiline_input' || widget.type === 'folder_picker') && widget.required && !value) {
+      message = 'This field is required.';
+    } else if (widget.type === 'folder_picker' && widget.must_exist && value) {
+      message = 'The selected folder does not exist.';
+    } else if ((widget.type === 'radio_group' || widget.type === 'dropdown') && widget.required && !value) {
+      message = 'Please choose one option.';
+    }
+
+    if (message) valid = false;
+    err.textContent = message;
+    err.style.display = message ? 'block' : 'none';
+  });
+  _errors.set('page', valid ? '' : 'invalid');
+  updateNextState(valid);
+}
+
+function updateNextState(pageValid = null) {
+  const next = document.getElementById('btn-next');
+  const back = document.getElementById('btn-back');
+  const cancel = document.getElementById('btn-cancel');
+  if (!next || !_state) return;
+  const stored = _errors.get('page');
+  const valid = pageValid === null ? (stored === undefined || stored === '') : pageValid;
+  next.disabled = !_state.can_go_next_state || !valid;
+  back.disabled = !_state.can_go_back_state;
+  cancel.disabled = false;
+  next.textContent = _page && _page.custom_html ? 'Next →' : 'Next →';
+}
+
+function onPageStateUpdate(s) {
+  ensurePageState(s);
+}
+
+window.__engineEvent = function(event) {
+  if (event.event === 'state_update') {
+    onPageStateUpdate(event.state);
+  } else if (event.event === 'browse_result') {
+    if (event.id && _page && Array.isArray(_page.widgets)) {
+      const widget = _page.widgets.find(w => w.id === event.id);
+      if (widget && widget.bind_to && event.path) {
+        _values[widget.bind_to] = event.path;
+        send('set_custom_value', { id: widget.bind_to, value: event.path });
+        const input = document.getElementById(widget.id);
+        if (input) input.value = event.path;
+        validateCurrentPage();
+      }
+    }
+  }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  send('ready');
+  document.getElementById('btn-next').onclick = () => send('next');
+  document.getElementById('btn-back').onclick = () => send('back');
+  document.getElementById('btn-cancel').onclick = () => {
+    if (confirm('Are you sure you want to cancel the installation?')) {
+      send('cancel');
+    }
+  };
+});
+</script>
+</body></html>

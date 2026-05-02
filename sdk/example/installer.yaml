@@ -71,6 +71,90 @@ pages:
   - type: components
     title: "Select Components"
 
+  - type: custom
+    id: deployment_identity
+    title: "Deployment Identity"
+    subtitle: "Capture organization and operator notes for this installation."
+    widgets:
+      - type: label
+        id: identity_intro
+        text: "Values entered on custom pages are stored as installer variables and are available to later install hooks."
+
+      - type: text_input
+        id: organization_name
+        label: "Organization name"
+        bind_to: ORGANIZATION_NAME
+        default: "Acme"
+        placeholder: "Company or team name"
+        help_text: "Used for logs, support notes, and post-install messaging."
+        required: true
+
+      - type: multiline_input
+        id: install_notes
+        label: "Install notes"
+        bind_to: INSTALL_NOTES
+        default: ""
+        placeholder: "Optional notes for this deployment"
+        help_text: "Useful for deployment metadata or operator comments."
+
+  - type: custom
+    id: deployment_options
+    title: "Deployment Options"
+    subtitle: "Choose installation behavior and runtime integration options."
+    widgets:
+      - type: label
+        id: options_intro
+        text: "These options demonstrate checkbox, radio, dropdown, and folder picker widgets on a second custom page."
+
+      - type: checkbox
+        id: import_certs
+        label: "Import certificates during setup"
+        bind_to: IMPORT_CERTS
+        default: true
+        help_text: "If enabled, the installer can use the selected certificate folder during post-install tasks."
+
+      - type: radio_group
+        id: install_mode
+        label: "Install mode"
+        bind_to: INSTALL_MODE
+        required: true
+        default: standard
+        help_text: "Choose the overall setup behavior."
+        options:
+          - label: "Standard"
+            value: standard
+            description: "Install the normal recommended set of features."
+          - label: "Advanced"
+            value: advanced
+            description: "Enable advanced deployment behavior and extra logging."
+
+      - type: dropdown
+        id: update_channel
+        label: "Update channel"
+        bind_to: UPDATE_CHANNEL
+        default: stable
+        help_text: "Controls how future update checks should classify this installation."
+        options:
+          - label: "Stable"
+            value: stable
+            description: "Recommended for most users."
+          - label: "Beta"
+            value: beta
+            description: "Receives preview releases earlier."
+          - label: "Internal"
+            value: internal
+            description: "For internal deployment and testing only."
+
+      - type: folder_picker
+        id: cert_dir
+        label: "Certificates folder"
+        bind_to: CERT_DIR
+        default: "{{INSTDIR}}/certs"
+        browse_title: "Select certificate folder"
+        help_text: "This path is exposed to install steps as {{CERT_DIR}}."
+        required: true
+        must_exist: false
+
   - type: summary
     title: "Ready to Install"
 
@@ -194,7 +278,14 @@ install:
   hooks:
     post_install:
       - run:
-          command: "Write-Host 'MyApp post-install validation completed'"
+          command: |
+            Write-Host 'MyApp post-install validation completed'
+            Write-Host "Organization: {{ORGANIZATION_NAME}}"
+            Write-Host "Install notes: {{INSTALL_NOTES}}"
+            Write-Host "Install mode: {{INSTALL_MODE}}"
+            Write-Host "Update channel: {{UPDATE_CHANNEL}}"
+            Write-Host "Certificate folder: {{CERT_DIR}}"
+            Write-Host "Import certificates: {{IMPORT_CERTS}}"
           shell: powershell
           wait: true
           fail_on_nonzero: true
