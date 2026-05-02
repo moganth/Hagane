@@ -26,6 +26,9 @@ pub enum InboundMessage {
     /// User changed install directory
     SetInstallDir { path: String },
 
+    /// User changed a custom page field
+    SetCustomValue { id: String, value: String },
+
     /// User toggled a component
     SetComponent { id: String, selected: bool },
 
@@ -40,6 +43,13 @@ pub enum InboundMessage {
 
     /// User clicked Browse for install dir (engine opens native folder picker)
     BrowseInstallDir,
+
+    /// User clicked Browse for a custom folder field
+    BrowseFolder {
+        id: String,
+        title: Option<String>,
+        initial_path: Option<String>,
+    },
 
     /// Request current state snapshot (for page re-renders)
     GetState,
@@ -86,8 +96,9 @@ pub enum OutboundEvent {
         all_passed: bool,
     },
 
-    /// Result of BrowseInstallDir — returns selected path or null if cancelled
+    /// Result of browsing for a folder/file — returns selected path or null if cancelled
     BrowseResult {
+        id: Option<String>,
         path: Option<String>,
     },
 
