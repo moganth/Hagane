@@ -1,0 +1,35 @@
+/* ── Caramel Latte · summary.css ── */
+
+.summary-box {
+  background: #fff9f2 !important;
+  border-color: rgba(152, 103, 69, 0.26) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 12px 28px rgba(112, 74, 46, 0.09) !important;
+  overflow: hidden !important;
+}
+.summary-row {
+  border-bottom-color: rgba(152, 103, 69, 0.16) !important;
+}
+.summary-key {
+  background: rgba(255, 245, 232, 0.92) !important;
+  color: #7c5a46 !important;
+  font-family: Georgia, 'Times New Roman', serif !important;
+}
+.summary-val { color: #3b281d !important; }
+
+.ready-note {
+  background: linear-gradient(180deg, #fff7ee 0%, #f8e8d7 100%) !important;
+  border-color: rgba(152, 103, 69, 0.34) !important;
+  color: #7c5135 !important;
+  border-radius: 10px !important;
+  position: relative;
+  padding-left: 42px !important;
+}
+.ready-note::before {
+  content: '☕';
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 15px;
+}

@@ -1,0 +1,12 @@
+/* ── Caramel Latte · finish.css ── */
+
+.divider { border-top-color: rgba(152, 103, 69, 0.20) !important; }
+
+.options-box {
+  background: linear-gradient(180deg, #fff8ef 0%, #f5e5d0 100%) !important;
+  border-color: rgba(152, 103, 69, 0.28) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 6px 18px rgba(110, 70, 40, 0.08) !important;
+}
+.check-row span { color: #5a3a26 !important; font-weight: 500 !important; }
+.check-row input[type=checkbox] { accent-color: #b06735 !important; }

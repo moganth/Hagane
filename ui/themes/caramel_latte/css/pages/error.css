@@ -1,0 +1,29 @@
+/* ── Caramel Latte · error.css ── */
+
+/* Banner shifts from warm brown to burnt-red on error pages */
+.banner,
+.brand-tile {
+  background: linear-gradient(120deg, #9e3e22 0%, #7a2d18 58%, #5e2010 100%) !important;
+}
+
+.error-icon { filter: sepia(0.4) saturate(1.1) hue-rotate(-8deg); }
+
+.error-title { color: #7b3014 !important; }
+.error-sub   { color: #8a5040 !important; }
+
+.error-detail {
+  background: #2a1208 !important;
+  border-color: #5a2810 !important;
+  color: #f3c8a0 !important;
+  border-radius: 10px !important;
+}
+.error-detail::-webkit-scrollbar-thumb {
+  background: rgba(180, 90, 50, 0.4) !important;
+}
+
+.rollback-note {
+  background: linear-gradient(180deg, #fff8ef 0%, #f5e8d8 100%) !important;
+  border-color: rgba(152, 103, 69, 0.28) !important;
+  color: #7a5036 !important;
+  border-radius: 10px !important;
+}

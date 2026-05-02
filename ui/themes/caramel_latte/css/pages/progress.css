@@ -1,0 +1,310 @@
+/* ── Caramel Latte · progress.css ── */
+
+/* Progress page hides banner/footer — it's a full-bleed brew scene */
+.banner  { display: none !important; }
+.footer  { display: none !important; }
+
+.content {
+  /* Override the global card shape — progress is full bleed, no card */
+  border-radius: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  flex: 1;
+  min-height: 0;
+  padding: 12px 16px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.content::before { display: none !important; }
+
+.page-title {
+  font-size: 26px !important;
+  line-height: 1.05 !important;
+  font-weight: 800 !important;
+  letter-spacing: .02em !important;
+  color: #4b2f20 !important;
+  font-family: Georgia, 'Times New Roman', serif !important;
+}
+.progress-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+.progress-label {
+  font-size: 14px;
+  line-height: 1.2;
+  color: #8f5f43;
+  font-weight: 600;
+}
+.progress-pct {
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 800;
+  color: #a86641;
+  font-family: Georgia, 'Times New Roman', serif !important;
+}
+
+.progress-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+/* ── Brew panel card ── */
+.brew-panel {
+  min-height: 0;
+  border: 1px solid rgba(151, 104, 71, .32);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fff9f3 0%, #f7e8d6 100%);
+  box-shadow: 0 10px 22px rgba(117, 77, 51, .12);
+  padding: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.brew-scene {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+}
+.brew-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  line-height: 1;
+  color: #8b6148;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  font-family: Georgia, 'Times New Roman', serif;
+  padding: 2px 6px;
+}
+
+/* ── Brew stage illustration ── */
+.brew-stage {
+  position: relative;
+  flex: 1;
+  min-height: 104px;
+  border-radius: 16px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 12% 14%, rgba(255, 248, 230, .55), transparent 22%),
+    radial-gradient(circle at 88% 18%, rgba(255, 244, 215, .5), transparent 24%),
+    radial-gradient(circle at 50% 20%, rgba(255, 255, 255, .95), transparent 30%),
+    linear-gradient(180deg, #fff8ef 0%, #f2dfc8 100%);
+  border: 1px solid rgba(163, 113, 78, .22);
+}
+/* Candle glow */
+.brew-stage::before {
+  content: '';
+  position: absolute;
+  left: 22px; top: 22px;
+  width: 44px; height: 66px;
+  border-radius: 8px 8px 18px 18px;
+  background: linear-gradient(180deg, rgba(255, 233, 170, .72) 0%, rgba(255, 199, 123, .22) 100%);
+  box-shadow: 0 0 26px rgba(255, 198, 112, .46);
+  opacity: .78;
+}
+/* Shadow under cup */
+.brew-stage::after {
+  content: '';
+  position: absolute;
+  right: 18px; bottom: 10px;
+  width: 120px; height: 18px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(94, 56, 34, .14) 0%, rgba(84, 48, 28, .03) 100%);
+  transform: skewX(-16deg);
+}
+
+/* ── Steam ── */
+.steam {
+  position: absolute;
+  left: 50%; bottom: 58px;
+  width: 64px; height: 62px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, .8));
+}
+.steam span {
+  position: absolute;
+  bottom: 0;
+  width: 16px; height: 46px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .98), rgba(255, 245, 233, .35) 58%, rgba(255, 255, 255, 0));
+  animation: steamRise 2.7s infinite ease-in-out;
+  opacity: .95;
+  transform-origin: 50% 100%;
+}
+.steam span:nth-child(1) { left: 0;   animation-delay: 0s;    }
+.steam span:nth-child(2) { left: 22px; height: 58px; animation-delay: .35s; }
+.steam span:nth-child(3) { left: 44px; height: 48px; animation-delay: .7s;  }
+.steam span:nth-child(4) { left: 66px; height: 40px; animation-delay: 1.05s;}
+@keyframes steamRise {
+  0%   { transform: translateY(0) scale(.74) rotate(-4deg); opacity: 0; }
+  20%  { opacity: .95; }
+  55%  { transform: translateY(-24px) scale(1.08) rotate(4deg); opacity: .8; }
+  100% { transform: translateY(-52px) scale(1.46) rotate(-2deg); opacity: 0; }
+}
+
+/* ── Cup ── */
+.cup-wrap {
+  position: absolute;
+  left: 50%; bottom: 14px;
+  width: 244px; max-width: 90%; height: 72px;
+  transform: translateX(-50%);
+}
+.cup {
+  position: absolute;
+  left: 50%; bottom: 0;
+  width: 166px; height: 52px;
+  transform: translateX(-50%);
+  border: 5px solid #915b3b;
+  border-bottom-width: 8px;
+  border-radius: 0 0 24px 24px;
+  background: linear-gradient(180deg, #fffaf4 0%, #f5e2cd 100%);
+  box-shadow: inset 0 8px 16px rgba(133, 90, 58, .14);
+}
+/* Handle */
+.cup::before {
+  content: '';
+  position: absolute;
+  right: -30px; top: 10px;
+  width: 30px; height: 30px;
+  border: 5px solid #915b3b;
+  border-left-color: transparent;
+  border-bottom-color: transparent;
+  border-radius: 50%;
+  transform: rotate(15deg);
+}
+/* Saucer shadow */
+.cup::after {
+  content: '';
+  position: absolute;
+  left: 50%; bottom: -14px;
+  width: 112px; height: 12px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: rgba(120, 78, 53, .2);
+  filter: blur(2px);
+}
+
+/* ── Coffee fill ── */
+.cup-fill {
+  position: absolute;
+  left: 8px; right: 8px; bottom: 8px;
+  height: 0;
+  border-radius: 0 0 24px 24px;
+  background: linear-gradient(180deg, #e3b083 0%, #c78653 42%, #8f5a3a 100%);
+  transition: height .35s ease;
+  overflow: hidden;
+  box-shadow: inset 0 12px 14px rgba(255, 255, 255, .1);
+}
+/* Foam bubbles */
+.cup-fill::before {
+  content: '';
+  position: absolute;
+  left: -14%; top: -6px;
+  width: 132%; height: 18px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 16px 50%, rgba(255, 249, 242, .98) 0 7px, transparent 8px),
+    radial-gradient(circle at 38px 50%, rgba(255, 249, 242, .85) 0 6px, transparent 7px),
+    radial-gradient(circle at 64px 50%, rgba(255, 249, 242, .97) 0 7px, transparent 8px),
+    radial-gradient(circle at 92px 50%, rgba(255, 249, 242, .88) 0 6px, transparent 7px),
+    radial-gradient(circle at 118px 50%, rgba(255, 249, 242, .95) 0 7px, transparent 8px);
+  animation: foamDrift 2.1s infinite linear;
+  opacity: .98;
+}
+@keyframes foamDrift {
+  from { transform: translateX(0); }
+  to   { transform: translateX(15px); }
+}
+
+/* ── Coffee beans ── */
+.cup-crumbs {
+  position: absolute;
+  inset: auto 24px 26px;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+  opacity: .94;
+}
+.cup-crumbs i {
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #6e4026 0 36%, #2d1a12 72%);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .08) inset;
+  animation: beanPulse 1.8s infinite ease-in-out;
+}
+.cup-crumbs i:nth-child(2) { animation-delay: .28s; }
+.cup-crumbs i:nth-child(3) { animation-delay: .56s; }
+@keyframes beanPulse {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%       { transform: translateY(-2px) scale(1.1); }
+}
+
+/* ── Caption & status ── */
+.brew-caption {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #7d543c;
+  padding: 0 6px;
+}
+.brew-caption strong {
+  font-size: 16px;
+  line-height: 1;
+  color: #a5653f;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #7d533b;
+  font-weight: 600;
+  padding: 2px 6px;
+}
+.spinner {
+  display: inline-block;
+  width: 16px; height: 16px;
+  border: 2px solid rgba(146, 95, 62, .28);
+  border-top-color: #b9764d;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Next/Cancel buttons on progress page ── */
+#btn-next {
+  background: linear-gradient(180deg, #b9764d 0%, #a5653f 100%) !important;
+  border-color: #965636 !important;
+  color: #fff !important;
+}
+#btn-cancel {
+  color: #a07050 !important;
+  border-color: rgba(124, 86, 61, 0.35) !important;
+  background: rgba(255, 246, 235, 0.85) !important;
+}
+
+@media (max-width: 680px) {
+  .progress-grid { grid-template-columns: 1fr; }
+  .brew-stage { min-height: 108px; }
+  .page-title { font-size: 22px !important; }
+  .progress-label { font-size: 13px; }
+}

@@ -1,0 +1,55 @@
+/* ── Caramel Latte · requirements.css ── */
+
+.status-banner {
+  border-radius: 10px !important;
+}
+.status-banner.checking {
+  background: linear-gradient(180deg, #fff8ef 0%, #f5e7d8 100%) !important;
+  border-color: rgba(152, 103, 69, 0.28) !important;
+  color: #9a6c4e !important;
+}
+.status-banner.ok {
+  background: linear-gradient(180deg, #fff8ef 0%, #f5e5d0 100%) !important;
+  border-color: rgba(152, 103, 69, 0.30) !important;
+  color: #6a3f1e !important;
+  position: relative;
+  padding-left: 42px !important;
+}
+.status-banner.ok::before {
+  content: '☕';
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 16px;
+  line-height: 1;
+}
+.status-banner.fail {
+  background: linear-gradient(180deg, #fff4f2 0%, #fce6e2 100%) !important;
+  border-color: rgba(180, 70, 50, 0.28) !important;
+  color: #8a3018 !important;
+}
+
+.req-row {
+  background: rgba(255, 249, 242, 0.95) !important;
+  border-color: rgba(152, 103, 69, 0.20) !important;
+  border-radius: 10px !important;
+}
+.req-row.pass {
+  background: linear-gradient(180deg, #fff8ef 0%, #f5e7d5 100%) !important;
+  border-color: rgba(152, 103, 69, 0.28) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55) !important;
+}
+.req-row.fail {
+  background: linear-gradient(180deg, #fff4f2 0%, #fce8e4 100%) !important;
+  border-color: rgba(180, 70, 50, 0.26) !important;
+}
+.req-row.pass .req-label { color: #4a2e1a !important; }
+.req-row.pass .req-detail { color: #8a6248 !important; }
+.req-row.fail .req-label { color: #6e2810 !important; }
+.req-row.fail .req-detail { color: #9a5040 !important; }
+
+.spinner {
+  border-color: rgba(152, 103, 69, 0.22) !important;
+  border-top-color: #c8824a !important;
+}
