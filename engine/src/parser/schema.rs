@@ -181,6 +181,7 @@ fn default_true() -> bool { true }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ThemeConfig {
+    pub preset: Option<String>,
     pub accent_color: Option<String>,
     pub accent_dark_color: Option<String>,
     pub accent_light_color: Option<String>,
@@ -216,9 +217,12 @@ pub enum BannerPosition {
 pub struct PageDefinition {
     #[serde(rename = "type")]
     pub page_type: PageType,
+    pub id: Option<String>,
     pub title: Option<String>,
     pub subtitle: Option<String>,
     pub custom_html: Option<String>,
+    pub widgets: Option<Vec<CustomWidget>>,
+    pub interactive: Option<bool>,
     /// Extra key-value data passed to the page template
     pub data: Option<HashMap<String, serde_json::Value>>,
 }
@@ -236,6 +240,80 @@ pub enum PageType {
     Install,
     Finish,
     Error,
+    Custom,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum CustomWidget {
+    Label(CustomLabelWidget),
+    TextInput(CustomTextWidget),
+    MultilineInput(CustomTextWidget),
+    Checkbox(CustomCheckboxWidget),
+    RadioGroup(CustomChoiceWidget),
+    Dropdown(CustomChoiceWidget),
+    FolderPicker(CustomPathWidget),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CustomLabelWidget {
+    pub text: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CustomTextWidget {
+    pub id: String,
+    pub label: String,
+    pub bind_to: Option<String>,
+    pub placeholder: Option<String>,
+    pub default: Option<String>,
+    pub help_text: Option<String>,
+    #[serde(default)]
+    pub required: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CustomCheckboxWidget {
+    pub id: String,
+    pub label: String,
+    pub bind_to: Option<String>,
+    #[serde(default)]
+    pub default: bool,
+    pub help_text: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CustomChoiceWidget {
+    pub id: String,
+    pub label: String,
+    pub bind_to: Option<String>,
+    #[serde(default)]
+    pub required: bool,
+    pub default: Option<String>,
+    pub help_text: Option<String>,
+    pub options: Vec<CustomChoiceOption>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CustomChoiceOption {
+    pub value: String,
+    pub label: String,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CustomPathWidget {
+    pub id: String,
+    pub label: String,
+    pub bind_to: Option<String>,
+    pub default: Option<String>,
+    pub placeholder: Option<String>,
+    pub browse_title: Option<String>,
+    pub help_text: Option<String>,
+    #[serde(default)]
+    pub required: bool,
+    #[serde(default)]
+    pub must_exist: bool,
 }
 
 // ── Requirements ──────────────────────────────────────────────────────────────

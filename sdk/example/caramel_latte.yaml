@@ -1,5 +1,5 @@
 # -- MyApp Installer Definition -------------------------------------------------
-# Build with: iebuild --manifest installer.yaml --build
+# Build with: iebuild --manifest caramel_latte.yaml --build
 # Silent:     MyApp-setup.exe /S
 
 app:
@@ -35,20 +35,23 @@ logging:
   slow_step_warn_sec: 10
 
 theme:
-  accent_color: "#0F6CBD"
-  accent_dark_color: "#0B4F9A"
-  accent_light_color: "#DCEBFA"
-  background_color: "#FFFFFF"
-  surface_color: "#F7F9FC"
-  text_color: "#1A1A1A"
-  text_muted_color: "#667085"
-  border_color: "#D0D7E2"
-  success_color: "#107C10"
-  success_bg_color: "#F3FAF4"
-  error_color: "#C42B1C"
-  error_bg_color: "#FFF4F2"
-  font_family: "'Segoe UI', system-ui, sans-serif"
-  border_radius: 6
+  preset: "caramel_latte"
+  accent_color: "#B9764D"
+  accent_dark_color: "#8F5A3A"
+  accent_light_color: "#F7E6D4"
+  background_color: "#F5E7D7"
+  surface_color: "#FFF7EE"
+  text_color: "#33241B"
+  text_muted_color: "#785E4D"
+  border_color: "#D8BCA6"
+  success_color: "#8F5A3A"
+  success_bg_color: "#F7E9D9"
+  error_color: "#A14E2D"
+  error_bg_color: "#FFF2E8"
+  progress_color: "#B9764D"
+  progress_light_color: "#E4B07F"
+  font_family: "'Trebuchet MS', 'Segoe UI', sans-serif"
+  border_radius: 10
   window_width: 780
   window_height: 540
   banner_position: top

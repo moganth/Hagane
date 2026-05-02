@@ -101,8 +101,20 @@ function updateFooter(){
   back.style.display=(onTerminal||hideBack)?'none':'inline-flex';
 }
 
+function getThemeGlobalCss(){
+  return (_state&&typeof _state.theme_global_css==='string')?_state.theme_global_css:'';
+}
+
+function getThemePageCss(){
+  if(!_state||!_state.theme_page_css||typeof _state.theme_page_css!=='object')return '';
+  return _state.theme_page_css[_currentPage]||'';
+}
+
 function patchPageHtml(html){
-  const injectedStyle='<style>.banner,.footer{display:none !important}.root{height:100vh !important}.content{padding-top:20px !important}html,body{background:transparent !important}</style>';
+  const baseStyle='.banner,.footer{display:none !important}.root{height:100vh !important}.content{padding-top:20px !important}html,body{background:transparent !important}';
+  const presetGlobal=getThemeGlobalCss();
+  const presetPage=getThemePageCss();
+  const injectedStyle='<style>'+baseStyle+'</style><style data-theme-global="1">'+presetGlobal+'</style><style data-theme-page="1">'+presetPage+'</style>';
   const closeScript='</scr'+'ipt>';
   const injectedScript='<script>window.chrome=window.chrome||{};window.chrome.webview=window.chrome.webview||{};window.chrome.webview.postMessage=function(msg){parent.__shellPostMessage(msg)};'+closeScript;
   if(/<head[^>]*>/i.test(html)){

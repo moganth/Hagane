@@ -1,0 +1,41 @@
+/* ── Caramel Latte · custom.css (custom wizard page) ── */
+
+/* Choice items / radio-style selectors */
+.choice-item {
+  background: rgba(255, 249, 242, 0.95) !important;
+  border-color: rgba(124, 84, 58, 0.24) !important;
+  border-radius: 10px !important;
+}
+.choice-item:hover {
+  background: #fff1e0 !important;
+  border-color: #c8824a !important;
+}
+.choice-item.selected {
+  background: linear-gradient(180deg, #fff4e4 0%, #fde9ce 100%) !important;
+  border-color: #c8824a !important;
+  box-shadow: 0 3px 10px rgba(152, 103, 69, 0.14) !important;
+}
+
+/* Label boxes */
+.label-box {
+  background: #fff8ef !important;
+  border-color: rgba(124, 84, 58, 0.24) !important;
+  border-radius: 8px !important;
+}
+
+/* Inputs */
+.input,
+.textarea,
+select.input {
+  background: #fffdf8 !important;
+  border-color: rgba(132, 92, 67, 0.34) !important;
+  color: #3b241a !important;
+  border-radius: 7px !important;
+}
+.input:focus,
+.textarea:focus,
+select.input:focus {
+  border-color: #a5653f !important;
+  box-shadow: 0 0 0 3px rgba(165, 101, 63, 0.14) !important;
+  outline: none !important;
+}

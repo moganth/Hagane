@@ -1,0 +1,72 @@
+:root {
+  --caramel-shadow: 0 18px 34px rgba(83, 51, 32, 0.2);
+  --caramel-border: rgba(117, 77, 52, 0.22);
+}
+
+html, body {
+  background:
+    radial-gradient(circle at 16% -12%, rgba(255, 223, 156, 0.42), transparent 28%),
+    radial-gradient(circle at 84% -10%, rgba(255, 218, 146, 0.34), transparent 25%),
+    linear-gradient(180deg, #f8eddc 0%, #f0dcc6 100%) !important;
+}
+
+.content {
+  border-radius: 16px !important;
+  border: 1px solid var(--caramel-border) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 251, 245, 0.96) 0%, rgba(250, 238, 223, 0.95) 100%) !important;
+  box-shadow: var(--caramel-shadow) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.content::before {
+  content: '';
+  position: absolute;
+  left: -8%;
+  right: -8%;
+  bottom: 0;
+  height: 42px;
+  background: linear-gradient(180deg, rgba(133, 84, 54, 0), rgba(122, 76, 48, 0.16));
+  pointer-events: none;
+}
+
+.footer {
+  border-top: 1px solid rgba(136, 90, 61, 0.3) !important;
+  background: linear-gradient(180deg, #f8e9d7 0%, #f1ddc6 100%) !important;
+}
+
+.btn-primary {
+  background: linear-gradient(180deg, #b9764d 0%, #a5653f 100%) !important;
+  border-color: #965636 !important;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #a86641 0%, #945638 100%) !important;
+}
+
+.btn-secondary,
+.btn-ghost {
+  border-color: rgba(124, 86, 61, 0.35) !important;
+  background: rgba(255, 246, 235, 0.85) !important;
+}
+
+.banner,
+.brand-tile {
+  background: linear-gradient(120deg, #8f5a3a 0%, #753f26 58%, #5f321e 100%) !important;
+}
+
+.page-title,
+.title,
+.finish-title,
+.error-title {
+  color: #583525 !important;
+  font-family: Georgia, 'Times New Roman', serif !important;
+}
+
+.page-desc,
+.subtitle,
+.finish-sub,
+.error-sub {
+  color: #81614b !important;
+}

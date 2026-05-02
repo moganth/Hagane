@@ -1,0 +1,39 @@
+/* ── Caramel Latte · install_dir.css ── */
+
+.field label { color: #5e3a22 !important; font-weight: 600 !important; }
+
+.input {
+  background: #fff9f2 !important;
+  border-color: rgba(130, 88, 59, 0.35) !important;
+  color: #3b241a !important;
+  border-radius: 7px !important;
+}
+.input:focus {
+  border-color: #a5653f !important;
+  box-shadow: 0 0 0 3px rgba(165, 101, 63, 0.14) !important;
+  outline: none !important;
+}
+
+.disk-info {
+  background: linear-gradient(180deg, #fff8ef 0%, #f5e5d0 100%) !important;
+  border-color: rgba(152, 103, 69, 0.28) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 4px 14px rgba(110, 70, 40, 0.08) !important;
+}
+.disk-stat-label {
+  color: #a07050 !important;
+  letter-spacing: .07em !important;
+}
+.disk-stat-value { color: #4a2e1a !important; }
+.disk-stat-value.warn { color: #b04a1a !important; }
+
+.disk-bar-wrap {
+  background: rgba(152, 103, 69, 0.18) !important;
+  border-radius: 4px !important;
+}
+.disk-bar {
+  background: linear-gradient(90deg, #c8824a 0%, #8f5532 100%) !important;
+}
+.disk-bar.warn {
+  background: linear-gradient(90deg, #d4622a 0%, #a03018 100%) !important;
+}

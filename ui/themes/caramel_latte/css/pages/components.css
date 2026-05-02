@@ -1,0 +1,38 @@
+/* ── Caramel Latte · components.css ── */
+
+/* Tree root node */
+.tree-root {
+  background: linear-gradient(180deg, #f5e7d5 0%, #ecdbc8 100%) !important;
+  border-color: rgba(152, 103, 69, 0.32) !important;
+  color: #4a2e1a !important;
+  border-radius: 10px !important;
+  font-family: Georgia, 'Times New Roman', serif !important;
+}
+
+/* Connector lines */
+.tree-children::before,
+.comp-row::before { background: rgba(152, 103, 69, 0.28) !important; }
+
+/* Component rows */
+.comp-row {
+  background: rgba(255, 249, 242, 0.95) !important;
+  border-color: rgba(152, 103, 69, 0.22) !important;
+  border-radius: 10px !important;
+}
+.comp-row:hover:not(.required) {
+  background: #fff1e0 !important;
+  border-color: #c8824a !important;
+  box-shadow: 0 3px 10px rgba(152, 103, 69, 0.13) !important;
+}
+.comp-row.selected {
+  background: linear-gradient(180deg, #fff4e4 0%, #fde9ce 100%) !important;
+  border-color: #c8824a !important;
+  box-shadow: 0 3px 12px rgba(152, 103, 69, 0.16) !important;
+}
+.comp-row.required { opacity: .82 !important; }
+
+.comp-name { color: #3d2418 !important; }
+.comp-desc { color: #876050 !important; }
+.comp-size { color: #9e7055 !important; }
+.comp-check { accent-color: #b06735 !important; }
+.size-summary { color: #9e7055 !important; }

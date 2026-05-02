@@ -632,6 +632,7 @@ Use `false` for user-level installs that should not prompt for elevation.
 
 All colors, fonts, and sizing are CSS variables injected at runtime from `theme:` in your YAML.
 No recompilation needed to rebrand the installer.
+For named theme presets and the folder layout used by this repository, see [THEMING_PRESETS.md](THEMING_PRESETS.md).
 
 ---
 

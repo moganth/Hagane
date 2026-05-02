@@ -1,0 +1,20 @@
+/* ── Caramel Latte · welcome.css ── */
+
+.hero-icon { filter: sepia(0.2) saturate(1.1); }
+
+.hero-title {
+  letter-spacing: 0.01em;
+}
+
+.hero-sub {
+  line-height: 1.7 !important;
+}
+
+.info-box {
+  background: linear-gradient(180deg, rgba(255, 248, 238, 0.95) 0%, rgba(244, 229, 210, 0.90) 100%) !important;
+  border-color: rgba(152, 103, 69, 0.30) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 14px rgba(110, 70, 40, 0.07) !important;
+  color: #7a5036 !important;
+}
+.info-box a { color: #a05c32 !important; }

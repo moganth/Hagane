@@ -115,11 +115,12 @@ function onRequirementsResult(e) {
 
 // ── Browse result ─────────────────────────────────────────────────────────────
 function onBrowseResult(path) {
-  if (path) {
+  const result = path && typeof path === 'object' ? path : { path };
+  if (result.path) {
     const input = document.getElementById('install-dir-input');
     if (input) {
-      input.value = path;
-      send('set_install_dir', { path });
+      input.value = result.path;
+      send('set_install_dir', { path: result.path });
     }
   }
 }
