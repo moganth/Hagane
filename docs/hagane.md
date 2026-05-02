@@ -22,9 +22,22 @@ The installed `hagane.exe` compiles user installers from any directory by using 
 From workspace root:
 
 ```powershell
-Set-Location C:\Users\monip\code\Installer-Engine
 cargo build -p builder --bin hagane --release
 ```
+
+Output: `target/release/hagane.exe`
+
+### Workspace Version Management
+
+The version is defined once in the root `Cargo.toml` under `[workspace.package]` and inherited by all crates (`engine`, `runner`, `builder`). To bump the version, edit only the root `Cargo.toml`:
+
+```toml
+[workspace.package]
+version = "0.1.5"
+edition = "2021"
+```
+
+All crates pick it up automatically via `version.workspace = true`.
 
 ## Stage Hagane Into Its Own Payload
 
@@ -36,9 +49,19 @@ Copy-Item .\target\release\hagane.exe .\hagane\payload\bin\hagane.exe -Force
 
 ## Build Hagane Installer
 
+With auto-discovery (if `hagane/installer.yaml` is the only YAML in the current directory):
+
 ```powershell
-.\target\release\hagane.exe run .\hagane\installer.yaml --release
+hagane run --release
 ```
+
+Or with an explicit path:
+
+```powershell
+hagane run .\hagane\installer.yaml --release
+```
+
+> **Auto-discovery**: If exactly one `.yaml` or `.yml` file exists in the current directory, Hagane selects it automatically. If multiple are found, Hagane prints a warning listing all of them and asks you to specify explicitly. If none are found, Hagane tries `hagane/installer.yaml` as a fallback.
 
 Expected output:
 
@@ -61,7 +84,14 @@ Test-Path "C:\Program Files\Hagane\bin\hagane.exe"
 
 ## Test User Flow
 
-Installed Hagane (recommended for end-user flow validation):
+Installed Hagane — auto-discovery (single YAML in directory):
+
+```powershell
+Set-Location C:\your-installer.yaml-folder-path
+hagane run --release
+```
+
+Installed Hagane — explicit manifest:
 
 ```powershell
 Set-Location C:\your-installer.yaml-folder-path
@@ -71,13 +101,12 @@ hagane run installer.yaml --release
 From source build (developer workflow):
 
 ```powershell
-Set-Location C:\Users\monip\code\Installer-Engine
-.\target\release\hagane.exe run C:\your-installer.yaml-folder-path\installer.yaml --release
+.\target\release\hagane.exe run .\path\to\installer.yaml --release
 ```
 
 Expected output:
 
-- `C:\Users\monip\code\test-installer\myapp-setup.exe`
+- `<manifest-dir>/bin/<app-name>-setup.exe` (copied from `target/release/`)
 
 ## Icon Behavior And Current Fixes
 

@@ -181,6 +181,14 @@ When an installation step fails and logging is enabled (default `mode: auto`), t
 
 ## Stable v1 Error Codes (Complete Reference)
 
+The screenshots below show what CLI errors look like in practice. A missing or unresolvable manifest path:
+
+![Error — manifest file not found](assets/hagane-cli/4.png)
+
+An invalid or malformed `installer.yaml` that fails schema validation:
+
+![Error — YAML parse or schema validation failure](assets/hagane-cli/5.png)
+
 ### Manifest and Variable Resolution
 
 #### `HG-YAML-001` — Manifest Schema Validation Failure

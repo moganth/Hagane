@@ -90,8 +90,14 @@ sdk/example/
 Installed Hagane (after installing Hagane on the machine):
 
 ```powershell
+# Auto-discovery: run from the directory containing your installer.yaml
+hagane run --release
+
+# Or with an explicit manifest path
 hagane run installer.yaml --release
 ```
+
+> **Tip — Auto-discovery**: When exactly one `.yaml` or `.yml` file exists in your working directory, `hagane run --release` (no manifest argument) selects it automatically. If multiple YAML files are present, Hagane lists them all and asks you to specify one explicitly.
 
 Build from source (from this repository):
 
@@ -285,9 +291,11 @@ If you are using this engine to ship your own app installer:
 3. Build your setup EXE:
 
 ```powershell
-cd <workspace-root>
-cargo build --release -p builder --bin hagane
-.\target\release\hagane.exe run ./path/to/installer.yaml --release
+# Auto-discovery (from the directory containing installer.yaml)
+hagane run --release
+
+# Or explicit:
+hagane run ./path/to/installer.yaml --release
 ```
 
 4. Distribute only the output setup EXE (for example `myapp-setup.exe`).

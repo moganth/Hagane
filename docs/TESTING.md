@@ -6,7 +6,6 @@
 
 ✅ All crates compile successfully:
 ```powershell
-cd c:\Users\monip\code\Installer-Engine
 cargo build --release
 ```
 
@@ -15,7 +14,6 @@ cargo build --release
 ## 1️⃣ Build the `hagane` CLI Tool
 
 ```powershell
-cd c:\Users\monip\code\Installer-Engine
 cargo build --release -p builder
 ```
 
@@ -63,11 +61,16 @@ sdk/example/
 ## 3️⃣ Build the Installer Executable
 
 ```powershell
-cd c:\Users\monip\code\Installer-Engine\sdk\example
+cd sdk\example
 
-# Build installer using the current manifest
+# Auto-discovery: if installer.yaml is the only YAML in the directory
+..\..\target\release\hagane.exe run --release
+
+# Or with an explicit manifest path
 ..\..\target\release\hagane.exe run installer.yaml --release
 ```
+
+> **Auto-discovery**: Hagane automatically finds a manifest when exactly one `.yaml`/`.yml` file is present in the current directory. If multiple YAML files are found, Hagane prints a warning listing them all and exits — specify the manifest explicitly in that case.
 
 ### What it does:
 

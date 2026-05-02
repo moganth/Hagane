@@ -66,22 +66,39 @@ ui/
     caramel_latte/
       global.css
       theme.json
-      pages/
-        welcome.css
-        license.css
-        requirements.css
-        install_dir.css
-        components.css
-        summary.css
-        progress.css
-        finish.css
-        custom.css
+      css/
+        global.css
+        pages/
+          welcome.css
+          license.css
+          requirements.css
+          install_dir.css
+          components.css
+          summary.css
+          progress.css
+          finish.css
+          custom.css
+          user_info.css
+          error.css
+      html/
+        welcome.html
+        license.html
+        requirements.html
+        install_dir.html
+        components.html
+        summary.html
+        progress.html
+        finish.html
+        custom.html
+        user_info.html
+        error.html
 ```
 
 ### What Each File Means
 
 - `global.css` applies the preset across the whole installer UI.
-- `pages/<page>.css` adjusts the look of one page only.
+- `css/pages/<page>.css` adjusts the look of one page only.
+- `html/<page>.html` is the page template with `:root { ... }` CSS variable defaults baked in.
 - `theme.json` is optional metadata for humans and tooling.
 
 If a preset has no page-specific CSS, the installer still works.
@@ -94,16 +111,22 @@ The manifest can use the following theme pattern:
 ```yaml
 theme:
   preset: "caramel_latte"
-  accent_color: "#B9764D"
-  accent_dark_color: "#8F5A3A"
-  accent_light_color: "#F7E6D4"
-  background_color: "#F5E7D7"
-  surface_color: "#FFF7EE"
-  text_color: "#33241B"
-  text_muted_color: "#785E4D"
-  border_color: "#D8BCA6"
-  font_family: "'Trebuchet MS', 'Segoe UI', sans-serif"
-  border_radius: 10
+  accent_color: "#A0522D"
+  accent_dark_color: "#7A3B1E"
+  accent_light_color: "#F5E6D3"
+  background_color: "#FDF6EE"
+  surface_color: "#F5EAD8"
+  text_color: "#3B2314"
+  text_muted_color: "#8B6347"
+  border_color: "#D4B896"
+  success_color: "#5A7A3A"
+  success_bg_color: "#EFF5E8"
+  error_color: "#8B2500"
+  error_bg_color: "#FCF0EB"
+  progress_color: "#A0522D"
+  progress_light_color: "#E8C9A8"
+  font_family: "'Georgia', 'Palatino Linotype', serif"
+  border_radius: 12
 ```
 
 Rules:
