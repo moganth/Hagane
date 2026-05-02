@@ -526,6 +526,33 @@ hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
   color: var(--text-muted); background: var(--code-bg);
   border: 1px solid var(--border); border-radius: 4px; padding: 3px 9px;
 }
+.header-ascii-art {
+  font-family: 'Courier New', monospace;
+  font-size: 5.5px; line-height: 1.3;
+  color: var(--brand);
+  text-shadow: 0 0 10px rgba(200,100,30,0.45);
+  margin: 0; padding: 0;
+  white-space: pre;
+  opacity: 0.9;
+  user-select: none;
+  pointer-events: none;
+}
+.header-download {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--brand);
+  color: #fff;
+  text-decoration: none;
+  font-size: 12px; font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 6px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.header-download:hover {
+  background: var(--brand-glow);
+  box-shadow: 0 0 14px rgba(200,100,30,0.5);
+}
 .mobile-menu-btn {
   display: none; background: none; border: 1px solid var(--border);
   color: var(--text-muted); border-radius: 4px;
@@ -720,6 +747,7 @@ figcaption { font-size: 12px; color: var(--text-muted); margin-top: 6px; text-al
   .mobile-menu-btn { display: block; }
   h1 { font-size: 1.75rem; }
   h2 { font-size: 1.25rem; }
+  .header-ascii-art { display: none; }
 }
 @media (max-width: 600px) {
   .content { padding: 24px 16px 60px; }
@@ -789,6 +817,13 @@ HTML_SHELL = """\
     <span class="logo-tag">Installer Engine</span>
   </a>
   <div class="header-spacer"></div>
+  <pre class="header-ascii-art" aria-hidden="true">&#x2588;&#x2588;&#x2557;  &#x2588;&#x2588;&#x2557; &#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2557;  &#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2557;  &#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2557; &#x2588;&#x2588;&#x2588;&#x2557;   &#x2588;&#x2588;&#x2557;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2557;
+&#x2588;&#x2588;&#x2551;  &#x2588;&#x2588;&#x2551;&#x2588;&#x2588;&#x2554;&#x2550;&#x2550;&#x2588;&#x2588;&#x2557;&#x2588;&#x2588;&#x2554;&#x2550;&#x2550;&#x2550;&#x2550;&#x255D; &#x2588;&#x2588;&#x2554;&#x2550;&#x2550;&#x2588;&#x2588;&#x2557;&#x2588;&#x2588;&#x2588;&#x2588;&#x2557;  &#x2588;&#x2588;&#x2551;&#x2588;&#x2588;&#x2554;&#x2550;&#x2550;&#x2550;&#x2550;&#x255D;
+&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2551;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2551;&#x2588;&#x2588;&#x2551;  &#x2588;&#x2588;&#x2588;&#x2557;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2551;&#x2588;&#x2588;&#x2554;&#x2588;&#x2588;&#x2557; &#x2588;&#x2588;&#x2551;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2557;
+&#x2588;&#x2588;&#x2554;&#x2550;&#x2550;&#x2588;&#x2588;&#x2551;&#x2588;&#x2588;&#x2554;&#x2550;&#x2550;&#x2588;&#x2588;&#x2551;&#x2588;&#x2588;&#x2551;   &#x2588;&#x2588;&#x2551;&#x2588;&#x2588;&#x2554;&#x2550;&#x2550;&#x2588;&#x2588;&#x2551;&#x2588;&#x2588;&#x2551;&#x255A;&#x2588;&#x2588;&#x2557;&#x2588;&#x2588;&#x2551;&#x2588;&#x2588;&#x2554;&#x2550;&#x2550;&#x255D;
+&#x2588;&#x2588;&#x2551;  &#x2588;&#x2588;&#x2551;&#x2588;&#x2588;&#x2551;  &#x2588;&#x2588;&#x2551;&#x255A;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2554;&#x255D;&#x2588;&#x2588;&#x2551;  &#x2588;&#x2588;&#x2551;&#x2588;&#x2588;&#x2551; &#x255A;&#x2588;&#x2588;&#x2588;&#x2588;&#x2551;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2557;
+&#x255A;&#x2550;&#x255D;  &#x255A;&#x2550;&#x255D;&#x255A;&#x2550;&#x255D;  &#x255A;&#x2550;&#x255D; &#x255A;&#x2550;&#x2550;&#x2550;&#x2550;&#x2550;&#x255D; &#x255A;&#x2550;&#x255D;  &#x255A;&#x2550;&#x255D;&#x255A;&#x2550;&#x255D;  &#x255A;&#x2550;&#x2550;&#x2550;&#x255D;&#x255A;&#x2550;&#x2550;&#x2550;&#x2550;&#x2550;&#x2550;&#x255D;</pre>
+  <a class="header-download" href="https://github.com/moganth/Hagane/releases/latest/download/hagane-setup.exe">&#8595; Download</a>
   <span class="header-version">v{version}</span>
 </header>
 
