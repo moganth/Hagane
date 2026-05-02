@@ -1,0 +1,2776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Hagane — Installer Engine Docs</title>
+<!-- AUTO-GENERATED — do not edit by hand. Run: python site/generate_site.py -->
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<header class="site-header">
+  <button class="mobile-menu-btn" onclick="toggleSidebar()" aria-label="Menu">&#9776;</button>
+  <a class="logo" href="#introduction">
+    <span class="logo-ascii">HAGANE</span>
+    <span class="logo-tag">Installer Engine</span>
+  </a>
+  <div class="header-spacer"></div>
+  <span class="header-version">v0.1.5</span>
+</header>
+
+<div class="layout">
+<aside class="sidebar" id="sidebar">
+  <nav>
+    <div class="nav-group nav-top">
+    <ul>
+    <li><a href="#introduction" class="nav-link">Introduction</a></li>
+    </ul>
+    </div>
+    <div class="nav-group" id="group-getting-started">
+    <button class="nav-group-btn" onclick="toggleGroup('getting-started')" aria-expanded="true"><span class="nav-group-label">Getting Started</span><span class="nav-chevron">&#9662;</span></button>
+    <div class="nav-group-body" id="body-getting-started">
+    <ul>
+    <li><a href="#prerequisites" class="nav-link">Prerequisites</a>
+    <ul class="nav-sub">
+    <li><a href="#prerequisites-system-requirements" class="nav-link nav-sub-link">System Requirements</a></li>
+    <li><a href="#prerequisites-install-rust" class="nav-link nav-sub-link">Install Rust</a></li>
+    <li><a href="#prerequisites-install-webview2-runtime" class="nav-link nav-sub-link">Install WebView2 Runtime</a></li>
+    <li><a href="#prerequisites-install-msvc-build-tools" class="nav-link nav-sub-link">Install MSVC Build Tools</a></li>
+    <li><a href="#prerequisites-install-hagane" class="nav-link nav-sub-link">Install Hagane</a></li>
+    <li><a href="#prerequisites-path-setup-manual" class="nav-link nav-sub-link">PATH Setup (Manual)</a></li>
+    <li><a href="#prerequisites-build-hagane-from-source" class="nav-link nav-sub-link">Build Hagane From Source</a></li>
+    </ul>
+    </li>
+    <li><a href="#quickstart" class="nav-link">Quick Start</a>
+    <ul class="nav-sub">
+    <li><a href="#quickstart-what-you-will-build" class="nav-link nav-sub-link">What You Will Build</a></li>
+    <li><a href="#quickstart-1-create-your-manifest" class="nav-link nav-sub-link">1. Create Your Manifest</a></li>
+    <li><a href="#quickstart-2-add-your-payload" class="nav-link nav-sub-link">2. Add Your Payload</a></li>
+    <li><a href="#quickstart-3-build" class="nav-link nav-sub-link">3. Build</a></li>
+    <li><a href="#quickstart-4-run-your-installer" class="nav-link nav-sub-link">4. Run Your Installer</a></li>
+    <li><a href="#quickstart-cli-help" class="nav-link nav-sub-link">CLI Help</a></li>
+    <li><a href="#quickstart-whats-next" class="nav-link nav-sub-link">What&#x27;s Next</a></li>
+    </ul>
+    </li>
+    </ul>
+    </div>
+    </div>
+    <div class="nav-group" id="group-theming">
+    <button class="nav-group-btn" onclick="toggleGroup('theming')" aria-expanded="true"><span class="nav-group-label">Theming</span><span class="nav-chevron">&#9662;</span></button>
+    <div class="nav-group-body" id="body-theming">
+    <ul>
+    <li><a href="#theming" class="nav-link">Theming &amp; Presets</a>
+    <ul class="nav-sub">
+    <li><a href="#theming-how-the-theme-flow-works" class="nav-link nav-sub-link">How The Theme Flow Works</a></li>
+    <li><a href="#theming-what-a-preset-changes" class="nav-link nav-sub-link">What A Preset Changes</a></li>
+    <li><a href="#theming-what-stays-the-same" class="nav-link nav-sub-link">What Stays The Same</a></li>
+    <li><a href="#theming-file-layout" class="nav-link nav-sub-link">File Layout</a></li>
+    <li><a href="#theming-current-manifest-contract" class="nav-link nav-sub-link">Current Manifest Contract</a></li>
+    <li><a href="#theming-how-the-preset-is-applied" class="nav-link nav-sub-link">How The Preset Is Applied</a></li>
+    <li><a href="#theming-why-css-first-not-html-replacement" class="nav-link nav-sub-link">Why CSS First, Not HTML Replacement</a></li>
+    <li><a href="#theming-how-to-use-a-theme-preset-in-installeryaml" class="nav-link nav-sub-link">How To Use A Theme Preset In `installer.yaml`</a></li>
+    <li><a href="#theming-example-walkthrough-caramel-latte" class="nav-link nav-sub-link">Example Walkthrough: Caramel Latte</a></li>
+    <li><a href="#theming-step-by-step-add-a-new-theme" class="nav-link nav-sub-link">Step-by-Step: Add A New Theme</a></li>
+    <li><a href="#theming-design-rules-for-future-themes" class="nav-link nav-sub-link">Design Rules For Future Themes</a></li>
+    <li><a href="#theming-recommended-team-workflow" class="nav-link nav-sub-link">Recommended Team Workflow</a></li>
+    <li><a href="#theming-when-to-use-tokens-versus-presets" class="nav-link nav-sub-link">When To Use Tokens Versus Presets</a></li>
+    <li><a href="#theming-current-state-of-the-repository" class="nav-link nav-sub-link">Current State Of The Repository</a></li>
+    <li><a href="#theming-practical-summary" class="nav-link nav-sub-link">Practical Summary</a></li>
+    </ul>
+    </li>
+    </ul>
+    </div>
+    </div>
+    <div class="nav-group" id="group-pages">
+    <button class="nav-group-btn" onclick="toggleGroup('pages')" aria-expanded="true"><span class="nav-group-label">Pages</span><span class="nav-chevron">&#9662;</span></button>
+    <div class="nav-group-body" id="body-pages">
+    <ul>
+    <li><a href="#custom_pages" class="nav-link">Custom Pages</a>
+    <ul class="nav-sub">
+    <li><a href="#custom_pages-what-a-custom-page-does" class="nav-link nav-sub-link">What A Custom Page Does</a></li>
+    <li><a href="#custom_pages-when-to-use-it" class="nav-link nav-sub-link">When To Use It</a></li>
+    <li><a href="#custom_pages-how-the-runtime-uses-it" class="nav-link nav-sub-link">How The Runtime Uses It</a></li>
+    <li><a href="#custom_pages-manifest-shape" class="nav-link nav-sub-link">Manifest Shape</a></li>
+    <li><a href="#custom_pages-widget-reference" class="nav-link nav-sub-link">Widget Reference</a></li>
+    <li><a href="#custom_pages-binding-values-to-later-steps" class="nav-link nav-sub-link">Binding Values To Later Steps</a></li>
+    <li><a href="#custom_pages-validation-rules" class="nav-link nav-sub-link">Validation Rules</a></li>
+    <li><a href="#custom_pages-example-walkthrough" class="nav-link nav-sub-link">Example Walkthrough</a></li>
+    <li><a href="#custom_pages-raw-html-mode" class="nav-link nav-sub-link">Raw HTML Mode</a></li>
+    <li><a href="#custom_pages-practical-recommendations" class="nav-link nav-sub-link">Practical Recommendations</a></li>
+    </ul>
+    </li>
+    </ul>
+    </div>
+    </div>
+    <div class="nav-group" id="group-logging">
+    <button class="nav-group-btn" onclick="toggleGroup('logging')" aria-expanded="true"><span class="nav-group-label">Logging</span><span class="nav-chevron">&#9662;</span></button>
+    <div class="nav-group-body" id="body-logging">
+    <ul>
+    <li><a href="#logging" class="nav-link">Logging</a>
+    <ul class="nav-sub">
+    <li><a href="#logging-what-logging-controls" class="nav-link nav-sub-link">What logging controls</a></li>
+    <li><a href="#logging-exact-mode-behavior" class="nav-link nav-sub-link">Exact mode behavior</a></li>
+    <li><a href="#logging-install-dsl-logging-scope" class="nav-link nav-sub-link">Install DSL logging scope</a></li>
+    <li><a href="#logging-recommended-usage-patterns" class="nav-link nav-sub-link">Recommended usage patterns</a></li>
+    <li><a href="#logging-example-output" class="nav-link nav-sub-link">Example output</a></li>
+    <li><a href="#logging-validation-rules-to-remember" class="nav-link nav-sub-link">Validation rules to remember</a></li>
+    <li><a href="#logging-quick-decision-guide" class="nav-link nav-sub-link">Quick decision guide</a></li>
+    </ul>
+    </li>
+    </ul>
+    </div>
+    </div>
+    <div class="nav-group" id="group-reference">
+    <button class="nav-group-btn" onclick="toggleGroup('reference')" aria-expanded="true"><span class="nav-group-label">Reference</span><span class="nav-chevron">&#9662;</span></button>
+    <div class="nav-group-body" id="body-reference">
+    <ul>
+    <li><a href="#error_codes" class="nav-link">Error Codes</a>
+    <ul class="nav-sub">
+    <li><a href="#error_codes-goals" class="nav-link nav-sub-link">Goals</a></li>
+    <li><a href="#error_codes-logging-modes-and-hooks" class="nav-link nav-sub-link">Logging Modes and Hooks</a></li>
+    <li><a href="#error_codes-conditional-execution-with-components" class="nav-link nav-sub-link">Conditional Execution with Components</a></li>
+    <li><a href="#error_codes-post-install-command-hooks" class="nav-link nav-sub-link">Post-Install Command Hooks</a></li>
+    <li><a href="#error_codes-error-line-format" class="nav-link nav-sub-link">Error Line Format</a></li>
+    <li><a href="#error_codes-stable-v1-error-codes-complete-reference" class="nav-link nav-sub-link">Stable v1 Error Codes (Complete Reference)</a></li>
+    <li><a href="#error_codes-recommended-authoring-pattern" class="nav-link nav-sub-link">Recommended Authoring Pattern</a></li>
+    <li><a href="#error_codes-troubleshooting-checklist" class="nav-link nav-sub-link">Troubleshooting Checklist</a></li>
+    <li><a href="#error_codes-logging-configuration-best-practices" class="nav-link nav-sub-link">Logging Configuration Best Practices</a></li>
+    <li><a href="#error_codes-compatibility-notes" class="nav-link nav-sub-link">Compatibility Notes</a></li>
+    </ul>
+    </li>
+    <li><a href="#testing" class="nav-link">Testing</a>
+    <ul class="nav-sub">
+    <li><a href="#testing-complete-workflow-build-test" class="nav-link nav-sub-link">Complete Workflow: Build &amp; Test</a></li>
+    <li><a href="#testing-1-build-the-hagane-cli-tool" class="nav-link nav-sub-link">1️⃣ Build the `hagane` CLI Tool</a></li>
+    <li><a href="#testing-2-prepare-payload-example-installer" class="nav-link nav-sub-link">2️⃣ Prepare Payload (Example Installer)</a></li>
+    <li><a href="#testing-3-build-the-installer-executable" class="nav-link nav-sub-link">3️⃣ Build the Installer Executable</a></li>
+    <li><a href="#testing-4-test-the-installer" class="nav-link nav-sub-link">4️⃣ Test the Installer</a></li>
+    <li><a href="#testing-5-verify-installation" class="nav-link nav-sub-link">5️⃣ Verify Installation</a></li>
+    <li><a href="#testing-troubleshooting" class="nav-link nav-sub-link">Troubleshooting</a></li>
+    <li><a href="#testing-quick-start-template" class="nav-link nav-sub-link">Quick Start Template</a></li>
+    <li><a href="#testing-build-notes" class="nav-link nav-sub-link">Build Notes</a></li>
+    <li><a href="#testing-testing-requirements-check" class="nav-link nav-sub-link">Testing Requirements Check</a></li>
+    <li><a href="#testing-advanced-testing" class="nav-link nav-sub-link">Advanced Testing</a></li>
+    <li><a href="#testing-next-steps" class="nav-link nav-sub-link">Next Steps</a></li>
+    </ul>
+    </li>
+    <li><a href="#shipping" class="nav-link">Shipping Hagane</a>
+    <ul class="nav-sub">
+    <li><a href="#shipping-what-is-shipped" class="nav-link nav-sub-link">What Is Shipped</a></li>
+    <li><a href="#shipping-build-hagane-cli" class="nav-link nav-sub-link">Build Hagane CLI</a></li>
+    <li><a href="#shipping-stage-hagane-into-its-own-payload" class="nav-link nav-sub-link">Stage Hagane Into Its Own Payload</a></li>
+    <li><a href="#shipping-build-hagane-installer" class="nav-link nav-sub-link">Build Hagane Installer</a></li>
+    <li><a href="#shipping-install-and-verify" class="nav-link nav-sub-link">Install And Verify</a></li>
+    <li><a href="#shipping-test-user-flow" class="nav-link nav-sub-link">Test User Flow</a></li>
+    <li><a href="#shipping-icon-behavior-and-current-fixes" class="nav-link nav-sub-link">Icon Behavior And Current Fixes</a></li>
+    <li><a href="#shipping-troubleshooting" class="nav-link nav-sub-link">Troubleshooting</a></li>
+    <li><a href="#shipping-release-checklist" class="nav-link nav-sub-link">Release Checklist</a></li>
+    </ul>
+    </li>
+    </ul>
+    </div>
+    </div>
+  </nav>
+</aside>
+
+<main class="content" id="main-content">
+<section class="doc-section" id="introduction">
+<span class="section-anchor" id="anchor-introduction"></span>
+<span class="section-anchor" id="introduction-installer-engine-documentation"></span><h1>Installer Engine Documentation</h1>
+<p>Installer Engine is a YAML-driven Windows installer framework built in Rust. It combines a native backend (requirements checks, install plan execution, rollback) with a WebView2 UI layer and the `hagane CLI for packaging and compilation.</p>
+<span class="section-anchor" id="introduction-why"></span><h2>Why</h2>
+<div class="table-wrap"><table>
+<thead><tr>
+<th>Problem with NSIS</th>
+<th>This engine</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>PowerShell/CMD for system checks -&gt; slow, laggy</td>
+<td>Native WinAPI calls only — microseconds</td>
+</tr>
+<tr>
+<td>Fixed UI with limited branding</td>
+<td>WebView2 HTML/CSS — fully brandable</td>
+</tr>
+<tr>
+<td>Script language with no type safety</td>
+<td>YAML with JSON Schema validation + IDE autocomplete</td>
+</tr>
+<tr>
+<td>No parallel processing</td>
+<td>Requirement checks run in parallel via Rayon</td>
+</tr>
+<tr>
+<td>Bloated runtime</td>
+<td>Pure Rust binary, no .NET/runtime dependency</td>
+</tr>
+</tbody>
+</table></div>
+<hr/>
+<span class="section-anchor" id="introduction-quick-start"></span><h2>Quick Start</h2>
+<span class="section-anchor" id="introduction-1-write-your-manifest"></span><h3>1. Write your manifest</h3>
+<pre data-lang="yaml"><code># sdk/example/installer.yaml
+app:
+  name: &quot;MyApp&quot;
+  version: &quot;1.0.0&quot;
+  publisher: &quot;Your Company&quot;
+  logo: &quot;assets/logo.png&quot;
+  default_install_dir: &quot;{{PROGRAMFILES64}}/YourCompany/MyApp&quot;
+
+theme:
+  accent_color: &quot;#0078D4&quot;
+
+pages:
+  - type: welcome
+  - type: license
+  - type: requirements
+  - type: install_dir
+  - type: install
+  - type: finish
+
+requirements:
+  - type: os
+    platform: windows
+    min_build: 18362
+    label: &quot;Windows 10 1903+&quot;
+  - type: ram
+    min_mb: 2048
+    label: &quot;2 GB RAM&quot;
+  - type: disk
+    min_mb: 200
+    label: &quot;200 MB free space&quot;
+
+install:
+  setup:
+    create_dirs:
+      - &quot;{{INSTDIR}}&quot;
+
+  components:
+    core:
+      archive: &quot;payload.zst&quot;
+      target: &quot;{{INSTDIR}}&quot;
+
+  system:
+    shortcuts:
+      - name: &quot;MyApp&quot;
+        target: &quot;{{INSTDIR}}/MyApp.exe&quot;
+        location: desktop
+
+  finalize:
+    write_uninstaller: &quot;{{INSTDIR}}/uninstall.exe&quot;</code></pre>
+<span class="section-anchor" id="introduction-2-place-your-payload"></span><h3>2. Place your payload</h3>
+<pre data-lang="text"><code>sdk/example/
+├── installer.yaml
+├── assets/
+│   ├── logo.png
+│   ├── banner.png
+│   └── icon.ico
+└── payload/          &lt;- folder named after archive (without .zst)
+    ├── MyApp.exe
+    └── ...</code></pre>
+<span class="section-anchor" id="introduction-3-build"></span><h3>3. Build</h3>
+<p>Installed Hagane (after installing Hagane on the machine):</p>
+<pre data-lang="powershell"><code># Auto-discovery: run from the directory containing your installer.yaml
+hagane run --release
+
+# Or with an explicit manifest path
+hagane run installer.yaml --release</code></pre>
+<div class="callout callout-info">
+<strong>Tip — Auto-discovery</strong>When exactly one `.yaml or <code>.yml</code> file exists in your working directory, <code>hagane run --release</code> (no manifest argument) selects it automatically. If multiple YAML files are present, Hagane lists them all and asks you to specify one explicitly.
+</div>
+<p>Build from source (from this repository):</p>
+<pre data-lang="powershell"><code>cargo build --release -p builder --bin hagane
+.\target\release\hagane.exe run .\path\to\installer.yaml --release</code></pre>
+<p>For iterative work during development:</p>
+<pre data-lang="powershell"><code>cargo run -p builder --bin hagane -- run .\path\to\installer.yaml --release</code></pre>
+<span class="section-anchor" id="introduction-4-run"></span><h3>4. Run</h3>
+<pre data-lang="powershell"><code># GUI mode
+myapp-setup.exe
+
+# Silent install (no UI)
+myapp-setup.exe /S</code></pre>
+<hr/>
+<span class="section-anchor" id="introduction-theme-customization"></span><h2>Theme Customization</h2>
+<p>The installer supports full theme customization via optional manifest fields.</p>
+<span class="section-anchor" id="introduction-basic-theme-token"></span><h3>Basic Theme Token</h3>
+<pre data-lang="yaml"><code>theme:
+  accent_color: &quot;#0078D4&quot;           # Buttons, links, accents
+  background_color: &quot;#FFFFFF&quot;       # Main background
+  text_color: &quot;#1A1A1A&quot;             # Primary text
+  font_family: &quot;&#x27;Segoe UI&#x27;, sans-serif&quot;</code></pre>
+<span class="section-anchor" id="introduction-advanced-theme-tokens"></span><h3>Advanced Theme Tokens</h3>
+<pre data-lang="yaml"><code>theme:
+  # Color variants for depth and interactivity
+  accent_dark_color: &quot;#005A9E&quot;      # Button hover/pressed states
+  accent_light_color: &quot;#EBF3FB&quot;     # Focus rings, light backgrounds
+
+  # Surfaces and text
+  surface_color: &quot;#F5F5F5&quot;          # Cards, alt backgrounds
+  text_muted_color: &quot;#6B6B6B&quot;       # Secondary text, labels
+  border_color: &quot;#E0E0E0&quot;           # Borders, dividers
+  border_radius: 6                   # Corner roundness (px)
+
+  # Semantic colors
+  success_color: &quot;#107C10&quot;          # Success text
+  success_bg_color: &quot;#F7F9F8&quot;       # Success background
+  error_color: &quot;#C42B1C&quot;            # Error text
+  error_bg_color: &quot;#FFF7F6&quot;         # Error background
+
+  # Progress bar — gradient from start to end
+  progress_color: &quot;#0078D4&quot;         # Gradient start color
+  progress_light_color: &quot;#EBF3FB&quot;   # Gradient end color
+
+  # Window geometry
+  window_width: 780                  # Pixels
+  window_height: 540                 # Pixels</code></pre>
+<span class="section-anchor" id="introduction-all-theme-fields-are-optional"></span><h3>All Theme Fields Are Optional</h3>
+<p>Every field in the `theme block is completely optional. Omit any field and the installer will use a sensible built-in default.</p>
+<div class="table-wrap"><table>
+<thead><tr>
+<th>Field</th>
+<th>Default</th>
+<th>Purpose</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>`accent_color</td>
+<td>`#0078D4</td>
+<td>Primary button color, links, active states</td>
+</tr>
+<tr>
+<td>`accent_dark_color</td>
+<td>`#005A9E</td>
+<td>Button hover/pressed states, emphasis</td>
+</tr>
+<tr>
+<td>`accent_light_color</td>
+<td>`#EBF3FB</td>
+<td>Focus rings, light backgrounds, hover underlay</td>
+</tr>
+<tr>
+<td>`background_color</td>
+<td>`#FFFFFF</td>
+<td>Main window background</td>
+</tr>
+<tr>
+<td>`surface_color</td>
+<td>`#F5F5F5</td>
+<td>Cards, alternate backgrounds, section dividers</td>
+</tr>
+<tr>
+<td>`text_color</td>
+<td>`#1A1A1A</td>
+<td>Primary text, headings, body copy</td>
+</tr>
+<tr>
+<td>`text_muted_color</td>
+<td>`#6B6B6B</td>
+<td>Secondary text, labels, hints, disabled text</td>
+</tr>
+<tr>
+<td>`border_color</td>
+<td>`#E0E0E0</td>
+<td>Borders, dividers, input outlines</td>
+</tr>
+<tr>
+<td>`border_radius</td>
+<td>`6</td>
+<td>Corner roundness in pixels (applies to buttons, cards, inputs)</td>
+</tr>
+<tr>
+<td>`success_color</td>
+<td>`#107C10</td>
+<td>Success message text, checkmarks</td>
+</tr>
+<tr>
+<td>`success_bg_color</td>
+<td>`#F7F9F8</td>
+<td>Success message background</td>
+</tr>
+<tr>
+<td>`error_color</td>
+<td>`#C42B1C</td>
+<td>Error message text, warnings</td>
+</tr>
+<tr>
+<td>`error_bg_color</td>
+<td>`#FFF7F6</td>
+<td>Error message background</td>
+</tr>
+<tr>
+<td>`progress_color</td>
+<td>`#0078D4</td>
+<td>Progress bar gradient start color</td>
+</tr>
+<tr>
+<td>`progress_light_color</td>
+<td>`#EBF3FB</td>
+<td>Progress bar gradient end color</td>
+</tr>
+<tr>
+<td>`font_family</td>
+<td>`&#x27;Segoe UI&#x27;, system-ui, sans-serif</td>
+<td>Typography, applies to all text</td>
+</tr>
+<tr>
+<td>`window_width</td>
+<td>`780</td>
+<td>Setup window width in pixels</td>
+</tr>
+<tr>
+<td>`window_height</td>
+<td>`540</td>
+<td>Setup window height in pixels</td>
+</tr>
+</tbody>
+</table></div>
+<p>**Minimal theme** (just brand color):</p>
+<pre data-lang="yaml"><code>theme:
+  accent_color: &quot;#FF6B35&quot;</code></pre>
+<p>**Moderate theme** (brand + light/dark mode):</p>
+<pre data-lang="yaml"><code>theme:
+  accent_color: &quot;#2563EB&quot;
+  background_color: &quot;#FFFFFF&quot;
+  text_color: &quot;#1A1A1A&quot;</code></pre>
+<p>**Complete theme** (full control):</p>
+<pre data-lang="yaml"><code>theme:
+  accent_color: &quot;#4F8FF7&quot;
+  accent_dark_color: &quot;#2E6FDB&quot;
+  accent_light_color: &quot;#D9E7FF&quot;
+  background_color: &quot;#0F172A&quot;
+  surface_color: &quot;#111C33&quot;
+  text_color: &quot;#E5EEF9&quot;
+  text_muted_color: &quot;#94A3B8&quot;
+  border_color: &quot;#24344D&quot;
+  success_color: &quot;#22C55E&quot;
+  success_bg_color: &quot;#102A1A&quot;
+  error_color: &quot;#F87171&quot;
+  error_bg_color: &quot;#2A1414&quot;
+  progress_color: &quot;#4F8FF7&quot;
+  progress_light_color: &quot;#A5C8FF&quot;
+  font_family: &quot;&#x27;Inter&#x27;, sans-serif&quot;
+  border_radius: 8
+  window_width: 800
+  window_height: 600</code></pre>
+<span class="section-anchor" id="introduction-example-presets"></span><h3>Example Presets</h3>
+<p>**Minimal Modern** (clean, light, blue accent):</p>
+<pre data-lang="yaml"><code>theme:
+  accent_color: &quot;#2563EB&quot;
+  accent_dark_color: &quot;#1D4ED8&quot;
+  accent_light_color: &quot;#DBEAFE&quot;
+  background_color: &quot;#FFFFFF&quot;
+  surface_color: &quot;#F8FAFC&quot;
+  text_color: &quot;#0F172A&quot;
+  text_muted_color: &quot;#475569&quot;
+  border_color: &quot;#E2E8F0&quot;
+  success_color: &quot;#15803D&quot;
+  success_bg_color: &quot;#F0FDF4&quot;
+  error_color: &quot;#B91C1C&quot;
+  error_bg_color: &quot;#FEF2F2&quot;
+  progress_color: &quot;#2563EB&quot;
+  progress_light_color: &quot;#DBEAFE&quot;</code></pre>
+<p>**Dark Corporate** (dark background, light text, blue accent):</p>
+<pre data-lang="yaml"><code>theme:
+  accent_color: &quot;#4F8FF7&quot;
+  accent_dark_color: &quot;#2E6FDB&quot;
+  accent_light_color: &quot;#D9E7FF&quot;
+  background_color: &quot;#0F172A&quot;
+  surface_color: &quot;#111C33&quot;
+  text_color: &quot;#E5EEF9&quot;
+  text_muted_color: &quot;#94A3B8&quot;
+  border_color: &quot;#24344D&quot;
+  success_color: &quot;#22C55E&quot;
+  success_bg_color: &quot;#102A1A&quot;
+  error_color: &quot;#F87171&quot;
+  error_bg_color: &quot;#2A1414&quot;
+  progress_color: &quot;#4F8FF7&quot;
+  progress_light_color: &quot;#A5C8FF&quot;</code></pre>
+<hr/>
+<span class="section-anchor" id="introduction-for-open-source-users"></span><h2>For Open-Source Users</h2>
+<p>If you are using this engine to ship your own app installer:</p>
+<ul>
+<li>You <strong>must</strong> create your own `installer.yaml (app metadata, pages, requirements, and <code>install</code> plan).</li>
+<li>You do <strong>not</strong> ship `installer.yaml to end users — it is embedded into the generated setup EXE at build time.</li>
+<li>`installer.schema.json is optional at runtime, but strongly recommended during authoring for IDE validation/autocomplete.</li>
+</ul>
+<span class="section-anchor" id="introduction-minimal-author-workflow"></span><h3>Minimal author workflow</h3>
+<ol>
+<li>Copy `sdk/example/installer.yaml and edit it for your app.</li>
+<li>Create payload folders next to your manifest (for each `extract archive name).</li>
+<li>Build your setup EXE:</li>
+</ol>
+<pre data-lang="powershell"><code># Auto-discovery (from the directory containing installer.yaml)
+hagane run --release
+
+# Or explicit:
+hagane run ./path/to/installer.yaml --release</code></pre>
+<ol>
+<li>Distribute only the output setup EXE (for example `myapp-setup.exe).</li>
+</ol>
+<span class="section-anchor" id="introduction-enable-yaml-schema-in-vs-code"></span><h3>Enable YAML Schema in VS Code</h3>
+<p>At the top of your manifest, add:</p>
+<pre data-lang="yaml"><code># yaml-language-server: $schema=../../sdk/schema/installer.schema.json</code></pre>
+<p>This gives field completion, type checks, and early validation errors while authoring.</p>
+<hr/>
+<span class="section-anchor" id="introduction-project-structure"></span><h2>Project Structure</h2>
+<pre data-lang="text"><code>installer-engine/
+├── engine/                    # Core library crate
+│   └── src/
+│       ├── parser/            # YAML schema + validation (serde)
+│       ├── requirements/      # Native WinAPI system checks (parallel)
+│       ├── install/           # Step runner, file ops, registry, shortcuts
+│       ├── state.rs           # Installer state machine
+│       └── ipc.rs             # Rust ↔ WebView2 JSON message protocol
+├── runner/                    # Binary — Win32 window + WebView2 host
+├── builder/                   # hagane CLI — compresses &amp; packages installer
+├── ui/
+│   ├── pages/                 # HTML pages (welcome, license, requirements…)
+│   └── assets/                # style.css, bridge.js
+└── sdk/
+    ├── example/               # Example installer.yaml + assets
+    └── schema/                # installer.schema.json for IDE support</code></pre>
+<hr/>
+<span class="section-anchor" id="introduction-requirements-checks-all-native-no-powershell"></span><h2>Requirements Checks (all native, no PowerShell)</h2>
+<div class="table-wrap"><table>
+<thead><tr>
+<th>Check</th>
+<th>API used</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Windows version</td>
+<td>`RtlGetVersion()</td>
+</tr>
+<tr>
+<td>RAM</td>
+<td>`GlobalMemoryStatusEx()</td>
+</tr>
+<tr>
+<td>Disk space</td>
+<td>`GetDiskFreeSpaceEx()</td>
+</tr>
+<tr>
+<td>.NET Framework</td>
+<td>Registry read — no subprocess</td>
+</tr>
+<tr>
+<td>VC++ Redistributable</td>
+<td>Registry scan — no subprocess</td>
+</tr>
+</tbody>
+</table></div>
+<p>All checks run **in parallel** via Rayon the moment the requirements page loads.</p>
+<hr/>
+<span class="section-anchor" id="introduction-available-pages"></span><h2>Available Pages</h2>
+<div class="table-wrap"><table>
+<thead><tr>
+<th>type</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>`welcome</td>
+<td>Splash with logo, app name, description</td>
+</tr>
+<tr>
+<td>`license</td>
+<td>Scrollable license text with accept checkbox</td>
+</tr>
+<tr>
+<td>`requirements</td>
+<td>Live parallel check results</td>
+</tr>
+<tr>
+<td>`install_dir</td>
+<td>Path picker with disk space indicator</td>
+</tr>
+<tr>
+<td>`components</td>
+<td>Optional feature selection with sizes</td>
+</tr>
+<tr>
+<td>`user_info</td>
+<td>Name, organization, serial key fields</td>
+</tr>
+<tr>
+<td>`summary</td>
+<td>Review before install</td>
+</tr>
+<tr>
+<td>`install</td>
+<td>Progress bar, real-time log, rollback on error</td>
+</tr>
+<tr>
+<td>`finish</td>
+<td>Launch app / desktop shortcut toggles</td>
+</tr>
+<tr>
+<td>`error</td>
+<td>Error detail with rollback confirmation</td>
+</tr>
+</tbody>
+</table></div>
+<hr/>
+<span class="section-anchor" id="introduction-install-dsl-blocks"></span><h2>Install DSL Blocks</h2>
+<p>The installer now uses a required top-level `install block (legacy top-level <code>steps</code> is rejected).</p>
+<div class="table-wrap"><table>
+<thead><tr>
+<th>block</th>
+<th>Purpose</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>`install.setup.create_dirs</td>
+<td>Creates required directories before extraction</td>
+</tr>
+<tr>
+<td>`install.components.&lt;id&gt;</td>
+<td>Maps each component to an archive and destination target</td>
+</tr>
+<tr>
+<td>`install.system.register_app</td>
+<td>Writes app registration metadata</td>
+</tr>
+<tr>
+<td>`install.system.register_uninstall</td>
+<td>Writes Add/Remove Programs metadata</td>
+</tr>
+<tr>
+<td>`install.system.shortcuts</td>
+<td>Creates desktop/start-menu/startup shortcuts</td>
+</tr>
+<tr>
+<td>`install.system.path</td>
+<td>Adds a directory to `PATH (user/system scope)</td>
+</tr>
+<tr>
+<td>`install.hooks.post_install</td>
+<td>Runs post-install hooks (`powershell or <code>program</code>)</td>
+</tr>
+<tr>
+<td>`install.finalize.write_uninstaller</td>
+<td>Writes the generated uninstaller executable</td>
+</tr>
+</tbody>
+</table></div>
+<hr/>
+<span class="section-anchor" id="introduction-declared-variables-define-once-reuse-anywhere"></span><h2>Declared Variables (Define Once, Reuse Anywhere)</h2>
+<p>Use a top-level `variables block to avoid repeating the same paths and keys.</p>
+<pre data-lang="yaml"><code>variables:
+  COMPANY: &quot;Acme&quot;
+  PRODUCT: &quot;MyApp&quot;
+  COMPANY_PRODUCT: &quot;{{COMPANY}}/{{PRODUCT}}&quot;
+  INSTALL_ROOT: &quot;{{PROGRAMFILES64}}/{{COMPANY}}/{{PRODUCT}}&quot;
+  APP_REG_KEY: &quot;SOFTWARE/{{COMPANY_PRODUCT}}&quot;
+
+app:
+  default_install_dir: &quot;{{INSTALL_ROOT}}&quot;
+  registry_key: &quot;{{COMPANY_PRODUCT}}&quot;
+
+install:
+  setup:
+    create_dirs:
+      - &quot;{{INSTDIR}}&quot;
+
+  components:
+    core:
+      archive: &quot;payload.zst&quot;
+      target: &quot;{{INSTDIR}}&quot;
+
+  system:
+    register_app:
+      hive: HKLM
+      key: &quot;{{APP_REG_KEY}}&quot;
+      install_location: &quot;{{INSTDIR}}&quot;
+      version: &quot;2.1.0&quot;
+
+  finalize:
+    write_uninstaller: &quot;{{INSTDIR}}/uninstall.exe&quot;</code></pre>
+<p>Rules:</p>
+<ul>
+<li>Variable keys should use `A-Z, <code>0-9</code>, and <code>_</code> (optionally prefixed with <code>$</code>).</li>
+<li>Preferred syntax is `{{KEY}} (for example <code>{{INSTDIR}}</code>).</li>
+<li>Built-in variables cannot be overridden: `{{INSTDIR}}, <code>{{PROGRAMFILES}}</code>, <code>{{PROGRAMFILES64}}</code>, <code>{{APPDATA}}</code>, <code>{{LOCALAPPDATA}}</code>, <code>{{TEMP}}</code>, <code>{{WINDIR}}</code>.</li>
+<li>Declared variables can reference other declared variables.</li>
+</ul>
+<hr/>
+<span class="section-anchor" id="introduction-variables-in-paths"></span><h2>Variables in Paths</h2>
+<div class="table-wrap"><table>
+<thead><tr>
+<th>Variable</th>
+<th>Resolves to</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>`{{INSTDIR}}</td>
+<td>Chosen installation directory</td>
+</tr>
+<tr>
+<td>`{{PROGRAMFILES}}</td>
+<td>`C:\Program Files (x86)</td>
+</tr>
+<tr>
+<td>`{{PROGRAMFILES64}}</td>
+<td>`C:\Program Files</td>
+</tr>
+<tr>
+<td>`{{APPDATA}}</td>
+<td>`C:\Users\&lt;user&gt;\AppData\Roaming</td>
+</tr>
+<tr>
+<td>`{{LOCALAPPDATA}}</td>
+<td>`C:\Users\&lt;user&gt;\AppData\Local</td>
+</tr>
+<tr>
+<td>`{{TEMP}}</td>
+<td>Temp directory</td>
+</tr>
+<tr>
+<td>`{{WINDIR}}</td>
+<td>`C:\Windows</td>
+</tr>
+</tbody>
+</table></div>
+<p>Use `{{KEY}} syntax in new manifests for consistent schema validation.</p>
+<hr/>
+<span class="section-anchor" id="introduction-logging-and-error-codes"></span><h2>Logging and Error Codes</h2>
+<p>The installer supports two logging modes:</p>
+<ul>
+<li>`auto: lifecycle logging is generated automatically for each executed step (start, slow-step warn, success in file logs, and classified failures).</li>
+<li>`manual_only: normal lifecycle logging is suppressed during step execution.</li>
+</ul>
+<p>In both modes, classified failure lines and rollback errors are still emitted when a step fails.</p>
+<span class="section-anchor" id="introduction-logging-configuration"></span><h3>Logging Configuration</h3>
+<p>Add a top-level `logging block to control mode and file output:</p>
+<pre data-lang="yaml"><code>logging:
+  mode: auto
+  path: &quot;{{INSTDIR}}/logs&quot;
+  file_name: &quot;installation.log&quot;
+  timestamp: true
+  include_raw_os_error: false
+  slow_step_warn_sec: 10</code></pre>
+<ul>
+<li>Set both `path and <code>file_name</code> when you want file logging enabled.</li>
+<li>`slow_step_warn_sec controls when long-running steps produce a warning.</li>
+<li>When file logging is enabled, completion messages stay in the file log but are not echoed into the UI log box.</li>
+</ul>
+<span class="section-anchor" id="introduction-install-logging-notes"></span><h3>Install Logging Notes</h3>
+<p>In the current `install DSL, logging is controlled primarily by top-level <code>logging.mode</code>:</p>
+<ul>
+<li>`auto emits lifecycle logs for compiled install operations.</li>
+<li>`manual_only suppresses normal lifecycle logs and keeps failure logging deterministic.</li>
+</ul>
+<p>For a full behavior matrix and end-to-end examples, see [LOGGING.md](LOGGING.md).</p>
+<span class="section-anchor" id="introduction-powershell-action"></span><h3>PowerShell Action</h3>
+<p>Use `install.hooks.post_install to run commands with deterministic error handling.</p>
+<pre data-lang="yaml"><code>install:
+  hooks:
+    post_install:
+      - run:
+          command: |
+            Write-Host &quot;Hello from installer&quot;
+          shell: powershell
+          wait: true
+          fail_on_nonzero: true
+          timeout_sec: 30</code></pre>
+<p>Supported parameters:</p>
+<ul>
+<li>`command</li>
+<li>`shell (<code>powershell</code> or <code>program</code>)</li>
+<li>`wait</li>
+<li>`fail_on_nonzero</li>
+<li>`timeout_sec</li>
+</ul>
+<span class="section-anchor" id="introduction-stable-error-codes"></span><h3>Stable Error Codes</h3>
+<p>The installer classifies step failures into stable v1 error codes:</p>
+<ul>
+<li>`HG-YAML-001 - manifest validation failure</li>
+<li>`HG-VAR-001 - unresolved installer variable</li>
+<li>`HG-EXTRACT-001 - archive missing from payload</li>
+<li>`HG-EXTRACT-002 - extraction I/O failure</li>
+<li>`HG-COPY-001 - copy source missing or invalid</li>
+<li>`HG-REG-001 - invalid registry configuration</li>
+<li>`HG-REG-002 - registry access denied / elevation required</li>
+<li>`HG-ENV-001 - environment variable operation failure</li>
+<li>`HG-RUN-001 - executable not found</li>
+<li>`HG-RUN-002 - process non-zero exit or execution failure</li>
+<li>`HG-PS-001 - PowerShell syntax/parse error</li>
+<li>`HG-PS-002 - PowerShell/command not found</li>
+<li>`HG-PS-003 - PowerShell non-zero exit</li>
+<li>`HG-PS-004 - PowerShell timeout</li>
+<li>`HG-PS-005 - PowerShell access denied or execution policy blocked</li>
+</ul>
+<p>See [ERROR_CODES.md](ERROR_CODES.md) for the full field-by-field format and fix guidance.</p>
+<hr/>
+<span class="section-anchor" id="introduction-conditional-install-execution"></span><h2>Conditional Install Execution</h2>
+<p>Component selection is now controlled through `install.components and per-entry <code>component</code> fields under system blocks.</p>
+<p>Supported `component fields include <code>install.system.shortcuts[*].component</code> and <code>install.system.path.component</code>.</p>
+<pre data-lang="yaml"><code>components:
+  - id: docs
+    name: &quot;Documentation&quot;
+    required: false
+    selected: true
+
+install:
+  components:
+    docs:
+      archive: &quot;docs.zst&quot;
+      target: &quot;{{INSTDIR}}/docs&quot;
+
+  system:
+    shortcuts:
+      - name: &quot;Documentation&quot;
+        target: &quot;{{INSTDIR}}/docs/manual.txt&quot;
+        location: start_menu
+        component: docs</code></pre>
+<hr/>
+<span class="section-anchor" id="introduction-high-level-registry-abstractions"></span><h2>High-Level Registry Abstractions</h2>
+<p>Use high-level actions to avoid repetitive registry write blocks.</p>
+<span class="section-anchor" id="introduction-register-uninstall"></span><h3>`register_uninstall</h3>
+<p>For Add/Remove Programs metadata, use `install.system.register_uninstall:</p>
+<pre data-lang="yaml"><code>install:
+  system:
+    register_uninstall:
+      hive: HKLM
+      key: &quot;{{UNINSTALL_KEY}}&quot;
+      name: &quot;MyApp 2.1.0&quot;
+      version: &quot;2.1.0&quot;
+      publisher: &quot;Acme Corporation&quot;
+      install_location: &quot;{{INSTDIR}}&quot;
+      uninstall: &quot;{{INSTDIR}}/uninstall.exe&quot;
+      estimated_size_kb: 180224
+      no_modify: true
+      no_repair: true</code></pre>
+<p>This expands internally into writes for:</p>
+<ul>
+<li>`DisplayName</li>
+<li>`DisplayVersion</li>
+<li>`Publisher</li>
+<li>`InstallLocation</li>
+<li>`UninstallString</li>
+<li>`EstimatedSize (if provided)</li>
+<li>`NoModify</li>
+<li>`NoRepair</li>
+</ul>
+<p>Preferred fields in the DSL are `install_location and <code>uninstall</code>.</p>
+<span class="section-anchor" id="introduction-register-app"></span><h3>`register_app</h3>
+<p>For app settings, use `install.system.register_app:</p>
+<pre data-lang="yaml"><code>install:
+  system:
+    register_app:
+      hive: HKLM
+      key: &quot;{{APP_REG_KEY}}&quot;
+      install_location: &quot;{{INSTDIR}}&quot;
+      version: &quot;2.1.0&quot;</code></pre>
+<p>This writes:</p>
+<ul>
+<li>`InstallDir = <code>inst_loc</code></li>
+<li>`Version = <code>version</code></li>
+</ul>
+<hr/>
+<span class="section-anchor" id="introduction-administrator-elevation"></span><h2>Administrator Elevation</h2>
+<p>Set `app.require_admin to control whether the installer requests elevation:</p>
+<pre data-lang="yaml"><code>app:
+  require_admin: true</code></pre>
+<p>Use `true for operations that need system access, such as:</p>
+<ul>
+<li>`HKLM registry writes</li>
+<li>system environment variables</li>
+<li>protected install locations like `C:\Program Files</li>
+</ul>
+<p>Use `false for user-level installs that should not prompt for elevation.</p>
+<hr/>
+<span class="section-anchor" id="introduction-theme-customization"></span><h2>Theme Customization</h2>
+<p>All colors, fonts, and sizing are CSS variables injected at runtime from `theme: in your YAML. No recompilation needed to rebrand the installer. For named theme presets and the folder layout used by this repository, see [THEMING_PRESETS.md](THEMING_PRESETS.md).</p>
+<hr/>
+<span class="section-anchor" id="introduction-ide-autocomplete"></span><h2>IDE Autocomplete</h2>
+<p>Add this comment to the top of your `installer.yaml for VS Code YAML extension:</p>
+<pre data-lang="yaml"><code># yaml-language-server: $schema=../../sdk/schema/installer.schema.json</code></pre>
+<hr/>
+<span class="section-anchor" id="introduction-building-from-source"></span><h2>Building from Source</h2>
+<pre data-lang="powershell"><code># Requirements: Rust stable, Windows SDK, WebView2 SDK
+cargo build --release          # builds all crates
+cargo build --release -p runner   # just the installer runner
+cargo build --release -p builder  # just hagane</code></pre>
+<span class="section-anchor" id="introduction-quick-commands"></span><h2>Quick Commands</h2>
+<pre data-lang="powershell"><code>cargo build -p builder --bin hagane --release 
+Copy-Item .\target\release\hagane.exe .\hagane\payload\bin\hagane.exe -Force 
+cargo run -p builder --bin hagane -- run hagane/installer.yaml --release</code></pre>
+<span class="section-anchor" id="introduction-useful-commands"></span><h2>Useful Commands</h2>
+<pre data-lang="powershell"><code>reg query &quot;HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\AcmeMyApp&quot; /s
+reg query &quot;HKLM\SOFTWARE\Acme\MyApp&quot; /s
+reg query &quot;HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Hagane&quot; /s
+reg query &quot;HKLM\SOFTWARE\InstallerEngine\Hagane&quot; /s</code></pre>
+<span class="section-anchor" id="introduction-notes"></span><h2>Notes</h2>
+<ul>
+<li>The runner requires Windows to compile (uses `windows-rs and <code>webview2-com</code>).</li>
+<li>The engine library and builder compile cross-platform for testing.</li>
+</ul>
+</section>
+
+<section class="doc-section" id="prerequisites" style="border-top:1px solid rgba(200,100,30,0.15);padding-top:60px">
+<span class="section-anchor" id="anchor-prerequisites"></span>
+<span class="section-anchor" id="prerequisites-prerequisites-installation"></span><h1>Prerequisites &amp; Installation</h1>
+<p>Everything you need installed before building Windows installers with Hagane.</p>
+<span class="section-anchor" id="prerequisites-system-requirements"></span><h2>System Requirements</h2>
+<div class="table-wrap"><table>
+<thead><tr>
+<th>Requirement</th>
+<th>Minimum</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>OS</td>
+<td>Windows 10 (x64) build 18362+ or Windows 11</td>
+</tr>
+<tr>
+<td>Rust</td>
+<td>Stable channel via `rustup</td>
+</tr>
+<tr>
+<td>WebView2 Runtime</td>
+<td>Pre-installed on Windows 11; installer available for Windows 10</td>
+</tr>
+<tr>
+<td>MSVC Build Tools</td>
+<td>Visual Studio 2019+ or Build Tools for Visual Studio 2022</td>
+</tr>
+</tbody>
+</table></div>
+<hr/>
+<span class="section-anchor" id="prerequisites-install-rust"></span><h2>Install Rust</h2>
+<pre data-lang="powershell"><code>winget install Rustlang.Rustup</code></pre>
+<p>Restart your terminal, then verify:</p>
+<pre data-lang="powershell"><code>rustc --version
+cargo --version</code></pre>
+<hr/>
+<span class="section-anchor" id="prerequisites-install-webview2-runtime"></span><h2>Install WebView2 Runtime</h2>
+<p>WebView2 ships with Windows 11 by default. For Windows 10:</p>
+<pre data-lang="powershell"><code>winget install Microsoft.EdgeWebView2Runtime</code></pre>
+<p>Or download the installer directly from the [WebView2 download page](https://developer.microsoft.com/en-us/microsoft-edge/webview2/).</p>
+<hr/>
+<span class="section-anchor" id="prerequisites-install-msvc-build-tools"></span><h2>Install MSVC Build Tools</h2>
+<p>The Rust toolchain for Windows requires MSVC linker and headers. Install via:</p>
+<pre data-lang="powershell"><code>winget install Microsoft.VisualStudio.2022.BuildTools --override &quot;--add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --quiet&quot;</code></pre>
+<p>Or install the full **Visual Studio 2022** IDE which includes these tools.</p>
+<hr/>
+<span class="section-anchor" id="prerequisites-install-hagane"></span><h2>Install Hagane</h2>
+<p>Run the Hagane setup executable. It places the CLI at:</p>
+<pre data-lang="text"><code>C:\Program Files\Hagane\bin\hagane.exe</code></pre>
+<p>The installer automatically adds this directory to your `PATH. Verify after installation:</p>
+<pre data-lang="powershell"><code>hagane --version</code></pre>
+<hr/>
+<span class="section-anchor" id="prerequisites-path-setup-manual"></span><h2>PATH Setup (Manual)</h2>
+<p>If Hagane is not found on your `PATH after installation, add it manually:</p>
+<pre data-lang="powershell"><code>[Environment]::SetEnvironmentVariable(
+    &quot;PATH&quot;,
+    $env:PATH + &quot;;C:\Program Files\Hagane\bin&quot;,
+    &quot;User&quot;
+)</code></pre>
+<p>Re-open your terminal after running this.</p>
+<hr/>
+<span class="section-anchor" id="prerequisites-build-hagane-from-source"></span><h2>Build Hagane From Source</h2>
+<p>If you are developing the engine itself, build the CLI directly:</p>
+<pre data-lang="powershell"><code># Build release binary
+cargo build --release -p builder --bin hagane
+
+# Verify
+.\target\release\hagane.exe --version</code></pre>
+<p>Use `.\target\release\hagane.exe in place of <code>hagane</code> for all commands when running from source.</p>
+</section>
+
+<section class="doc-section" id="quickstart" style="border-top:1px solid rgba(200,100,30,0.15);padding-top:60px">
+<span class="section-anchor" id="anchor-quickstart"></span>
+<span class="section-anchor" id="quickstart-quick-start"></span><h1>Quick Start</h1>
+<p>Build your first installer in under 5 minutes.</p>
+<span class="section-anchor" id="quickstart-what-you-will-build"></span><h2>What You Will Build</h2>
+<p>A standalone Windows setup EXE (`myapp-setup.exe) that:</p>
+<ul>
+<li>Shows a welcome screen with your app branding</li>
+<li>Checks system requirements natively (no PowerShell, no subprocess)</li>
+<li>Lets the user pick an install directory</li>
+<li>Extracts your app files to the chosen location</li>
+<li>Creates desktop shortcuts and registry entries</li>
+<li>Writes a working uninstaller</li>
+</ul>
+<hr/>
+<span class="section-anchor" id="quickstart-1-create-your-manifest"></span><h2>1. Create Your Manifest</h2>
+<p>Create a folder for your installer project and add `installer.yaml:</p>
+<pre data-lang="yaml"><code># installer.yaml
+# yaml-language-server: $schema=../../sdk/schema/installer.schema.json
+app:
+  name: &quot;MyApp&quot;
+  version: &quot;1.0.0&quot;
+  publisher: &quot;Acme Corp&quot;
+  logo: &quot;assets/logo.png&quot;
+  default_install_dir: &quot;{{PROGRAMFILES64}}/Acme/MyApp&quot;
+
+theme:
+  accent_color: &quot;#0078D4&quot;
+
+pages:
+  - type: welcome
+  - type: license
+  - type: requirements
+  - type: install_dir
+  - type: install
+  - type: finish
+
+requirements:
+  - type: os
+    platform: windows
+    min_build: 18362
+    label: &quot;Windows 10 1903+&quot;
+  - type: ram
+    min_mb: 2048
+    label: &quot;2 GB RAM&quot;
+  - type: disk
+    min_mb: 200
+    label: &quot;200 MB free space&quot;
+
+install:
+  setup:
+    create_dirs:
+      - &quot;{{INSTDIR}}&quot;
+
+  components:
+    core:
+      archive: &quot;payload.zst&quot;
+      target: &quot;{{INSTDIR}}&quot;
+
+  system:
+    register_app:
+      hive: HKCU
+      key: &quot;Software/Acme/MyApp&quot;
+      version: &quot;{{APP_VERSION}}&quot;
+      install_location: &quot;{{INSTDIR}}&quot;
+    shortcuts:
+      - name: &quot;MyApp&quot;
+        target: &quot;{{INSTDIR}}/MyApp.exe&quot;
+        location: desktop
+
+  finalize:
+    write_uninstaller: &quot;{{INSTDIR}}/uninstall.exe&quot;</code></pre>
+<div class="callout callout-info">
+<strong>Tip</strong>The `# yaml-language-server comment gives you field completion and validation in VS Code with the YAML extension installed.
+</div>
+<hr/>
+<span class="section-anchor" id="quickstart-2-add-your-payload"></span><h2>2. Add Your Payload</h2>
+<p>Create a `payload/ folder next to <code>installer.yaml</code> and put your application files inside. Hagane compresses it automatically into <code>payload.zst</code> during the build step.</p>
+<pre data-lang="text"><code>my-installer/
+├── installer.yaml
+├── assets/
+│   └── logo.png
+└── payload/          ← compressed to payload.zst at build time
+    └── MyApp.exe</code></pre>
+<hr/>
+<span class="section-anchor" id="quickstart-3-build"></span><h2>3. Build</h2>
+<p>Run from the directory containing your `installer.yaml:</p>
+<pre data-lang="powershell"><code>hagane run --release</code></pre>
+<div class="callout callout-info">
+<strong>Auto-Discovery</strong>When exactly one `.yaml / <code>.yml</code> file is in your working directory, Hagane selects it automatically. No path argument needed.
+</div>
+<p>If multiple YAML files are detected in the directory, Hagane shows a warning and exits cleanly — listing every candidate so you can pick the right one:</p>
+<div class="cli-screenshot"><div class="cli-bar"><span class="cli-dot cli-dot-r"></span><span class="cli-dot cli-dot-y"></span><span class="cli-dot cli-dot-g"></span><span class="cli-title">Multiple YAML files detected — Hagane warns and exits</span></div><img src="assets/hagane-cli/2.png" alt="Multiple YAML files detected — Hagane warns and exits" loading="lazy"/></div>
+<p>Hagane streams the full build pipeline — banner, manifest validation, payload compression, and `cargo build output:</p>
+<div class="cli-screenshot"><div class="cli-bar"><span class="cli-dot cli-dot-r"></span><span class="cli-dot cli-dot-y"></span><span class="cli-dot cli-dot-g"></span><span class="cli-title">hagane run --release — successful build output</span></div><img src="assets/hagane-cli/3.png" alt="hagane run --release — successful build output" loading="lazy"/></div>
+<p>The output EXE is written to `bin/ next to your manifest:</p>
+<pre data-lang="text"><code>my-installer/
+└── bin/
+    └── MyApp-setup.exe   ← ready to distribute</code></pre>
+<hr/>
+<span class="section-anchor" id="quickstart-4-run-your-installer"></span><h2>4. Run Your Installer</h2>
+<pre data-lang="powershell"><code># GUI mode
+.\bin\MyApp-setup.exe
+
+# Silent / automated install
+.\bin\MyApp-setup.exe /S</code></pre>
+<hr/>
+<span class="section-anchor" id="quickstart-cli-help"></span><h2>CLI Help</h2>
+<p>Run `hagane at any time to see the banner and available commands:</p>
+<div class="cli-screenshot"><div class="cli-bar"><span class="cli-dot cli-dot-r"></span><span class="cli-dot cli-dot-y"></span><span class="cli-dot cli-dot-g"></span><span class="cli-title">hagane CLI — ASCII banner and commands overview</span></div><img src="assets/hagane-cli/1.png" alt="hagane CLI — ASCII banner and commands overview" loading="lazy"/></div>
+<hr/>
+<span class="section-anchor" id="quickstart-whats-next"></span><h2>What&#x27;s Next</h2>
+<ul>
+<li>Apply a **theme preset** — see [Theming &amp; Presets](#theming)</li>
+<li>Collect extra info from users with a **custom page** — see [Custom Pages](#custom_pages)</li>
+<li>Configure **install logging** for diagnostics — see [Logging](#logging)</li>
+<li>Understand all **error codes** — see [Error Codes](#error_codes)</li>
+</ul>
+</section>
+
+<section class="doc-section" id="theming" style="border-top:1px solid rgba(200,100,30,0.15);padding-top:60px">
+<span class="section-anchor" id="anchor-theming"></span>
+<span class="section-anchor" id="theming-theme-presets"></span><h1>Theme Presets</h1>
+<p>This guide explains the preset-based theme system used by the installer UI.</p>
+<p>The goal is simple:</p>
+<ul>
+<li>keep the installer logic and page behavior stable,</li>
+<li>let each preset change the visual style,</li>
+<li>make it easy for teammates to add new looks without editing core UI code,</li>
+<li>keep the default appearance available when no preset is selected.</li>
+</ul>
+<p>The repository currently supports a preset called `caramel_latte, which gives the installer a warm latte/tan/beige look while keeping the same core UI and interactions.</p>
+<span class="section-anchor" id="theming-how-the-theme-flow-works"></span><h2>How The Theme Flow Works</h2>
+<p>Theme presets are resolved in layers.</p>
+<ol>
+<li>The manifest declares `theme.preset.</li>
+<li>The engine stores that preset in installer state.</li>
+<li>The runner converts the preset into CSS payloads.</li>
+<li>The shell injects the preset CSS into the page iframe.</li>
+<li>The page HTML and JavaScript stay the same.</li>
+<li>CSS changes the appearance.</li>
+</ol>
+<p>That means the installer can look completely different without rewriting the page logic.</p>
+<span class="section-anchor" id="theming-what-a-preset-changes"></span><h2>What A Preset Changes</h2>
+<p>A preset can change things like:</p>
+<ul>
+<li>background color and panel tint</li>
+<li>button shape and fill style</li>
+<li>borders, spacing, and shadows</li>
+<li>font family</li>
+<li>banner treatment</li>
+<li>page-level accents for specific screens</li>
+<li>subtle motion and surface styling</li>
+</ul>
+<p>A preset should not change core installer behavior. That means navigation, validation, IPC, and step execution stay shared.</p>
+<span class="section-anchor" id="theming-what-stays-the-same"></span><h2>What Stays The Same</h2>
+<p>These parts remain core and reusable:</p>
+<ul>
+<li>installer manifest parsing</li>
+<li>step runner and hook execution</li>
+<li>page navigation logic</li>
+<li>custom page widget behavior</li>
+<li>IPC message shapes</li>
+<li>validation rules</li>
+</ul>
+<p>You should think of preset theming as a presentation layer, not a logic layer.</p>
+<span class="section-anchor" id="theming-file-layout"></span><h2>File Layout</h2>
+<p>The theme files live under `ui/themes.</p>
+<p>Recommended structure:</p>
+<pre data-lang="text"><code>ui/
+  themes/
+    default/
+      global.css
+    caramel_latte/
+      global.css
+      theme.json
+      css/
+        global.css
+        pages/
+          welcome.css
+          license.css
+          requirements.css
+          install_dir.css
+          components.css
+          summary.css
+          progress.css
+          finish.css
+          custom.css
+          user_info.css
+          error.css
+      html/
+        welcome.html
+        license.html
+        requirements.html
+        install_dir.html
+        components.html
+        summary.html
+        progress.html
+        finish.html
+        custom.html
+        user_info.html
+        error.html</code></pre>
+<span class="section-anchor" id="theming-what-each-file-means"></span><h3>What Each File Means</h3>
+<ul>
+<li>`global.css applies the preset across the whole installer UI.</li>
+<li>`css/pages/&lt;page&gt;.css adjusts the look of one page only.</li>
+<li>`html/&lt;page&gt;.html is the page template with <code>:root { ... }</code> CSS variable defaults baked in.</li>
+<li>`theme.json is optional metadata for humans and tooling.</li>
+</ul>
+<p>If a preset has no page-specific CSS, the installer still works. It just uses the global styling.</p>
+<span class="section-anchor" id="theming-current-manifest-contract"></span><h2>Current Manifest Contract</h2>
+<p>The manifest can use the following theme pattern:</p>
+<pre data-lang="yaml"><code>theme:
+  preset: &quot;caramel_latte&quot;
+  accent_color: &quot;#A0522D&quot;
+  accent_dark_color: &quot;#7A3B1E&quot;
+  accent_light_color: &quot;#F5E6D3&quot;
+  background_color: &quot;#FDF6EE&quot;
+  surface_color: &quot;#F5EAD8&quot;
+  text_color: &quot;#3B2314&quot;
+  text_muted_color: &quot;#8B6347&quot;
+  border_color: &quot;#D4B896&quot;
+  success_color: &quot;#5A7A3A&quot;
+  success_bg_color: &quot;#EFF5E8&quot;
+  error_color: &quot;#8B2500&quot;
+  error_bg_color: &quot;#FCF0EB&quot;
+  progress_color: &quot;#A0522D&quot;
+  progress_light_color: &quot;#E8C9A8&quot;
+  font_family: &quot;&#x27;Georgia&#x27;, &#x27;Palatino Linotype&#x27;, serif&quot;
+  border_radius: 12</code></pre>
+<p>Rules:</p>
+<ul>
+<li>`preset selects the visual theme pack.</li>
+<li>The other fields still work as overrides.</li>
+<li>If `preset is missing, the installer falls back to the default look.</li>
+<li>If a preset exists but a field is omitted, the UI still uses the built-in default token values.</li>
+</ul>
+<span class="section-anchor" id="theming-how-the-preset-is-applied"></span><h2>How The Preset Is Applied</h2>
+<p>The runtime path is important.</p>
+<ol>
+<li>`installer.yaml is parsed into the manifest model.</li>
+<li>Theme data is stored in installer state.</li>
+<li>The runner sends theme data to the shell.</li>
+<li>The shell injects CSS into the page iframe before the page renders.</li>
+<li>Page JavaScript keeps handling validation, buttons, and events.</li>
+</ol>
+<p>This is why the preset approach is safe: it changes the visual layer while preserving the core flow.</p>
+<span class="section-anchor" id="theming-why-css-first-not-html-replacement"></span><h2>Why CSS First, Not HTML Replacement</h2>
+<p>The recommended theme mechanism is CSS-first.</p>
+<p>That gives you:</p>
+<ul>
+<li>less duplication,</li>
+<li>less risk of breaking page logic,</li>
+<li>easier maintenance for teammates,</li>
+<li>a stable DOM contract across all presets,</li>
+<li>simpler diffs when adjusting a theme.</li>
+</ul>
+<p>You can still use small JavaScript helpers if a preset needs micro-adjustments, but the default strategy should be CSS.</p>
+<p>Avoid replacing the core page HTML for a preset unless you truly need a special one-off experience. That makes the system harder to maintain and easier to break.</p>
+<span class="section-anchor" id="theming-how-to-use-a-theme-preset-in-installeryaml"></span><h2>How To Use A Theme Preset In `installer.yaml</h2>
+<p>Use the preset name in the `theme block.</p>
+<p>Example:</p>
+<pre data-lang="yaml"><code>theme:
+  preset: &quot;caramel_latte&quot;</code></pre>
+<p>Optional overrides can be added below it:</p>
+<pre data-lang="yaml"><code>theme:
+  preset: &quot;caramel_latte&quot;
+  accent_color: &quot;#B9764D&quot;
+  border_radius: 10</code></pre>
+<p>That means:</p>
+<ul>
+<li>the preset provides the overall look,</li>
+<li>the override fields fine-tune specific tokens.</li>
+</ul>
+<span class="section-anchor" id="theming-example-walkthrough-caramel-latte"></span><h2>Example Walkthrough: Caramel Latte</h2>
+<p>The file [sdk/example/caramel_latte.yaml](../sdk/example/caramel_latte.yaml) shows the preset in action.</p>
+<p>What it does:</p>
+<ol>
+<li>Selects `caramel_latte as the preset.</li>
+<li>Uses warm tan and beige colors.</li>
+<li>Uses a softer font and rounder surfaces.</li>
+<li>Keeps the same installer flow and custom pages.</li>
+<li>Still allows the existing color token system to override any individual value.</li>
+</ol>
+<p>This is the pattern to copy when you create the next theme.</p>
+<span class="section-anchor" id="theming-step-by-step-add-a-new-theme"></span><h2>Step-by-Step: Add A New Theme</h2>
+<p>Follow these steps when creating a new preset.</p>
+<span class="section-anchor" id="theming-1-choose-a-clear-name"></span><h3>1. Choose a clear name</h3>
+<p>Use a lowercase, underscore-separated preset name.</p>
+<p>Examples:</p>
+<ul>
+<li>`caramel_latte</li>
+<li>`midnight_ember</li>
+<li>`forest_mist</li>
+</ul>
+<p>Avoid spaces and punctuation.</p>
+<span class="section-anchor" id="theming-2-create-the-theme-folder"></span><h3>2. Create the theme folder</h3>
+<p>Add a new folder under `ui/themes/&lt;preset_name&gt;.</p>
+<p>Example:</p>
+<pre data-lang="text"><code>ui/themes/midnight_ember/
+  global.css
+  pages/
+    welcome.css
+    summary.css</code></pre>
+<p>Start small. You do not need every page file on day one.</p>
+<span class="section-anchor" id="theming-3-define-the-global-style-layer"></span><h3>3. Define the global style layer</h3>
+<p>Put the broad look and feel in `global.css.</p>
+<p>Use it for:</p>
+<ul>
+<li>background gradients,</li>
+<li>buttons,</li>
+<li>card surfaces,</li>
+<li>shadows,</li>
+<li>borders,</li>
+<li>typography,</li>
+<li>banner styling.</li>
+</ul>
+<p>This file should make the preset recognizable at a glance.</p>
+<span class="section-anchor" id="theming-4-add-page-specific-overrides-only-when-needed"></span><h3>4. Add page-specific overrides only when needed</h3>
+<p>Use `pages/&lt;page&gt;.css for page-specific polish.</p>
+<p>Examples:</p>
+<ul>
+<li>a more dramatic welcome screen,</li>
+<li>a different summary card layout,</li>
+<li>a progress bar style,</li>
+<li>custom field borders for custom pages.</li>
+</ul>
+<p>Do not repeat the same rule in every page file. Keep shared styling in `global.css.</p>
+<span class="section-anchor" id="theming-5-register-the-preset-in-the-runner"></span><h3>5. Register the preset in the runner</h3>
+<p>The runner must know how to load the preset CSS files.</p>
+<p>In practice, that means adding the preset to the theme bundle loader in [runner/src/main.rs](../runner/src/main.rs).</p>
+<p>If the preset is not registered there, the installer can still parse the manifest, but the preset styling will not be shipped into the UI.</p>
+<span class="section-anchor" id="theming-6-use-the-preset-in-a-manifest"></span><h3>6. Use the preset in a manifest</h3>
+<p>Point the manifest at the new preset:</p>
+<pre data-lang="yaml"><code>theme:
+  preset: &quot;midnight_ember&quot;</code></pre>
+<p>Then test the installer end to end.</p>
+<span class="section-anchor" id="theming-7-verify-fallback-behavior"></span><h3>7. Verify fallback behavior</h3>
+<p>Check that the installer still works if:</p>
+<ul>
+<li>`preset is omitted,</li>
+<li>a page-specific CSS file is missing,</li>
+<li>only token overrides are provided.</li>
+</ul>
+<p>The default UI should remain functional in all three cases.</p>
+<span class="section-anchor" id="theming-design-rules-for-future-themes"></span><h2>Design Rules For Future Themes</h2>
+<p>Use these rules so themes stay maintainable.</p>
+<ul>
+<li>Keep the page HTML unchanged unless there is a strong reason to change it.</li>
+<li>Prefer CSS over JS.</li>
+<li>Keep each theme visually distinct.</li>
+<li>Keep text readable and contrast high.</li>
+<li>Avoid loading remote assets.</li>
+<li>Keep assets local and packaged with the installer.</li>
+<li>Do not hard-code business logic in theme files.</li>
+<li>Treat themes as presentation packs, not application code.</li>
+</ul>
+<span class="section-anchor" id="theming-recommended-team-workflow"></span><h2>Recommended Team Workflow</h2>
+<p>When a teammate adds a new theme:</p>
+<ol>
+<li>Duplicate an existing preset folder.</li>
+<li>Rename it.</li>
+<li>Change only the CSS variables and surface rules first.</li>
+<li>Test the welcome page and summary page.</li>
+<li>Add page-specific CSS only after the global look is stable.</li>
+<li>Update the example manifest if the theme should be demoed.</li>
+<li>Run a full build and launch the installer.</li>
+</ol>
+<p>This avoids a common mistake: designing a theme from page files before the global visual system is stable.</p>
+<span class="section-anchor" id="theming-when-to-use-tokens-versus-presets"></span><h2>When To Use Tokens Versus Presets</h2>
+<p>Use tokens when you only want brand tuning.</p>
+<p>Examples:</p>
+<ul>
+<li>change the primary accent color,</li>
+<li>change fonts,</li>
+<li>slightly adjust radius or borders.</li>
+</ul>
+<p>Use presets when you want a full visual identity.</p>
+<p>Examples:</p>
+<ul>
+<li>Caramel Latte,</li>
+<li>a dark industrial theme,</li>
+<li>a soft pastel theme,</li>
+<li>a high-contrast enterprise theme.</li>
+</ul>
+<p>A good rule of thumb is this:</p>
+<ul>
+<li>tokens customize,</li>
+<li>presets transform.</li>
+</ul>
+<span class="section-anchor" id="theming-current-state-of-the-repository"></span><h2>Current State Of The Repository</h2>
+<p>Right now the repository supports:</p>
+<ul>
+<li>`theme.preset in the manifest,</li>
+<li>runtime preset delivery from the runner,</li>
+<li>CSS injection through the shell,</li>
+<li>a shipped `caramel_latte example manifest,</li>
+<li>a clean folder structure for new presets.</li>
+</ul>
+<p>That is enough to add more theme packs without changing the core installer flow.</p>
+<span class="section-anchor" id="theming-practical-summary"></span><h2>Practical Summary</h2>
+<p>If you want a new theme, do this:</p>
+<ol>
+<li>Add a preset folder under `ui/themes.</li>
+<li>Put shared visual rules in `global.css.</li>
+<li>Put page-specific overrides in `pages/*.css.</li>
+<li>Register the preset in the runner.</li>
+<li>Set `theme.preset in <code>installer.yaml</code>.</li>
+<li>Build and test.</li>
+</ol>
+<p>That is the safe, scalable way to theme this installer.</p>
+</section>
+
+<section class="doc-section" id="custom_pages" style="border-top:1px solid rgba(200,100,30,0.15);padding-top:60px">
+<span class="section-anchor" id="anchor-custom_pages"></span>
+<span class="section-anchor" id="custom_pages-custom-pages"></span><h1>Custom Pages</h1>
+<p>Custom pages let an installer ask the user for extra information that does not fit the built-in welcome, license, install directory, component, summary, or finish screens.</p>
+<p>In this codebase, a custom page is still a first-class installer page. It participates in normal navigation, validation, state snapshots, and variable substitution. The main difference is that you define the page data in the manifest instead of hard-coding the UI in Rust.</p>
+<span class="section-anchor" id="custom_pages-what-a-custom-page-does"></span><h2>What A Custom Page Does</h2>
+<p>A custom page can:</p>
+<ul>
+<li>Collect text, multiline text, checkbox, choice, and folder path values.</li>
+<li>Bind those values to installer variables such as `CERT_DIR or <code>IMPORT_CERTS</code>.</li>
+<li>Block `Next until required fields are valid.</li>
+<li>Pass the collected values into later install steps and hooks.</li>
+<li>Optionally render advanced raw HTML when you need more control than the built-in widgets provide.</li>
+</ul>
+<span class="section-anchor" id="custom_pages-when-to-use-it"></span><h2>When To Use It</h2>
+<p>Use a custom page when you need one or more of these:</p>
+<ul>
+<li>A folder selection that is specific to your product.</li>
+<li>A setup question that changes later install behavior.</li>
+<li>A small decision form before the install starts.</li>
+<li>A page that needs several fields bound to variables.</li>
+</ul>
+<p>Do not use a custom page when a built-in page already solves the problem. For example, the install directory page should still be used for the main target folder.</p>
+<span class="section-anchor" id="custom_pages-how-the-runtime-uses-it"></span><h2>How The Runtime Uses It</h2>
+<p>The flow is simple:</p>
+<ol>
+<li>The manifest declares a page with `type: custom.</li>
+<li>The engine parses the page and validates its widget definitions.</li>
+<li>The runner loads the generic `custom.html template for that page.</li>
+<li>The template renders widgets or raw custom HTML.</li>
+<li>User input is sent back to Rust through IPC.</li>
+<li>Rust stores the values in installer state.</li>
+<li>When the install starts, the runner merges those custom values into the variable map.</li>
+<li>Later install steps and hooks can reference those values with `{{VARIABLE_NAME}}.</li>
+</ol>
+<p>That means custom page values behave like normal installer variables once the install begins.</p>
+<span class="section-anchor" id="custom_pages-manifest-shape"></span><h2>Manifest Shape</h2>
+<p>A custom page is defined under `pages.</p>
+<p>A minimal page looks like this:</p>
+<pre data-lang="yaml"><code>pages:
+  - type: custom
+    id: cert_folder
+    title: &quot;Certificate Folder&quot;
+    subtitle: &quot;Choose where certificate files should be read from during setup.&quot;
+    widgets:
+      - type: folder_picker
+        id: cert_dir
+        label: &quot;Certificates folder&quot;
+        bind_to: CERT_DIR
+        default: &quot;{{INSTDIR}}/certs&quot;
+        browse_title: &quot;Select certificate folder&quot;
+        help_text: &quot;This path is exposed to install steps as {{CERT_DIR}}.&quot;
+        required: true
+        must_exist: false</code></pre>
+<p>The important fields are:</p>
+<ul>
+<li>`type: custom identifies the page as a custom page.</li>
+<li>`id gives the page a stable identifier.</li>
+<li>`title is the page heading.</li>
+<li>`subtitle is optional explanatory text.</li>
+<li>`widgets defines the controls that the user sees.</li>
+</ul>
+<p>You can also use `custom_html for advanced rendering, but the widget-based flow is the recommended path.</p>
+<span class="section-anchor" id="custom_pages-widget-reference"></span><h2>Widget Reference</h2>
+<p>The supported widget types are deliberately small and predictable.</p>
+<span class="section-anchor" id="custom_pages-label"></span><h3>`label</h3>
+<p>A read-only text block. Use it for instructions, warnings, or separators.</p>
+<p>Example:</p>
+<pre data-lang="yaml"><code>- type: label
+  id: cert_hint
+  text: &quot;This folder will be used for certificate import during setup.&quot;</code></pre>
+<span class="section-anchor" id="custom_pages-text-input"></span><h3>`text_input</h3>
+<p>A single-line text field. Bind it to a variable if you want the value available later.</p>
+<p>Useful fields:</p>
+<ul>
+<li>`label</li>
+<li>`bind_to</li>
+<li>`default</li>
+<li>`placeholder</li>
+<li>`required</li>
+<li>`min_length</li>
+<li>`max_length</li>
+</ul>
+<p>Example:</p>
+<pre data-lang="yaml"><code>- type: text_input
+  id: company_name
+  label: &quot;Company name&quot;
+  bind_to: COMPANY_NAME
+  required: true</code></pre>
+<span class="section-anchor" id="custom_pages-multiline-input"></span><h3>`multiline_input</h3>
+<p>A larger text box for notes, commands, or free-form content.</p>
+<p>Example:</p>
+<pre data-lang="yaml"><code>- type: multiline_input
+  id: install_notes
+  label: &quot;Notes&quot;
+  bind_to: INSTALL_NOTES
+  placeholder: &quot;Optional notes for the installer&quot;</code></pre>
+<span class="section-anchor" id="custom_pages-checkbox"></span><h3>`checkbox</h3>
+<p>A boolean toggle.</p>
+<p>Example:</p>
+<pre data-lang="yaml"><code>- type: checkbox
+  id: import_certs
+  label: &quot;Import certificates during setup&quot;
+  bind_to: IMPORT_CERTS
+  default: true</code></pre>
+<span class="section-anchor" id="custom_pages-radio-group"></span><h3>`radio_group</h3>
+<p>A set of mutually exclusive choices where the user must pick one option.</p>
+<p>Useful fields:</p>
+<ul>
+<li>`label</li>
+<li>`bind_to</li>
+<li>`required</li>
+<li>`options</li>
+</ul>
+<p>Example:</p>
+<pre data-lang="yaml"><code>- type: radio_group
+  id: mode
+  label: &quot;Install mode&quot;
+  bind_to: INSTALL_MODE
+  required: true
+  options:
+    - label: &quot;Standard&quot;
+      value: standard
+    - label: &quot;Advanced&quot;
+      value: advanced</code></pre>
+<span class="section-anchor" id="custom_pages-dropdown"></span><h3>`dropdown</h3>
+<p>A compact choice selector.</p>
+<p>Example:</p>
+<pre data-lang="yaml"><code>- type: dropdown
+  id: region
+  label: &quot;Region&quot;
+  bind_to: REGION
+  options:
+    - label: &quot;US&quot;
+      value: us
+    - label: &quot;EU&quot;
+      value: eu</code></pre>
+<span class="section-anchor" id="custom_pages-folder-picker"></span><h3>`folder_picker</h3>
+<p>A field that opens the native folder browser. This is the best option when the user needs to point the installer at an existing directory.</p>
+<p>Useful fields:</p>
+<ul>
+<li>`label</li>
+<li>`bind_to</li>
+<li>`default</li>
+<li>`browse_title</li>
+<li>`help_text</li>
+<li>`required</li>
+<li>`must_exist</li>
+</ul>
+<p>Example:</p>
+<pre data-lang="yaml"><code>- type: folder_picker
+  id: cert_dir
+  label: &quot;Certificates folder&quot;
+  bind_to: CERT_DIR
+  default: &quot;{{INSTDIR}}/certs&quot;
+  browse_title: &quot;Select certificate folder&quot;
+  required: true</code></pre>
+<span class="section-anchor" id="custom_pages-binding-values-to-later-steps"></span><h2>Binding Values To Later Steps</h2>
+<p>The `bind_to field is what turns a widget value into an installer variable.</p>
+<p>If a widget is bound to `CERT_DIR, later steps can use that variable like this:</p>
+<pre data-lang="yaml"><code>hooks:
+  post_install:
+    - run:
+        shell: powershell
+        wait: true
+        fail_on_nonzero: true
+        timeout_sec: 30
+        command: |
+          Write-Host &quot;Certificate folder: {{CERT_DIR}}&quot;</code></pre>
+<p>That is the key idea behind custom pages: the UI collects data once, then the rest of the installer uses it like any other variable.</p>
+<span class="section-anchor" id="custom_pages-validation-rules"></span><h2>Validation Rules</h2>
+<p>The validator checks several things before the installer is built:</p>
+<ul>
+<li>Custom pages must have a non-empty `id.</li>
+<li>Page ids must not be duplicated.</li>
+<li>A custom page must define either `custom_html or at least one widget.</li>
+<li>Interactive widgets must have a non-empty `bind_to value.</li>
+<li>Choice widgets must contain options.</li>
+<li>Widget ids must be unique within the page.</li>
+</ul>
+<p>This is intentional. Validation fails early so the manifest is not allowed to ship with broken page wiring.</p>
+<span class="section-anchor" id="custom_pages-example-walkthrough"></span><h2>Example Walkthrough</h2>
+<p>The example manifest at [sdk/example/installer.yaml](../sdk/example/installer.yaml) shows a concrete page that asks for a certificate folder and a boolean import flag.</p>
+<p>The flow is:</p>
+<ol>
+<li>The page appears after component selection.</li>
+<li>The user chooses a folder in the native folder picker.</li>
+<li>The user optionally toggles whether certificates should be imported.</li>
+<li>The installer stores those values as `CERT_DIR and <code>IMPORT_CERTS</code>.</li>
+<li>The post-install hook prints the chosen values.</li>
+</ol>
+<p>That is the simplest real-world pattern to start with.</p>
+<span class="section-anchor" id="custom_pages-raw-html-mode"></span><h2>Raw HTML Mode</h2>
+<p>If `custom_html is present, the generic template renders that HTML instead of generating widgets.</p>
+<p>Use this mode only when you need something the widget set does not support yet. It is powerful, but it is also easier to make mistakes with because the installer cannot infer validation from arbitrary HTML.</p>
+<p>When using raw HTML, you are responsible for sending values back to the engine through the page script.</p>
+<span class="section-anchor" id="custom_pages-practical-recommendations"></span><h2>Practical Recommendations</h2>
+<ul>
+<li>Prefer widgets over `custom_html for most pages.</li>
+<li>Keep the page focused on a small number of decisions.</li>
+<li>Bind every user-entered value that later install logic depends on.</li>
+<li>Use clear page ids and variable names so the manifest stays readable.</li>
+<li>Test the page in a full build, not only by reading the YAML.</li>
+</ul>
+<p>If you follow those rules, custom pages stay predictable and easy to maintain.</p>
+</section>
+
+<section class="doc-section" id="logging" style="border-top:1px solid rgba(200,100,30,0.15);padding-top:60px">
+<span class="section-anchor" id="anchor-logging"></span>
+<span class="section-anchor" id="logging-hagane-logging-guide"></span><h1>Hagane Logging Guide</h1>
+<p>This guide explains exactly how installer logging works with the `install DSL, what <code>auto</code> mode does, what <code>manual_only</code> mode does, and how to choose between them.</p>
+<span class="section-anchor" id="logging-what-logging-controls"></span><h2>What logging controls</h2>
+<p>Hagane logs can go to two destinations:</p>
+<ul>
+<li>Installer UI log stream</li>
+<li>Optional log file on disk</li>
+</ul>
+<p>Top-level logging config:</p>
+<pre data-lang="yaml"><code>logging:
+  mode: auto
+  path: &quot;{{INSTDIR}}/logs&quot;
+  file_name: &quot;installation.log&quot;
+  timestamp: true
+  include_raw_os_error: false
+  slow_step_warn_sec: 10</code></pre>
+<p>Field meanings:</p>
+<ul>
+<li>mode: `auto or <code>manual_only</code>.</li>
+<li>path: folder for log file output.</li>
+<li>file_name: log file name.</li>
+<li>timestamp: when true, each file log line includes local timestamp.</li>
+<li>include_raw_os_error: reserved compatibility field for diagnostics policy.</li>
+<li>slow_step_warn_sec: threshold in seconds for slow-step warning lines. Must be greater than 0.</li>
+</ul>
+<span class="section-anchor" id="logging-exact-mode-behavior"></span><h2>Exact mode behavior</h2>
+<span class="section-anchor" id="logging-auto-mode"></span><h3>Auto mode</h3>
+<p>In `mode: auto, Hagane emits lifecycle logs for every compiled install operation:</p>
+<ul>
+<li>Start of step: info</li>
+<li>Slow step (elapsed &gt;= slow_step_warn_sec): warn</li>
+<li>Step failure: error with classified HG-* code</li>
+<li>Rollback failures: error</li>
+</ul>
+<p>When file logging is configured, completion lines remain in the log file but are not echoed into the UI log box. This avoids showing the same lifecycle text twice in the visible installer UI.</p>
+<p>Skip behavior in auto mode:</p>
+<ul>
+<li>If a compiled operation has `component and that component is not selected, the operation is skipped.</li>
+<li>Hagane emits an info skip line showing the reason.</li>
+</ul>
+<span class="section-anchor" id="logging-manual-only-mode"></span><h3>Manual-only mode</h3>
+<p>In `mode: manual_only, normal execution logs are suppressed:</p>
+<ul>
+<li>Hagane does not auto-emit lifecycle start/success/skip messages.</li>
+<li>Slow-step warnings are not emitted for normal operations.</li>
+</ul>
+<p>Important: failures are still always logged.</p>
+<ul>
+<li>Classified step failures (HG-* lines) are emitted in both modes.</li>
+<li>Rollback errors are emitted in both modes.</li>
+</ul>
+<p>This keeps troubleshooting reliable even when normal logs are fully manual.</p>
+<span class="section-anchor" id="logging-install-dsl-logging-scope"></span><h2>Install DSL logging scope</h2>
+<p>The top-level `install DSL does not expose per-operation inline <code>log</code> blocks. Logging is controlled by <code>logging.mode</code> and emitted from the compiled execution plan.</p>
+<p>Rules:</p>
+<ul>
+<li>File logging requires both `logging.path and <code>logging.file_name</code>.</li>
+<li>`auto mode gives lifecycle visibility with minimal YAML.</li>
+<li>`manual_only is best when you only want failure-classification output during install execution.</li>
+</ul>
+<span class="section-anchor" id="logging-recommended-usage-patterns"></span><h2>Recommended usage patterns</h2>
+<span class="section-anchor" id="logging-pattern-a-fully-automatic-lifecycle-logging"></span><h3>Pattern A: Fully automatic lifecycle logging</h3>
+<p>Use this when you want full traceability with minimal YAML noise.</p>
+<pre data-lang="yaml"><code>logging:
+  mode: auto
+  path: &quot;{{TEMP}}/MyAppLogs&quot;
+  file_name: &quot;installation.log&quot;
+  slow_step_warn_sec: 10
+
+install:
+  setup:
+    create_dirs:
+      - &quot;{{INSTDIR}}&quot;
+
+  components:
+    core:
+      archive: &quot;payload.zst&quot;
+      target: &quot;{{INSTDIR}}&quot;
+
+  finalize:
+    write_uninstaller: &quot;{{INSTDIR}}/uninstall.exe&quot;</code></pre>
+<p>What you get:</p>
+<ul>
+<li>Automatic start/success lines for each step</li>
+<li>Automatic slow-step warnings</li>
+<li>Automatic classified failures</li>
+</ul>
+<span class="section-anchor" id="logging-pattern-b-failure-focused-logs"></span><h3>Pattern B: Failure-focused logs</h3>
+<p>Use this when you only want deterministic classified failures during install execution.</p>
+<pre data-lang="yaml"><code>logging:
+  mode: manual_only
+  path: &quot;{{TEMP}}/MyAppLogs&quot;
+  file_name: &quot;installation.log&quot;
+
+install:
+  setup:
+    create_dirs:
+      - &quot;{{INSTDIR}}&quot;
+
+  components:
+    core:
+      archive: &quot;payload.zst&quot;
+      target: &quot;{{INSTDIR}}&quot;
+
+  finalize:
+    write_uninstaller: &quot;{{INSTDIR}}/uninstall.exe&quot;</code></pre>
+<p>What you get:</p>
+<ul>
+<li>No automatic lifecycle chatter for successful execution</li>
+<li>Still gets classified error lines on failure</li>
+</ul>
+<span class="section-anchor" id="logging-example-output"></span><h2>Example output</h2>
+<p>Auto mode success path (illustrative):</p>
+<pre data-lang="text"><code>[INFO] Starting step 1/3: Creating directory C:\Program Files\Acme\MyApp
+[INFO] Completed step 1/3: Creating directory C:\Program Files\Acme\MyApp
+[INFO] Starting step 2/3: Extracting payload.zst
+[WARN] Extracting payload.zst is taking longer than expected (12s)
+[INFO] Completed step 2/3: Extracting payload.zst</code></pre>
+<p>Failure output (both modes):</p>
+<pre data-lang="text"><code>[ERROR] HG-EXTRACT-001 step=2 action=extract field=archive value=payload.zst reason=&quot;archive &#x27;payload.zst&#x27; is missing from embedded payload&quot; fix=&quot;Run hagane build again and ensure the archive source folder exists near installer.yaml.&quot;
+[ERROR] Rollback error: ...</code></pre>
+<span class="section-anchor" id="logging-validation-rules-to-remember"></span><h2>Validation rules to remember</h2>
+<ul>
+<li>File logging always requires top-level `logging.path and <code>logging.file_name</code>.</li>
+<li>`logging.slow_step_warn_sec must be greater than 0 when present.</li>
+<li>For hooks, `run.command and <code>run.shell</code> are required.</li>
+</ul>
+<span class="section-anchor" id="logging-quick-decision-guide"></span><h2>Quick decision guide</h2>
+<p>Use `auto when:</p>
+<ul>
+<li>You want complete step lifecycle visibility by default.</li>
+<li>You want fewer per-step log entries in YAML.</li>
+<li>You want easier support diagnostics.</li>
+</ul>
+<p>Use `manual_only when:</p>
+<ul>
+<li>You want minimal normal logging output.</li>
+<li>You rely on HG error codes and rollback logs for diagnostics.</li>
+<li>You are validating error handling behavior.</li>
+</ul>
+</section>
+
+<section class="doc-section" id="error_codes" style="border-top:1px solid rgba(200,100,30,0.15);padding-top:60px">
+<span class="section-anchor" id="anchor-error_codes"></span>
+<span class="section-anchor" id="error_codes-hagane-installer-error-codes-and-logging-guide"></span><h1>Hagane Installer Error Codes and Logging Guide</h1>
+<p>This document defines stable v1 error codes and logging behavior in `installer.yaml.</p>
+<span class="section-anchor" id="error_codes-goals"></span><h2>Goals</h2>
+<ul>
+<li>Show actionable install failures to users.</li>
+<li>Keep logging behavior deterministic across auto and manual modes.</li>
+<li>Provide consistent error codes for support and troubleshooting.</li>
+</ul>
+<span class="section-anchor" id="error_codes-logging-modes-and-hooks"></span><h2>Logging Modes and Hooks</h2>
+<p>Hagane logging is configured globally and applies to the compiled operations from `install. Post-install commands are defined in <code>install.hooks.post_install</code>.</p>
+<span class="section-anchor" id="error_codes-logging-configuration-block"></span><h3>Logging Configuration Block</h3>
+<p>Add a top-level `logging block:</p>
+<pre data-lang="yaml"><code>logging:
+  mode: auto                    # &quot;auto&quot; or &quot;manual_only&quot; (default: auto)
+  path: &quot;{{INSTDIR}}/logs&quot;        # Directory to store log files
+  file_name: &quot;installation.log&quot;  # Log file name
+  timestamp: true                # Prefix each log line with ISO timestamp (default: true)
+  include_raw_os_error: false    # Include raw OS error details in auto-logged errors (default: false)
+  slow_step_warn_sec: 10         # Warn threshold in seconds for long-running steps</code></pre>
+<span class="section-anchor" id="error_codes-logging-configuration-parameters"></span><h4>Logging Configuration Parameters</h4>
+<div class="table-wrap"><table>
+<thead><tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Required?</th>
+<th>Notes</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>`mode</td>
+<td>string</td>
+<td>`auto</td>
+<td>No</td>
+<td>`auto logs lifecycle messages (start/warn/success) and classified failures. <code>manual_only</code> suppresses normal lifecycle logging during execution.</td>
+</tr>
+<tr>
+<td>`path</td>
+<td>string</td>
+<td>—</td>
+<td>Recommended</td>
+<td>Installation directory must be resolvable. Supports `{{INSTDIR}}, <code>{{PROGRAMFILES}}</code>, <code>{{APPDATA}}</code>, <code>{{LOCALAPPDATA}}</code>.</td>
+</tr>
+<tr>
+<td>`file_name</td>
+<td>string</td>
+<td>—</td>
+<td>Recommended</td>
+<td>Name of the log file (e.g., `installation.log, <code>setup.log</code>).</td>
+</tr>
+<tr>
+<td>`timestamp</td>
+<td>boolean</td>
+<td>`true</td>
+<td>No</td>
+<td>If `true, each log line is prefixed with ISO 8601 timestamp (e.g., <code>2026-04-12T14:32:01.234Z</code>).</td>
+</tr>
+<tr>
+<td>`include_raw_os_error</td>
+<td>boolean</td>
+<td>`false</td>
+<td>No</td>
+<td>If `true, automatic error classification includes raw Windows OS error details (may expose implementation details).</td>
+</tr>
+<tr>
+<td>`slow_step_warn_sec</td>
+<td>integer</td>
+<td>`10</td>
+<td>No</td>
+<td>Threshold in seconds for slow-step warning lines. Must be greater than 0.</td>
+</tr>
+</tbody>
+</table></div>
+<span class="section-anchor" id="error_codes-install-dsl-logging-behavior"></span><h3>Install DSL Logging Behavior</h3>
+<p>Log level is automatic in `mode: auto:</p>
+<ul>
+<li>Start-of-operation log: `info</li>
+<li>Long-running operation notice: `warn</li>
+<li>Failures: `error</li>
+</ul>
+<p><strong>Note</strong>: When file logging is desired, set both `logging.path and <code>logging.file_name</code>.</p>
+<span class="section-anchor" id="error_codes-conditional-execution-with-components"></span><h2>Conditional Execution with Components</h2>
+<p>Component-based operations are skipped if that component is not selected by the user during installation.</p>
+<span class="section-anchor" id="error_codes-supported-dsl-locations-with-component"></span><h3>Supported DSL Locations with `component</h3>
+<ul>
+<li>`install.system.shortcuts[*].component</li>
+<li>`install.system.path.component</li>
+</ul>
+<span class="section-anchor" id="error_codes-example-component-based-installation"></span><h3>Example: Component-Based Installation</h3>
+<pre data-lang="yaml"><code>components:
+  - id: core
+    name: &quot;Core Application&quot;
+    required: true
+    selected: true
+  - id: docs
+    name: &quot;Documentation&quot;
+    required: false
+    selected: true
+  - id: dev_tools
+    name: &quot;Developer Tools&quot;
+    required: false
+    selected: false
+
+install:
+  components:
+    core:
+      archive: &quot;core.zst&quot;
+      target: &quot;{{INSTDIR}}&quot;
+    docs:
+      archive: &quot;docs.zst&quot;
+      target: &quot;{{INSTDIR}}/docs&quot;
+    dev_tools:
+      archive: &quot;devtools.zst&quot;
+      target: &quot;{{INSTDIR}}/devtools&quot;
+
+  system:
+    shortcuts:
+      - name: &quot;Developer Shell&quot;
+        target: &quot;{{INSTDIR}}/devtools/shell.exe&quot;
+        location: start_menu
+        component: dev_tools
+    path:
+      add: &quot;{{INSTDIR}}/devtools/bin&quot;
+      scope: user
+      component: dev_tools</code></pre>
+<span class="section-anchor" id="error_codes-post-install-command-hooks"></span><h2>Post-Install Command Hooks</h2>
+<p>`install.hooks.post_install executes commands with automatic error classification.</p>
+<span class="section-anchor" id="error_codes-powershell-hook-execution"></span><h3>PowerShell Hook Execution</h3>
+<p>Execute a PowerShell command:</p>
+<pre data-lang="yaml"><code>install:
+  hooks:
+    post_install:
+      - run:
+          command: |
+            Write-Host &quot;Hello from installer&quot;
+            [Environment]::SetEnvironmentVariable(&quot;MY_VAR&quot;, &quot;value&quot;, &quot;User&quot;)
+          shell: powershell
+          wait: true
+          fail_on_nonzero: true
+          timeout_sec: 30</code></pre>
+<span class="section-anchor" id="error_codes-program-hook-execution"></span><h3>Program Hook Execution</h3>
+<p>Execute a normal process command:</p>
+<pre data-lang="yaml"><code>install:
+  hooks:
+    post_install:
+      - run:
+          command: &quot;{{INSTDIR}}/bin/post_install.exe --mode setup&quot;
+          shell: program
+          wait: true
+          fail_on_nonzero: true
+          timeout_sec: 60</code></pre>
+<span class="section-anchor" id="error_codes-run-parameters"></span><h4>`run Parameters</h4>
+<div class="table-wrap"><table>
+<thead><tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Required?</th>
+<th>Notes</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>`command</td>
+<td>string</td>
+<td>—</td>
+<td>Yes</td>
+<td>Command text to execute. For PowerShell, this is script content; for program mode, this is the command line.</td>
+</tr>
+<tr>
+<td>`shell</td>
+<td>string</td>
+<td>—</td>
+<td>Yes</td>
+<td>`powershell or <code>program</code>.</td>
+</tr>
+<tr>
+<td>`wait</td>
+<td>boolean</td>
+<td>`true</td>
+<td>No</td>
+<td>If `true, the installer waits for the script to complete before continuing. If <code>false</code>, script runs in background.</td>
+</tr>
+<tr>
+<td>`fail_on_nonzero</td>
+<td>boolean</td>
+<td>`true</td>
+<td>No</td>
+<td>If `true, a non-zero exit code from the script fails the entire installation. If <code>false</code>, non-zero exits are ignored.</td>
+</tr>
+<tr>
+<td>`timeout_sec</td>
+<td>number</td>
+<td>(none)</td>
+<td>No</td>
+<td>Maximum execution time in seconds. If the script exceeds this time and `wait=true, it&#x27;s terminated and classified as <code>HG-PS-004</code> (timeout).</td>
+</tr>
+</tbody>
+</table></div>
+<span class="section-anchor" id="error_codes-hook-execution-notes"></span><h4>Hook Execution Notes</h4>
+<ul>
+<li><strong>Error Action Preference</strong>: Scripts are automatically wrapped with `$ErrorActionPreference=&#x27;Stop&#x27; to ensure deterministic error codes.</li>
+<li>**Elevation**: If the installer runs with admin elevation, scripts execute with the same privileges.</li>
+<li>**Output**: Command output is captured and included in automatic error classification (HG-PS-001 through HG-PS-005 when using PowerShell).</li>
+<li><strong>Working Directory</strong>: Hooks inherit the installer&#x27;s working directory (`{{INSTDIR}}).</li>
+</ul>
+<span class="section-anchor" id="error_codes-error-line-format"></span><h2>Error Line Format</h2>
+<p>When an installation step fails and logging is enabled (default `mode: auto), the installer automatically generates an error line in the following format:</p>
+<pre data-lang="text"><code>[ERROR] &lt;CODE&gt; step=&lt;N&gt; action=&lt;ACTION&gt; field=&lt;FIELD&gt; value=&lt;VALUE&gt; reason=&quot;...&quot; fix=&quot;...&quot;</code></pre>
+<span class="section-anchor" id="error_codes-error-line-components"></span><h3>Error Line Components</h3>
+<div class="table-wrap"><table>
+<thead><tr>
+<th>Component</th>
+<th>Description</th>
+<th>Example</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>`CODE</td>
+<td>9-character stable v1 error code (HG-XXXX-NNN)</td>
+<td>`HG-EXTRACT-001</td>
+</tr>
+<tr>
+<td>`step</td>
+<td>Compiled operation index (1-indexed)</td>
+<td>`step=4</td>
+</tr>
+<tr>
+<td>`action</td>
+<td>The operation action type</td>
+<td>`action=extract</td>
+</tr>
+<tr>
+<td>`field</td>
+<td>The problematic field in the operation configuration</td>
+<td>`field=archive</td>
+</tr>
+<tr>
+<td>`value</td>
+<td>The value of that field (may be truncated)</td>
+<td>`value=docs.zst</td>
+</tr>
+<tr>
+<td>`reason</td>
+<td>Root cause of the failure (auto-classified)</td>
+<td>`reason=&quot;archive &#x27;docs.zst&#x27; is missing from embedded payload&quot;</td>
+</tr>
+<tr>
+<td>`fix</td>
+<td>Recommended action to resolve the error</td>
+<td>`fix=&quot;Run hagane build again and ensure the archive source folder exists near installer.yaml.&quot;</td>
+</tr>
+</tbody>
+</table></div>
+<span class="section-anchor" id="error_codes-example-error-log-line"></span><h3>Example Error Log Line</h3>
+<pre data-lang="text"><code>[ERROR] HG-EXTRACT-001 step=4 action=extract field=archive value=docs.zst reason=&quot;archive &#x27;docs.zst&#x27; is missing from embedded payload&quot; fix=&quot;Run hagane build again and ensure the archive source folder exists near installer.yaml.&quot;</code></pre>
+<span class="section-anchor" id="error_codes-stable-v1-error-codes-complete-reference"></span><h2>Stable v1 Error Codes (Complete Reference)</h2>
+<p>The screenshots below show what CLI errors look like in practice. A missing or unresolvable manifest path:</p>
+<div class="cli-screenshot"><div class="cli-bar"><span class="cli-dot cli-dot-r"></span><span class="cli-dot cli-dot-y"></span><span class="cli-dot cli-dot-g"></span><span class="cli-title">Error — manifest file not found</span></div><img src="assets/hagane-cli/4.png" alt="Error — manifest file not found" loading="lazy"/></div>
+<p>An invalid or malformed `installer.yaml that fails schema validation:</p>
+<div class="cli-screenshot"><div class="cli-bar"><span class="cli-dot cli-dot-r"></span><span class="cli-dot cli-dot-y"></span><span class="cli-dot cli-dot-g"></span><span class="cli-title">Error — YAML parse or schema validation failure</span></div><img src="assets/hagane-cli/5.png" alt="Error — YAML parse or schema validation failure" loading="lazy"/></div>
+<span class="section-anchor" id="error_codes-manifest-and-variable-resolution"></span><h3>Manifest and Variable Resolution</h3>
+<span class="section-anchor" id="error_codes-hg-yaml-001-manifest-schema-validation-failure"></span><h4>`HG-YAML-001 — Manifest Schema Validation Failure</h4>
+<p>**When it occurs:** During manifest parsing or validation, the installer detects invalid YAML structure, missing required fields, or invalid field values.</p>
+<p>**Common causes:**</p>
+<ul>
+<li>Missing `app.name, <code>app.version</code>, or <code>app.publisher</code></li>
+<li>Missing `pages with at least one <code>install</code> type page</li>
+<li>Invalid registry hive name (not one of: HKLM, HKCU, HKCR, HKU, HKCC)</li>
+<li>Invalid environment scope (`scope must be <code>user</code> or <code>system</code>)</li>
+<li>Invalid environment operation (`operation must be <code>set</code>, <code>append</code>, or <code>prepend</code>)</li>
+<li>Missing or malformed `install block</li>
+<li>Hook with missing `run.command or <code>run.shell</code></li>
+</ul>
+<p><strong>Typical fix:</strong> Review the error reason and correct the manifest YAML. Re-run `hagane build to re-validate.</p>
+<p>**Field mapping in error line:**</p>
+<pre data-lang="text"><code>field=key field (e.g., app.name, logging.path, [registry|env|step] configuration)
+value=malformed value</code></pre>
+<span class="section-anchor" id="error_codes-hg-var-001-unresolved-installer-variable"></span><h4>`HG-VAR-001 — Unresolved Installer Variable</h4>
+<p>**When it occurs:** During step execution, a path-like field contains a variable reference that cannot be resolved.</p>
+<p>**Supported variables:**</p>
+<ul>
+<li>`{{INSTDIR}} (or legacy <code>$INSTDIR</code>) — installation directory</li>
+<li>`{{PROGRAMFILES}} (or legacy <code>$PROGRAMFILES</code>) — typically C:\Program Files</li>
+<li>`{{PROGRAMFILES64}} (or legacy <code>$PROGRAMFILES64</code>) — 64-bit variant</li>
+<li>`{{APPDATA}} (or legacy <code>$APPDATA</code>) — per-user Application Data folder</li>
+<li>`{{LOCALAPPDATA}} (or legacy <code>$LOCALAPPDATA</code>) — per-user Local\Application Data folder</li>
+<li>`{{TEMP}} (or legacy <code>$TEMP</code>) — user temp directory</li>
+<li>`{{WINDIR}} (or legacy <code>$WINDIR</code>) — Windows system directory</li>
+<li>Any custom variable declared in top-level `variables: (for example <code>{{APP_REG_KEY}}</code>)</li>
+</ul>
+<p>**Common causes:**</p>
+<ul>
+<li>Misspelled variable name (e.g., `{{INSTDIR_ROOT}} instead of <code>{{INSTDIR}}</code>)</li>
+<li>Typo inside braces (e.g., `${INSDIR})</li>
+<li>Custom variables (not supported)</li>
+</ul>
+<p>**Typical fix:** Correct the variable name and re-run the installer.</p>
+<p><strong>Authoring note:</strong> Custom variables must be declared in `variables: and use keys with <code>A-Z</code>, <code>0-9</code>, and <code>_</code> (optionally prefixed with <code>$</code>). Use <code>{{KEY}}</code> as the preferred template syntax.</p>
+<hr/>
+<span class="section-anchor" id="error_codes-extract-and-copy-operations"></span><h3>Extract and Copy Operations</h3>
+<span class="section-anchor" id="error_codes-hg-extract-001-archive-missing-from-payload"></span><h4>`HG-EXTRACT-001 — Archive Missing from Payload</h4>
+<p><strong>When it occurs:</strong> An `extract action references an archive name that was not embedded during build.</p>
+<p>**Cause:** The archive source folder specified in the build command does not exist, or its contents were not found.</p>
+<p>**Typical fix:**</p>
+<ol>
+<li>Verify the archive source directory exists in your build context.</li>
+<li>Re-run `hagane build to re-scan and embed archives.</li>
+<li>Verify the `archive field in the manifest matches the embedded name.</li>
+</ol>
+<p>**Field mapping:**</p>
+<pre data-lang="text"><code>field=archive
+value=&lt;archive name from manifest&gt;</code></pre>
+<span class="section-anchor" id="error_codes-hg-extract-002-extraction-io-failure-or-destination-not-writable"></span><h4>`HG-EXTRACT-002 — Extraction I/O Failure or Destination Not Writable</h4>
+<p>**When it occurs:** The extraction process fails due to I/O errors, permission issues, or an invalid destination path.</p>
+<p>**Common causes:**</p>
+<ul>
+<li>Destination directory is on a read-only drive</li>
+<li>Destination path contains invalid characters or is malformed</li>
+<li>File locking (e.g., antivirus or file explorer blocking writes)</li>
+<li>Insufficient disk space</li>
+<li>Running without elevation when destination is protected (e.g., C:\Program Files under some Windows configurations)</li>
+</ul>
+<p>**Typical fix:** Check destination path permissions, close file locks, ensure adequate free disk space, or run the installer with elevated privileges.</p>
+<p>**Field mapping:**</p>
+<pre data-lang="text"><code>field=destination
+value=&lt;destination path from manifest&gt;</code></pre>
+<span class="section-anchor" id="error_codes-hg-copy-001-copy-source-file-missing-or-invalid"></span><h4>`HG-COPY-001 — Copy Source File Missing or Invalid</h4>
+<p><strong>When it occurs:</strong> A `copy_file action references a source file that does not exist or cannot be read.</p>
+<p>**Common causes:**</p>
+<ul>
+<li>Source file was not extracted or copied in a previous step</li>
+<li>Source path typo or incorrect variable resolution</li>
+<li>Source file permission-denied (rare)</li>
+<li>Source file was deleted between build and installation</li>
+</ul>
+<p><strong>Typical fix:</strong> Verify the source file path in the manifest and confirm previous `extract or <code>copy_file</code> steps produce the expected file.</p>
+<p>**Field mapping:**</p>
+<pre data-lang="text"><code>field=source
+value=&lt;source path from manifest&gt;</code></pre>
+<hr/>
+<span class="section-anchor" id="error_codes-registry-operations"></span><h3>Registry Operations</h3>
+<p>You can either use low-level `registry actions or high-level actions:</p>
+<ul>
+<li>`register_uninstall for Add/Remove Programs metadata</li>
+<li>`register_app for app settings (<code>InstallDir</code>, <code>Version</code>)</li>
+</ul>
+<span class="section-anchor" id="error_codes-hg-reg-001-invalid-registry-configuration"></span><h4>`HG-REG-001 — Invalid Registry Configuration</h4>
+<p><strong>When it occurs:</strong> A `registry step contains structurally invalid configuration (invalid hive, key format, or type).</p>
+<p>**Common causes:**</p>
+<ul>
+<li>Invalid `hive name (must be: HKLM, HKCU, HKCR, HKU, or HKCC)</li>
+<li>`value_type mismatch (e.g., <code>BINARY</code> type with string value)</li>
+<li>Invalid key path syntax</li>
+<li>Missing required fields for the operation</li>
+<li>Missing required `register_uninstall fields (name/version/publisher/install location/uninstall string)</li>
+<li>Missing required `register_app fields (<code>inst_loc</code>/<code>install_location</code>, <code>version</code>)</li>
+</ul>
+<p>**Typical fix:** Validate the registry hive, key, value type, and value format. Test with regedit if unsure.</p>
+<p>**Field mapping:**</p>
+<pre data-lang="text"><code>field=key
+value=&lt;HIVE\Key path&gt;</code></pre>
+<span class="section-anchor" id="error_codes-hg-reg-002-registry-access-denied-permission-required"></span><h4>`HG-REG-002 — Registry Access Denied (Permission Required)</h4>
+<p><strong>When it occurs:</strong> A `registry action attempts to write to a protected hive or key that requires elevated privileges.</p>
+<p>**Common registry locations requiring admin:**</p>
+<ul>
+<li>`HKLM\Software\* — HKEY_LOCAL_MACHINE (system-wide)</li>
+<li>`HKCR\* — HKEY_CLASSES_ROOT (system-wide)</li>
+</ul>
+<p>**Typical fix:**</p>
+<ol>
+<li><strong>For system-wide settings:</strong> Ensure installer runs with <strong>administrator elevation</strong>. Set `app.require_admin: true in manifest.</li>
+<li><strong>For user-only settings:</strong> Use `HKCU instead of <code>HKLM</code>.</li>
+<li><strong>At build time:</strong> Verify `app.require_admin is set correctly in <code>installer.yaml</code>.</li>
+</ol>
+<p>**Field mapping:**</p>
+<pre data-lang="text"><code>field=key
+value=&lt;HIVE\Key path&gt;</code></pre>
+<hr/>
+<span class="section-anchor" id="error_codes-environment-variables"></span><h3>Environment Variables</h3>
+<span class="section-anchor" id="error_codes-hg-env-001-environment-variable-operation-failed"></span><h4>`HG-ENV-001 — Environment Variable Operation Failed</h4>
+<p><strong>When it occurs:</strong> An `env_var step fails due to invalid scope, operation, or permission issues.</p>
+<p>**Valid Scope Values:**</p>
+<ul>
+<li>`user — per-user environment (HKEY_CURRENT_USER)</li>
+<li>`system — system-wide environment (HKEY_LOCAL_MACHINE) — **requires admin elevation**</li>
+</ul>
+<p>**Valid Operation Values:**</p>
+<ul>
+<li>`set — replace or create variable</li>
+<li>`append — add to the end of existing value (with <code>;</code> separator)</li>
+<li>`prepend — add to the beginning of existing value (with <code>;</code> separator)</li>
+</ul>
+<p>**Common causes:**</p>
+<ul>
+<li>Invalid scope or operation spelling</li>
+<li>Attempting system-wide operation (`scope: system) without elevation</li>
+<li>Registry write failure due to ACLs</li>
+</ul>
+<p>**Typical fix:**</p>
+<ol>
+<li>Validate `scope and <code>operation</code> values in manifest.</li>
+<li>**For system scope:** Run installer as Administrator.</li>
+<li>**For user scope:** No elevation required; ensure registry path is writable.</li>
+</ol>
+<p>**Field mapping:**</p>
+<pre data-lang="text"><code>field=operation
+value=scope=&lt;scope&gt;, operation=&lt;operation&gt;</code></pre>
+<hr/>
+<span class="section-anchor" id="error_codes-program-execution"></span><h3>Program Execution</h3>
+<span class="section-anchor" id="error_codes-hg-run-001-executable-not-found"></span><h4>`HG-RUN-001 — Executable Not Found</h4>
+<p><strong>When it occurs:</strong> A `run_program action references an executable that cannot be located in PATH or at the specified path.</p>
+<p>**Common causes:**</p>
+<ul>
+<li>Executable not extracted or copied in previous steps</li>
+<li>Path typo or incorrect variable resolution</li>
+<li>File extension missing (e.g., `.exe)</li>
+<li>Executable is for a different architecture or OS</li>
+</ul>
+<p>**Typical fix:**</p>
+<ol>
+<li>Verify the executable was extracted or copied by a previous step.</li>
+<li>Check the path in the manifest; ensure variables resolve correctly.</li>
+<li>Test the executable exists by extracting manually and checking with file explorer.</li>
+</ol>
+<p>**Field mapping:**</p>
+<pre data-lang="text"><code>field=executable
+value=&lt;executable path/filename from manifest&gt;</code></pre>
+<span class="section-anchor" id="error_codes-hg-run-002-process-non-zero-exit-code"></span><h4>`HG-RUN-002 — Process Non-Zero Exit Code</h4>
+<p><strong>When it occurs:</strong> A `run_program step executes but returns a non-zero exit code, indicating failure.</p>
+<p>**Common causes:**</p>
+<ul>
+<li>Program encountered an error (e.g., setup hook failed)</li>
+<li>Program requires arguments or configuration not provided</li>
+<li>Program dependency is missing (e.g., .NET Framework, library)</li>
+<li>Permission issue during program execution</li>
+</ul>
+<p>**Typical fix:**</p>
+<ol>
+<li>Review the program&#x27;s documentation and verify arguments are correct.</li>
+<li>Ensure all dependencies are present in the system or bundled.</li>
+<li>If the program&#x27;s failure should not stop installation, set `fail_on_nonzero: false in <code>run_program</code> definition.</li>
+<li>Run the program manually from the install directory to see detailed error output.</li>
+</ol>
+<p>**Field mapping:**</p>
+<pre data-lang="text"><code>field=executable
+value=&lt;executable path from manifest&gt;</code></pre>
+<hr/>
+<span class="section-anchor" id="error_codes-powershell-execution"></span><h3>PowerShell Execution</h3>
+<span class="section-anchor" id="error_codes-hg-ps-001-powershell-parsesyntax-error"></span><h4>`HG-PS-001 — PowerShell Parse/Syntax Error</h4>
+<p>**When it occurs:** PowerShell script contains syntax errors and cannot be parsed.</p>
+<p>**Common causes:**</p>
+<ul>
+<li>Unclosed quotes or braces</li>
+<li>Misspelled keywords (e.g., `if () with invalid condition)</li>
+<li>Invalid pipeline syntax</li>
+<li>Escape character issues in YAML (remember PowerShell needs correct escaping)</li>
+</ul>
+<p>**Typical fix:**</p>
+<ol>
+<li>Test the script manually in PowerShell: `powershell -NoProfile -File script.ps1</li>
+<li>Fix syntax errors.</li>
+<li>Use inline `script: in manifest for simple code and external <code>.ps1</code> files for complex scripts.</li>
+</ol>
+<p>**Field mapping:**</p>
+<pre data-lang="text"><code>field=script
+value=&lt;script name or first line&gt;</code></pre>
+<span class="section-anchor" id="error_codes-hg-ps-002-powershellcommand-not-found"></span><h4>`HG-PS-002 — PowerShell/Command Not Found</h4>
+<p>**When it occurs:** The PowerShell executable cannot be invoked, or a referenced cmdlet/command is not available.</p>
+<p>**Common causes:**</p>
+<ul>
+<li>PowerShell not in PATH (rare on Windows)</li>
+<li>Cmdlet does not exist or is misspelled</li>
+<li>Cmdlet from a module that is not imported</li>
+<li>Module path issues in restricted environments</li>
+</ul>
+<p>**Typical fix:**</p>
+<ol>
+<li>Verify PowerShell exists on the target system (should be standard on Windows 7+).</li>
+<li>Verify cmdlet names and module availability.</li>
+<li>Wrap cmdlet usage in full namespace if needed (e.g., `Microsoft.PowerShell.Utility\Get-Member).</li>
+<li>Pre-import modules at the start of the script if needed.</li>
+</ol>
+<p>**Field mapping:**</p>
+<pre data-lang="text"><code>field=script
+value=&lt;script name or first line&gt;</code></pre>
+<span class="section-anchor" id="error_codes-hg-ps-003-powershell-non-zero-exit-code"></span><h4>`HG-PS-003 — PowerShell Non-Zero Exit Code</h4>
+<p>**When it occurs:** PowerShell script executes but exits with a non-zero code (script logic error or explicit exit call).</p>
+<p>**Common causes:**</p>
+<ul>
+<li>Script explicitly calls `exit 1 or similar</li>
+<li>Terminating error occurs and `$ErrorActionPreference is not set to <code>Stop</code> (handled automatically)</li>
+<li>Script returns a falsy value that PowerShell interprets as failure</li>
+</ul>
+<p>**Typical fix:**</p>
+<ol>
+<li>Review script logic near the end; check for explicit `exit calls.</li>
+<li>Ensure error handling is correct (`try/<code>catch</code> blocks).</li>
+<li>Test script manually and note the exact PowerShell error.</li>
+</ol>
+<p>**Field mapping:**</p>
+<pre data-lang="text"><code>field=script
+value=&lt;script name or first line&gt;</code></pre>
+<span class="section-anchor" id="error_codes-hg-ps-004-powershell-timeout"></span><h4>`HG-PS-004 — PowerShell Timeout</h4>
+<p><strong>When it occurs:</strong> A PowerShell script runs longer than the specified `timeout_sec and is terminated.</p>
+<p>**Cause:** Script took too long to execute, likely due to waiting for resources, network operations, or infinite loops.</p>
+<p>**Typical fix:**</p>
+<ol>
+<li>Increase `timeout_sec in the manifest (if the delay is expected).</li>
+<li>Optimize the script to reduce execution time.</li>
+<li>Break long-running operations into smaller async tasks.</li>
+</ol>
+<p>**Field mapping:**</p>
+<pre data-lang="text"><code>field=timeout_sec
+value=&lt;timeout value in seconds&gt;</code></pre>
+<span class="section-anchor" id="error_codes-hg-ps-005-powershell-access-denied-execution-policy-blocked"></span><h4>`HG-PS-005 — PowerShell Access Denied / Execution Policy Blocked</h4>
+<p>**When it occurs:** PowerShell script is blocked by execution policy, security manager, or access control.</p>
+<p>**Common causes:**</p>
+<ul>
+<li>Script Execution Policy is `Restricted (default on non-admin shells)</li>
+<li>Script is not digitally signed but policy requires it</li>
+<li>User lacks permissions to run scripts</li>
+<li>Antivirus or security software blocked execution</li>
+</ul>
+<p>**Typical fix:**</p>
+<ol>
+<li>**For user scripts:** Run installer with elevated privileges (admin), which relaxes policy temporarily.</li>
+<li><strong>Persistent:</strong> Edit ExecutionPolicy (requires admin): `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser</li>
+<li>**For secure environments:** Request script signing or provide security exemption.</li>
+<li><strong>In manifest:</strong> Set `app.require_admin: true to ensure elevated context during script execution.</li>
+</ol>
+<p>**Field mapping:**</p>
+<pre data-lang="text"><code>field=script
+value=&lt;script name or first line&gt;</code></pre>
+<hr/>
+<span class="section-anchor" id="error_codes-recommended-authoring-pattern"></span><h2>Recommended Authoring Pattern</h2>
+<span class="section-anchor" id="error_codes-manifest-structure-with-logging"></span><h3>Manifest Structure with Logging</h3>
+<p>Here&#x27;s a complete example showing best practices for using logging and error detection:</p>
+<pre data-lang="yaml"><code>app:
+  name: &quot;My Application&quot;
+  version: &quot;1.0.0&quot;
+  publisher: &quot;Acme Inc&quot;
+  require_admin: false        # Set to true if registry (HKLM) or system env vars are needed
+
+logging:
+  mode: auto                  # &quot;auto&quot; (default) or &quot;manual_only&quot;
+  path: &quot;{{INSTDIR}}/logs&quot;
+  file_name: &quot;installation.log&quot;
+  timestamp: true
+  include_raw_os_error: false
+
+pages:
+  - type: welcome
+    title: &quot;Welcome to My Application&quot;
+  - type: requirements
+  - type: install_dir
+  - type: install
+  - type: finish
+
+install:
+  setup:
+    create_dirs:
+      - &quot;{{INSTDIR}}&quot;
+      - &quot;{{INSTDIR}}/logs&quot;
+
+  components:
+    core:
+      archive: &quot;app_binaries.zst&quot;
+      target: &quot;{{INSTDIR}}/bin&quot;
+
+  system:
+    register_app:
+      hive: HKCU
+      key: &quot;Software/Acme/MyApp&quot;
+      version: &quot;1.0.0&quot;
+      install_location: &quot;{{INSTDIR}}&quot;
+
+    path:
+      add: &quot;{{INSTDIR}}/bin&quot;
+      scope: user
+
+  hooks:
+    post_install:
+      - run:
+          command: |
+            Write-Host &quot;Configuring application at {{INSTDIR}}&quot;
+          shell: powershell
+          wait: true
+          fail_on_nonzero: true
+          timeout_sec: 60
+
+  finalize:
+    write_uninstaller: &quot;{{INSTDIR}}/Uninstall.exe&quot;</code></pre>
+<span class="section-anchor" id="error_codes-error-handling-and-troubleshooting-pattern"></span><h3>Error Handling and Troubleshooting Pattern</h3>
+<p>When errors occur, use the logged error line to diagnose:</p>
+<ol>
+<li><strong>Extract the error code</strong> from the log: `[ERROR] HG-XXXXX-NNN ...</li>
+<li>**Find the code section** in this document</li>
+<li><em></em>Read the `field and <code>value</code>**: These describe what went wrong</li>
+<li><em></em>Review the `fix**: Recommended resolution steps</li>
+</ol>
+<p>**Example log output:**</p>
+<pre data-lang="text"><code>[ERROR] HG-ENV-001 step=8 action=env_var field=operation value=scope=system, operation=set reason=&quot;registry open failed&quot; fix=&quot;Use scope user/system and operation set/append/prepend. For system scope, run installer elevated.&quot;</code></pre>
+<p>**Interpretation:**</p>
+<ul>
+<li>Step 8 tried to set a system environment variable</li>
+<li>The installer was not run with admin privileges</li>
+<li><strong>Fix:</strong> Set `app.require_admin: true in manifest or run installer as Administrator</li>
+</ul>
+<span class="section-anchor" id="error_codes-troubleshooting-checklist"></span><h2>Troubleshooting Checklist</h2>
+<p>If users report an error code:</p>
+<ol>
+<li><strong>Extract the error code</strong> from the log line: `HG-XXXX-NNN</li>
+<li>**Find the code** in the &quot;Stable v1 Error Codes&quot; section above</li>
+<li>**Read the description** to understand what failed</li>
+<li><em></em>Review the `field, <code>value</code>, <code>reason</code>, and <code>fix</code>** from the error line</li>
+<li>**Apply the recommended fix:**</li>
+<ul>
+<li>Correct `installer.yaml configuration</li>
+<li>Fix manifest logic (e.g., use correct registry hives, variables, operators)</li>
+<li>Update payload layout or ensure proper extraction order</li>
+<li>For elevation issues: Set `app.require_admin: true</li>
+<li>**Re-build and re-test:**</li>
+<li>Run `hagane run installer.yaml --release to build the installer</li>
+<li>Test the installer in silence mode: `installer-setup.exe /S</li>
+<li>Check `%TEMP%\HaganeInstall\logs\installation.log for detailed error output</li>
+<li>**Iterate** until the error no longer appears</li>
+</ul>
+</ol>
+<span class="section-anchor" id="error_codes-logging-configuration-best-practices"></span><h2>Logging Configuration Best Practices</h2>
+<ol>
+<li>**Include a top-level logging block** when you need file output.</li>
+<li>**Use mode: auto** (default) for automatic error classification — provides rich context</li>
+<li>**Use mode: manual_only** only if you want to suppress normal lifecycle logs</li>
+<li>**Set timestamp: true** for debugging sequences of steps</li>
+<li><strong>Store logs in user-writable location</strong> like `{{TEMP}} for non-admin testing, <code>{{INSTDIR}}</code> for normal installs</li>
+<li>**Review logs after test failures** to extract error codes and diagnose issues</li>
+</ol>
+<span class="section-anchor" id="error_codes-compatibility-notes"></span><h2>Compatibility Notes</h2>
+<ul>
+<li>**Stable v1 Codes**: These 15 codes are stable and will not change in v1. New failure types will receive new code families.</li>
+<li><strong>Field/Value changes</strong>: The `field, <code>value</code>, <code>reason</code>, and <code>fix</code> sections may be enhanced but will maintain semantic compatibility.</li>
+<li>**Variable Support**: The variable list ({{INSTDIR}}, {{PROGRAMFILES}}, etc.) is fixed v1. New variables will only be added in v2+.</li>
+<li>**Scope/Operation Enums**: Environment scope and operation values are fixed v1 (user, system; set, append, prepend).</li>
+</ul>
+</section>
+
+<section class="doc-section" id="testing" style="border-top:1px solid rgba(200,100,30,0.15);padding-top:60px">
+<span class="section-anchor" id="anchor-testing"></span>
+<span class="section-anchor" id="testing-testing-the-installer-engine"></span><h1>Testing the Installer Engine</h1>
+<span class="section-anchor" id="testing-complete-workflow-build-test"></span><h2>Complete Workflow: Build &amp; Test</h2>
+<span class="section-anchor" id="testing-prerequisites"></span><h3>Prerequisites</h3>
+<p>✅ All crates compile successfully:</p>
+<pre data-lang="powershell"><code>cargo build --release</code></pre>
+<hr/>
+<span class="section-anchor" id="testing-1-build-the-hagane-cli-tool"></span><h2>1️⃣ Build the `hagane CLI Tool</h2>
+<pre data-lang="powershell"><code>cargo build --release -p builder</code></pre>
+<p>Output: `target/release/hagane.exe</p>
+<hr/>
+<span class="section-anchor" id="testing-2-prepare-payload-example-installer"></span><h2>2️⃣ Prepare Payload (Example Installer)</h2>
+<p>The builder compresses directories referenced in your `install.components block. For the example, you need:</p>
+<span class="section-anchor" id="testing-create-minimal-test-payload"></span><h3>Create minimal test payload:</h3>
+<pre data-lang="powershell"><code>cd c:\Users\monip\code\Installer-Engine\sdk\example
+
+# Create payload directories
+mkdir -Force payload docs samples
+
+# Add dummy files (required for archives to exist)
+echo &quot;MyApp version 2.1.0&quot; &gt; payload\version.txt
+echo &quot;Sample documentation&quot; &gt; docs\README.txt
+echo &quot;Sample project files&quot; &gt; samples\example.txt</code></pre>
+<span class="section-anchor" id="testing-directory-structure-should-look-like"></span><h3>Directory structure should look like:</h3>
+<pre data-lang="text"><code>sdk/example/
+├── installer.yaml
+├── assets/
+│   ├── logo.png
+│   ├── banner.png
+│   └── icon.ico
+├── payload/                  ← compressed to payload.zst
+│   └── version.txt
+├── docs/                     ← compressed to docs.zst
+│   └── README.txt
+└── samples/                  ← compressed to samples.zst
+    └── example.txt</code></pre>
+<hr/>
+<span class="section-anchor" id="testing-3-build-the-installer-executable"></span><h2>3️⃣ Build the Installer Executable</h2>
+<pre data-lang="powershell"><code>cd sdk\example
+
+# Auto-discovery: if installer.yaml is the only YAML in the directory
+..\..\target\release\hagane.exe run --release
+
+# Or with an explicit manifest path
+..\..\target\release\hagane.exe run installer.yaml --release</code></pre>
+<div class="callout callout-info">
+<strong>Auto-discovery</strong>Hagane automatically finds a manifest when exactly one `.yaml/<code>.yml</code> file is present in the current directory. If multiple YAML files are found, Hagane prints a warning listing them all and exits — specify the manifest explicitly in that case.
+</div>
+<span class="section-anchor" id="testing-what-it-does"></span><h3>What it does:</h3>
+<ol>
+<li>✅ Loads and validates `installer.yaml</li>
+<li>✅ Loads assets (logo, banner, icon)</li>
+<li>✅ Compresses payload directories (payload/, docs/, samples/)</li>
+<li>✅ Generates runtime embedded artifacts</li>
+<li>✅ Runs `cargo build --release to compile the final <code>.exe</code></li>
+</ol>
+<span class="section-anchor" id="testing-output"></span><h3>Output:</h3>
+<pre data-lang="text"><code>target/release/MyApp-setup.exe</code></pre>
+<hr/>
+<span class="section-anchor" id="testing-4-test-the-installer"></span><h2>4️⃣ Test the Installer</h2>
+<span class="section-anchor" id="testing-gui-mode-default"></span><h3>**GUI Mode (Default)**</h3>
+<pre data-lang="powershell"><code># Run the installer
+..\..\target\release\MyApp-setup.exe</code></pre>
+<p>This opens the WebView2-based GUI with pages:</p>
+<ul>
+<li>Welcome screen</li>
+<li>License agreement</li>
+<li>System requirements check</li>
+<li>Installation directory picker</li>
+<li>Component selection</li>
+<li>Installation summary</li>
+<li>Progress bar</li>
+<li>Finish screen</li>
+</ul>
+<span class="section-anchor" id="testing-silent-mode-no-ui"></span><h3>**Silent Mode (No UI)**</h3>
+<pre data-lang="powershell"><code># Install without UI
+..\..\target\release\MyApp-setup.exe /S</code></pre>
+<p>Uses default settings from the manifest&#x27;s `silent: section.</p>
+<hr/>
+<span class="section-anchor" id="testing-5-verify-installation"></span><h2>5️⃣ Verify Installation</h2>
+<span class="section-anchor" id="testing-default-install-location"></span><h3>Default install location:</h3>
+<pre data-lang="text"><code>C:\Program Files\Acme\MyApp\</code></pre>
+<span class="section-anchor" id="testing-what-should-be-installed"></span><h3>What should be installed:</h3>
+<ul>
+<li>`version.txt (from payload)</li>
+<li>`docs/ (from docs archive)</li>
+<li>`samples/ (from samples archive)</li>
+<li>`uninstall.exe (auto-generated)</li>
+</ul>
+<span class="section-anchor" id="testing-check-registry"></span><h3>Check registry:</h3>
+<pre data-lang="powershell"><code># Verify Add/Remove Programs entry
+reg query &quot;HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\AcmeMyApp&quot;
+
+# Verify app configuration
+reg query &quot;HKLM\SOFTWARE\Acme\MyApp&quot;</code></pre>
+<hr/>
+<span class="section-anchor" id="testing-troubleshooting"></span><h2>Troubleshooting</h2>
+<span class="section-anchor" id="testing-error-missing-archive-payload"></span><h3>Error: &quot;Missing archive &#x27;payload&#x27;&quot;</h3>
+<p><strong>Cause:</strong> No `payload/ directory exists **Fix:**</p>
+<pre data-lang="powershell"><code>mkdir payload
+echo &quot;test&quot; &gt; payload\test.txt</code></pre>
+<span class="section-anchor" id="testing-error-missing-asset-assetsbannerpng"></span><h3>Error: &quot;Missing asset &#x27;assets/banner.png&#x27;&quot;</h3>
+<p>**Cause:** Referenced in manifest but file doesn&#x27;t exist **Fix:** Either:</p>
+<ul>
+<li>Create the file: `copy assets\logo.png assets\banner.png</li>
+<li>Remove from manifest: `banner: null or delete the line</li>
+</ul>
+<span class="section-anchor" id="testing-no-ui-webview2-error"></span><h3>No UI / WebView2 error</h3>
+<p>**Cause:** WebView2 Runtime not installed **Fix:**</p>
+<ul>
+<li>Install [WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/download/)</li>
+<li>Or use `--build-runtime-check flag (if implemented)</li>
+</ul>
+<span class="section-anchor" id="testing-installation-path-issues"></span><h3>Installation path issues</h3>
+<p>Edit `app.default_install_dir in <code>installer.yaml</code>:</p>
+<pre data-lang="yaml"><code>app:
+  default_install_dir: &quot;{{PROGRAMFILES64}}/MyCompany/MyApp&quot;</code></pre>
+<span class="section-anchor" id="testing-logging-and-error-code-validation"></span><h3>Logging and error code validation</h3>
+<p>Use the following checks to verify the implemented logging and error code behavior:</p>
+<ol>
+<li>Add a `logging block with <code>path</code> and <code>file_name</code> to your test manifest.</li>
+<li>Set `logging.mode to <code>auto</code> and run once to verify lifecycle logs are emitted automatically.</li>
+<li>Switch to `logging.mode: manual_only and verify normal lifecycle messages are suppressed.</li>
+<li>Confirm the installer writes a log file in the configured location.</li>
+<li>Trigger a known failure, such as a missing archive, to confirm the installer emits an `HG-* code.</li>
+<li>Confirm `install.hooks.post_install failures classify correctly for syntax errors, non-zero exit, timeout, and access denied cases.</li>
+</ol>
+<p>Example test output should include lines like:</p>
+<pre data-lang="text"><code>[ERROR] HG-EXTRACT-001 step=4 action=extract field=archive value=payload.zst reason=&quot;...&quot; fix=&quot;...&quot;</code></pre>
+<hr/>
+<span class="section-anchor" id="testing-quick-start-template"></span><h2>Quick Start Template</h2>
+<p>Minimal installer with no archives:</p>
+<span class="section-anchor" id="testing-1-create-installeryaml"></span><h3>1. Create `installer.yaml:</h3>
+<pre data-lang="yaml"><code>app:
+  name: &quot;HelloWorld&quot;
+  version: &quot;1.0.0&quot;
+  publisher: &quot;MyCompany&quot;
+  default_install_dir: &quot;{{PROGRAMFILES64}}/MyCompany/HelloWorld&quot;
+  require_admin: false
+
+pages:
+  - type: welcome
+  - type: summary
+  - type: install
+  - type: finish
+
+install:
+  setup:
+    create_dirs:
+      - &quot;{{INSTDIR}}&quot;
+
+  components:
+    core:
+      archive: &quot;payload.zst&quot;
+      target: &quot;{{INSTDIR}}&quot;
+
+  system:
+    register_app:
+      hive: HKCU
+      key: &quot;Software/MyCompany/HelloWorld&quot;
+      version: &quot;1.0.0&quot;
+      install_location: &quot;{{INSTDIR}}&quot;
+
+  finalize:
+    write_uninstaller: &quot;{{INSTDIR}}/uninstall.exe&quot;</code></pre>
+<span class="section-anchor" id="testing-2-build"></span><h3>2. Build:</h3>
+<pre data-lang="powershell"><code>hagane.exe run installer.yaml --release</code></pre>
+<span class="section-anchor" id="testing-3-test"></span><h3>3. Test:</h3>
+<pre data-lang="powershell"><code>target/release/HelloWorld-setup.exe</code></pre>
+<span class="section-anchor" id="testing-logging-focused-quick-start"></span><h3>Logging-focused Quick Start</h3>
+<p>If you want to test the logging pipeline directly, add logging and a post-install hook:</p>
+<pre data-lang="yaml"><code>logging:
+  mode: auto
+  path: &quot;{{TEMP}}/MyAppLogs&quot;
+  file_name: &quot;installation.log&quot;
+  timestamp: true
+  slow_step_warn_sec: 5
+
+install:
+  hooks:
+    post_install:
+      - run:
+          command: &quot;Write-Host &#x27;Testing PowerShell action&#x27;&quot;
+          shell: powershell
+          wait: true
+          fail_on_nonzero: true</code></pre>
+<hr/>
+<span class="section-anchor" id="testing-build-notes"></span><h2>Build Notes</h2>
+<p>Use release mode for shipping builds:</p>
+<pre data-lang="powershell"><code>hagane.exe run installer.yaml --release</code></pre>
+<p>For rapid local iteration, run without `--release from source during development:</p>
+<pre data-lang="powershell"><code>cargo run -p builder --bin hagane -- run installer.yaml</code></pre>
+<hr/>
+<span class="section-anchor" id="testing-testing-requirements-check"></span><h2>Testing Requirements Check</h2>
+<p>All system requirements are checked **in parallel** (no PowerShell):</p>
+<ol>
+<li><strong>OS Version</strong> → WinAPI `RtlGetVersion()</li>
+<li><strong>RAM</strong> → WinAPI `GlobalMemoryStatusEx()</li>
+<li><strong>Disk Space</strong> → WinAPI `GetDiskFreeSpaceEx()</li>
+<li>**Windows Update KB** → Registry query</li>
+<li><strong>.NET Framework</strong> → Registry `HKLM\SOFTWARE\Microsoft\NET Framework Setup</li>
+<li>**VC++ Redistributable** → Registry scan</li>
+</ol>
+<p>Verify these work on your system by:</p>
+<ol>
+<li>Opening the installer</li>
+<li>Going to Requirements page</li>
+<li>Checking results display instantly (parallel evaluation)</li>
+</ol>
+<hr/>
+<span class="section-anchor" id="testing-advanced-testing"></span><h2>Advanced Testing</h2>
+<span class="section-anchor" id="testing-capture-build-logs"></span><h3>Capture build logs:</h3>
+<pre data-lang="powershell"><code>hagane.exe run installer.yaml --release 2&gt;&amp;1 | Tee-Object build.log</code></pre>
+<span class="section-anchor" id="testing-check-embeddedrs"></span><h3>Check embedded.rs:</h3>
+<pre data-lang="powershell"><code># View generated manifest
+Get-Content runner/src/generated/embedded.rs | Select-Object -First 50</code></pre>
+<span class="section-anchor" id="testing-monitor-installation"></span><h3>Monitor installation:</h3>
+<pre data-lang="powershell"><code># Watch the installer write files
+Get-Process explorer | ForEach-Object { watcher }
+# Or use Process Monitor: https://docs.microsoft.com/en-us/sysinternals/downloads/procmon</code></pre>
+<hr/>
+<span class="section-anchor" id="testing-next-steps"></span><h2>Next Steps</h2>
+<ol>
+<li>✅ Run example: `MyApp-setup.exe</li>
+<li>✅ Customize `installer.yaml with your app</li>
+<li>✅ Add your files to `payload/, <code>docs/</code>, etc.</li>
+<li>✅ Rebuild and test</li>
+<li>✅ Ship the `.exe</li>
+</ol>
+</section>
+
+<section class="doc-section" id="shipping" style="border-top:1px solid rgba(200,100,30,0.15);padding-top:60px">
+<span class="section-anchor" id="anchor-shipping"></span>
+<span class="section-anchor" id="shipping-hagane-shipping-guide"></span><h1>Hagane Shipping Guide</h1>
+<p>This document covers building, packaging, installing, and validating the Hagane CLI that is shipped to users.</p>
+<span class="section-anchor" id="shipping-what-is-shipped"></span><h2>What Is Shipped</h2>
+<p>Install target layout:</p>
+<ul>
+<li>`C:\Program Files\Hagane\bin\hagane.exe</li>
+<li>`C:\Program Files\Hagane\runtime\... (embedded workspace used at build time)</li>
+</ul>
+<p>The installed `hagane.exe compiles user installers from any directory by using the bundled runtime workspace.</p>
+<span class="section-anchor" id="shipping-runtime-source-of-truth"></span><h3>Runtime Source Of Truth</h3>
+<ul>
+<li>The authoritative code lives in root workspace crates: `engine/, <code>runner/</code>, and <code>ui/</code>.</li>
+<li>`hagane/payload/runtime is generated at build time when packaging <code>hagane/installer.yaml</code>.</li>
+<li>This avoids maintaining duplicate runtime source trees in git while still shipping a self-contained installed Hagane.</li>
+</ul>
+<span class="section-anchor" id="shipping-build-hagane-cli"></span><h2>Build Hagane CLI</h2>
+<p>From workspace root:</p>
+<pre data-lang="powershell"><code>cargo build -p builder --bin hagane --release</code></pre>
+<p>Output: `target/release/hagane.exe</p>
+<span class="section-anchor" id="shipping-workspace-version-management"></span><h3>Workspace Version Management</h3>
+<p>The version is defined once in the root `Cargo.toml under <code>[workspace.package]</code> and inherited by all crates (<code>engine</code>, <code>runner</code>, <code>builder</code>). To bump the version, edit only the root <code>Cargo.toml</code>:</p>
+<pre data-lang="toml"><code>[workspace.package]
+version = &quot;0.1.5&quot;
+edition = &quot;2021&quot;</code></pre>
+<p>All crates pick it up automatically via `version.workspace = true.</p>
+<span class="section-anchor" id="shipping-stage-hagane-into-its-own-payload"></span><h2>Stage Hagane Into Its Own Payload</h2>
+<p>Before packaging `hagane-setup.exe, copy the fresh binary into the Hagane payload:</p>
+<pre data-lang="powershell"><code>Copy-Item .\target\release\hagane.exe .\hagane\payload\bin\hagane.exe -Force</code></pre>
+<span class="section-anchor" id="shipping-build-hagane-installer"></span><h2>Build Hagane Installer</h2>
+<p>With auto-discovery (if `hagane/installer.yaml is the only YAML in the current directory):</p>
+<pre data-lang="powershell"><code>hagane run --release</code></pre>
+<p>Or with an explicit path:</p>
+<pre data-lang="powershell"><code>hagane run .\hagane\installer.yaml --release</code></pre>
+<div class="callout callout-info">
+<strong>Auto-discovery</strong>If exactly one `.yaml or <code>.yml</code> file exists in the current directory, Hagane selects it automatically. If multiple are found, Hagane prints a warning listing all of them and asks you to specify explicitly. If none are found, Hagane tries <code>hagane/installer.yaml</code> as a fallback.
+</div>
+<p>Expected output:</p>
+<ul>
+<li>`hagane\bin\hagane-setup.exe</li>
+</ul>
+<span class="section-anchor" id="shipping-install-and-verify"></span><h2>Install And Verify</h2>
+<p>Run installer:</p>
+<pre data-lang="powershell"><code>Start-Process .\hagane\bin\hagane-setup.exe -Wait</code></pre>
+<p>Verify installation:</p>
+<pre data-lang="powershell"><code>Test-Path &quot;C:\Program Files\Hagane\bin\hagane.exe&quot;
+&amp; &quot;C:\Program Files\Hagane\bin\hagane.exe&quot; --version</code></pre>
+<span class="section-anchor" id="shipping-test-user-flow"></span><h2>Test User Flow</h2>
+<p>Installed Hagane — auto-discovery (single YAML in directory):</p>
+<pre data-lang="powershell"><code>Set-Location C:\your-installer.yaml-folder-path
+hagane run --release</code></pre>
+<p>Installed Hagane — explicit manifest:</p>
+<pre data-lang="powershell"><code>Set-Location C:\your-installer.yaml-folder-path
+hagane run installer.yaml --release</code></pre>
+<p>From source build (developer workflow):</p>
+<pre data-lang="powershell"><code>.\target\release\hagane.exe run .\path\to\installer.yaml --release</code></pre>
+<p>Expected output:</p>
+<ul>
+<li>`&lt;manifest-dir&gt;/bin/&lt;app-name&gt;-setup.exe (copied from <code>target/release/</code>)</li>
+</ul>
+<span class="section-anchor" id="shipping-icon-behavior-and-current-fixes"></span><h2>Icon Behavior And Current Fixes</h2>
+<p>Two icon paths exist:</p>
+<ul>
+<li>UI icon/logo in pages (loaded from manifest assets).</li>
+<li>Windows EXE icon resource (stamped at compile time).</li>
+</ul>
+<p>Current implementation passes manifest icon path from builder to runner using `HAGANE_ICON_PATH and normalizes Windows verbatim paths so winres can embed the icon correctly.</p>
+<span class="section-anchor" id="shipping-troubleshooting"></span><h2>Troubleshooting</h2>
+<span class="section-anchor" id="shipping-bin-folder-is-empty-after-install"></span><h3>`bin folder is empty after install</h3>
+<p>Cause: `hagane\payload\bin\hagane.exe was not staged before building <code>hagane-setup.exe</code>.</p>
+<p>Fix:</p>
+<ol>
+<li>Rebuild Hagane CLI.</li>
+<li>Copy it into `hagane\payload\bin.</li>
+<li>Rebuild and reinstall `hagane-setup.exe.</li>
+</ol>
+<span class="section-anchor" id="shipping-could-not-find-workspace-root"></span><h3>`Could not find workspace root</h3>
+<p>Cause: old Hagane binary or missing runtime structure.</p>
+<p>Fix:</p>
+<ul>
+<li>Rebuild and reinstall latest Hagane.</li>
+<li>Ensure installed structure includes `bin\hagane.exe and <code>runtime\Cargo.toml</code>.</li>
+</ul>
+<span class="section-anchor" id="shipping-no-custom-exe-icon-in-explorer"></span><h3>No custom EXE icon in Explorer</h3>
+<p>Cause: stale build or shell icon cache.</p>
+<p>Fix:</p>
+<ol>
+<li>Rebuild using latest Hagane.</li>
+<li>Confirm logs show `Using EXE icon: during pack.</li>
+<li>Re-open Explorer (or sign out/in) if cache still shows old icon.</li>
+</ol>
+<span class="section-anchor" id="shipping-installer-error-codes-are-not-visible"></span><h3>Installer error codes are not visible</h3>
+<p>Cause: file logging is not configured, the destination is not writable, or the error happened before the installer reached the step runner.</p>
+<p>Fix:</p>
+<ol>
+<li>Add a top-level `logging block to <code>installer.yaml</code>.</li>
+<li>Use `mode: auto for lifecycle logs, or <code>mode: manual_only</code> to suppress normal lifecycle logging.</li>
+<li>For file logs, ensure `logging.path and <code>logging.file_name</code> are set.</li>
+<li>Use a writable path during testing, such as `{{TEMP}}.</li>
+<li>Check [LOGGING.md](LOGGING.md) for behavior details and [ERROR_CODES.md](ERROR_CODES.md) for code-level troubleshooting.</li>
+</ol>
+<p>Variable syntax note:</p>
+<ul>
+<li>Preferred manifest variable syntax is `{{KEY}} (for example <code>{{INSTDIR}}/logs</code>).</li>
+<li>Use `{{KEY}} syntax consistently in new manifests.</li>
+</ul>
+<span class="section-anchor" id="shipping-powershell-step-fails-with-access-denied"></span><h3>PowerShell step fails with access denied</h3>
+<p>Cause: the script needs elevation, or execution policy blocks the command.</p>
+<p>Fix:</p>
+<ul>
+<li>Set `app.require_admin: true when the script writes to protected locations.</li>
+<li>Confirm the PowerShell command is valid and available in PATH.</li>
+<li>Use `timeout_sec only if the script is expected to finish quickly.</li>
+</ul>
+<span class="section-anchor" id="shipping-logging-file-not-created"></span><h3>Logging file not created</h3>
+<p>Cause: `logging.path or <code>logging.file_name</code> is missing, or the destination folder cannot be created.</p>
+<p>Fix:</p>
+<ul>
+<li>Add `logging.path and <code>logging.file_name</code> to the manifest.</li>
+<li>Use a writable location during development.</li>
+<li>Confirm the destination path is writable by the installer process.</li>
+</ul>
+<span class="section-anchor" id="shipping-release-checklist"></span><h2>Release Checklist</h2>
+<ul>
+<li>Build `hagane.exe in release mode.</li>
+<li>Stage binary into `hagane/payload/bin/hagane.exe.</li>
+<li>Build `hagane-setup.exe.</li>
+<li>Install on clean machine or VM.</li>
+<li>Verify PATH integration (user/system choices).</li>
+<li>Verify ability to build external installer projects.</li>
+<li>Verify EXE icon and UI branding.</li>
+<li>Verify installation logs and error codes are emitted correctly during a failing test manifest.</li>
+</ul>
+</section>
+
+  <footer class="site-footer">
+    <p>Hagane Installer Engine &mdash; v0.1.5 &mdash; Built with Rust &amp; WebView2</p>
+    <p style="margin-top:6px;font-size:11px;color:#4A4540">
+      Generated from <code>.md</code> source files &mdash;
+      edit the <code>docs/</code> files, then run <code>python site/generate_site.py</code> to rebuild.
+    </p>
+  </footer>
+</main>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
