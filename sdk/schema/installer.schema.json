@@ -34,6 +34,7 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "preset": { "type": "string" },
         "accent_color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
         "accent_dark_color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
         "accent_light_color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
@@ -65,11 +66,146 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["welcome", "license", "requirements", "install_dir", "components", "user_info", "summary", "install", "finish", "error"]
+            "enum": ["welcome", "license", "requirements", "install_dir", "components", "user_info", "summary", "install", "finish", "error", "custom"]
           },
+          "id": { "type": "string" },
           "title": { "type": "string" },
           "subtitle": { "type": "string" },
           "custom_html": { "type": "string" },
+          "interactive": { "type": "boolean" },
+          "widgets": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "required": ["type", "text"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": { "const": "label" },
+                    "id": { "type": "string" },
+                    "text": { "type": "string" }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": ["type", "id", "label"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": { "const": "text_input" },
+                    "id": { "type": "string" },
+                    "label": { "type": "string" },
+                    "bind_to": { "type": "string" },
+                    "placeholder": { "type": "string" },
+                    "default": { "type": "string" },
+                    "help_text": { "type": "string" },
+                    "required": { "type": "boolean", "default": false }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": ["type", "id", "label"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": { "const": "multiline_input" },
+                    "id": { "type": "string" },
+                    "label": { "type": "string" },
+                    "bind_to": { "type": "string" },
+                    "placeholder": { "type": "string" },
+                    "default": { "type": "string" },
+                    "help_text": { "type": "string" },
+                    "required": { "type": "boolean", "default": false }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": ["type", "id", "label"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": { "const": "checkbox" },
+                    "id": { "type": "string" },
+                    "label": { "type": "string" },
+                    "bind_to": { "type": "string" },
+                    "default": { "type": "boolean", "default": false },
+                    "help_text": { "type": "string" }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": ["type", "id", "label", "options"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": { "const": "radio_group" },
+                    "id": { "type": "string" },
+                    "label": { "type": "string" },
+                    "bind_to": { "type": "string" },
+                    "required": { "type": "boolean", "default": false },
+                    "default": { "type": "string" },
+                    "help_text": { "type": "string" },
+                    "options": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "type": "object",
+                        "required": ["value", "label"],
+                        "additionalProperties": false,
+                        "properties": {
+                          "value": { "type": "string" },
+                          "label": { "type": "string" },
+                          "description": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": ["type", "id", "label", "options"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": { "const": "dropdown" },
+                    "id": { "type": "string" },
+                    "label": { "type": "string" },
+                    "bind_to": { "type": "string" },
+                    "required": { "type": "boolean", "default": false },
+                    "default": { "type": "string" },
+                    "help_text": { "type": "string" },
+                    "options": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "type": "object",
+                        "required": ["value", "label"],
+                        "additionalProperties": false,
+                        "properties": {
+                          "value": { "type": "string" },
+                          "label": { "type": "string" },
+                          "description": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": ["type", "id", "label"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": { "const": "folder_picker" },
+                    "id": { "type": "string" },
+                    "label": { "type": "string" },
+                    "bind_to": { "type": "string" },
+                    "default": { "type": "string" },
+                    "placeholder": { "type": "string" },
+                    "browse_title": { "type": "string" },
+                    "help_text": { "type": "string" },
+                    "required": { "type": "boolean", "default": false },
+                    "must_exist": { "type": "boolean", "default": false }
+                  }
+                }
+              ]
+            }
+          },
           "data": { "type": "object" }
         }
       }
