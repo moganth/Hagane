@@ -553,7 +553,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
   color: var(--text); text-decoration: none;
   font-size: 13px; gap: 8px; transition: background 0.1s;
 }
-.download-menu-item::before { content: "\2193"; color: var(--brand); }
+.download-menu-item::before { content: "↓"; color: var(--brand); }
 .download-menu-item:hover { background: var(--card-bg); color: #fff; text-decoration: none; }
 .download-menu-loading { padding: 10px 16px; color: var(--text-muted); font-size: 12px; }
 .intro-ascii-art {
@@ -563,11 +563,10 @@ hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
   color: var(--brand);
   text-shadow: 0 0 14px rgba(200,100,30,0.5);
   margin: 0 0 24px 40px;
-  padding: 20px 24px;
+  padding: 0;
   white-space: pre;
-  background: rgba(200,100,30,0.03);
-  border: 1px solid rgba(200,100,30,0.15);
-  border-radius: 8px;
+  background: none;
+  border: none;
   user-select: none;
 }
 .mobile-menu-btn {
