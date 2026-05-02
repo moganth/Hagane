@@ -18,6 +18,7 @@ use std::{
 };
 
 include!("../../hagane/generated/embedded.rs");
+include!(concat!(env!("OUT_DIR"), "/theme_registry.rs"));
 
 fn main() {
     env_logger::Builder::from_env(
@@ -248,7 +249,7 @@ fn handle_message(
         InboundMessage::Ready => {
             send_state(webview, &st, true);
             let page_name = page_to_filename(st.current_page()).to_string();
-            if let Some(html) = html_map.get(&page_name) {
+            if let Some(html) = select_page_html(html_map, &page_name, &st.theme_preset) {
                 send_event(webview, &OutboundEvent::Navigate { page: page_name, html: html.clone() });
             }
         }
@@ -267,6 +268,7 @@ fn handle_message(
 
                     let install_dir = st.install_dir.clone();
                     let selected_components = st.selected_components.clone();
+                    let custom_values = st.custom_values.clone();
                     let is_uninstall = st.is_uninstall;
                     let state_clone = Arc::clone(state);
                     let manifest_clone = Arc::clone(manifest);
@@ -292,7 +294,11 @@ fn handle_message(
                                 archives: (*archives_clone).clone(),
                                 backup_dir: std::env::temp_dir().join("installer_backup"),
                                 logging: manifest_clone.logging.clone(),
-                                variables: manifest_clone.variables.clone().unwrap_or_default(),
+                                variables: {
+                                    let mut vars = manifest_clone.variables.clone().unwrap_or_default();
+                                    vars.extend(custom_values.clone());
+                                    vars
+                                },
                             };
 
                             let mut runner = StepRunner::new(ctx);
@@ -405,7 +411,11 @@ fn handle_message(
 
                         drop(st);
                         let page_name = page_to_filename(&next_page).to_string();
-                        if let Some(html) = html_map.get(&page_name) {
+                        let preset = {
+                            let st_now = state.lock().unwrap();
+                            st_now.theme_preset.clone()
+                        };
+                        if let Some(html) = select_page_html(html_map, &page_name, &preset) {
                             send_event(webview, &OutboundEvent::Navigate { page: page_name, html: html.clone() });
                         }
                         let st_now = state.lock().unwrap();
@@ -415,7 +425,7 @@ fn handle_message(
                 }
 
                 let page_name = page_to_filename(&next_page).to_string();
-                if let Some(html) = html_map.get(&page_name) {
+                if let Some(html) = select_page_html(html_map, &page_name, &st.theme_preset) {
                     send_event(webview, &OutboundEvent::Navigate { page: page_name, html: html.clone() });
                 }
                 send_state(webview, &st, false);
@@ -426,7 +436,7 @@ fn handle_message(
             if st.can_go_back() {
                 st.go_back();
                 let page_name = page_to_filename(st.current_page()).to_string();
-                if let Some(html) = html_map.get(&page_name) {
+                if let Some(html) = select_page_html(html_map, &page_name, &st.theme_preset) {
                     send_event(webview, &OutboundEvent::Navigate { page: page_name, html: html.clone() });
                 }
                 send_state(webview, &st, false);
@@ -444,6 +454,11 @@ fn handle_message(
 
         InboundMessage::SetInstallDir { path } => {
             st.install_dir = path;
+            send_state(webview, &st, false);
+        }
+
+        InboundMessage::SetCustomValue { id, value } => {
+            st.set_custom_value(&id, value);
             send_state(webview, &st, false);
         }
 
@@ -472,8 +487,15 @@ fn handle_message(
 
         InboundMessage::BrowseInstallDir => {
             drop(st);
-            let path = browse_for_folder();
-            send_event(webview, &OutboundEvent::BrowseResult { path });
+            let path = browse_for_folder(Some("Select installation folder"), None);
+            send_event(webview, &OutboundEvent::BrowseResult { id: None, path });
+            return;
+        }
+
+        InboundMessage::BrowseFolder { id, title, initial_path } => {
+            drop(st);
+            let path = browse_for_folder(title.as_deref(), initial_path.as_deref());
+            send_event(webview, &OutboundEvent::BrowseResult { id: Some(id), path });
             return;
         }
 
@@ -509,7 +531,11 @@ fn run_silent(
         archives,
         backup_dir: std::env::temp_dir().join("installer_backup"),
         logging: manifest.logging.clone(),
-        variables: manifest.variables.clone().unwrap_or_default(),
+        variables: {
+            let mut vars = manifest.variables.clone().unwrap_or_default();
+            vars.extend(state.custom_values);
+            vars
+        },
     };
 
     let mut runner = StepRunner::new(ctx);
@@ -536,6 +562,29 @@ fn page_to_filename(page: &engine::state::Page) -> &'static str {
         Page::Install      => "progress",
         Page::Finish       => "finish",
         Page::Error        => "error",
+        Page::Custom(_)    => "custom",
+    }
+}
+
+fn select_page_html<'a>(
+    map: &'a HashMap<String, String>,
+    page_name: &str,
+    preset: &str,
+) -> Option<&'a String> {
+    if !preset.is_empty() {
+        let themed_key = format!("{}__theme__{}", page_name, preset);
+        if let Some(html) = map.get(&themed_key) {
+            return Some(html);
+        }
+    }
+    map.get(page_name)
+}
+
+fn render_theme_page_html(template: &str, progress_js: Option<&str>) -> String {
+    if template.contains("__HAGANE_PROGRESS_JS__") {
+        template.replace("__HAGANE_PROGRESS_JS__", progress_js.unwrap_or(""))
+    } else {
+        template.to_string()
     }
 }
 
@@ -550,8 +599,11 @@ fn build_html_map() -> HashMap<String, String> {
     map.insert("user_info".into(),    include_str!("../../ui/pages/user_info.html").into());
     map.insert("summary".into(),      include_str!("../../ui/pages/summary.html").into());
     map.insert("progress".into(),     include_str!("../../ui/pages/progress.html").into());
+    map.insert("custom".into(),       include_str!("../../ui/pages/custom.html").into());
     map.insert("finish".into(),       include_str!("../../ui/pages/finish.html").into());
     map.insert("error".into(),        include_str!("../../ui/pages/error.html").into());
+    register_themed_html(&mut map);
+
     map
 }
 
@@ -574,7 +626,20 @@ fn to_state_json(st: &InstallerState, include_assets: bool) -> serde_json::Value
             obj.insert("banner_b64".into(), serde_json::Value::Null);
         }
     }
+    if let serde_json::Value::Object(ref mut obj) = json {
+        let (global_css, page_css) = theme_css_bundle(&st.theme_preset);
+        obj.insert("theme_global_css".into(), serde_json::Value::String(global_css.to_string()));
+        obj.insert("theme_page_css".into(), serde_json::json!(page_css));
+    }
     json
+}
+
+fn theme_css_bundle(preset: &str) -> (&'static str, std::collections::HashMap<&'static str, &'static str>) {
+    if let Some(bundle) = theme_css_bundle_generated(preset) {
+        bundle
+    } else {
+        (include_str!("../../ui/themes/default/global.css"), std::collections::HashMap::new())
+    }
 }
 
 #[cfg(windows)]
@@ -592,16 +657,32 @@ fn send_state(
 }
 
 #[cfg(windows)]
-fn browse_for_folder() -> Option<String> {
+fn browse_for_folder(title: Option<&str>, initial_path: Option<&str>) -> Option<String> {
     use windows::Win32::UI::Shell::{
         SHBrowseForFolderW, SHGetPathFromIDListW, BROWSEINFOW,
+        BFFM_INITIALIZED, BFFM_SETSELECTIONW,
         BIF_NEWDIALOGSTYLE, BIF_RETURNONLYFSDIRS,
     };
+    use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
+    use windows::Win32::UI::WindowsAndMessaging::SendMessageW;
+
+    unsafe extern "system" fn browse_callback(hwnd: HWND, msg: u32, _lparam: LPARAM, data: LPARAM) -> i32 {
+        if msg == BFFM_INITIALIZED && data.0 != 0 {
+            SendMessageW(hwnd, BFFM_SETSELECTIONW, WPARAM(1), data);
+        }
+        0
+    }
+
     unsafe {
-        let title: Vec<u16> = "Select installation folder\0"
-            .encode_utf16().collect();
+        let default_title = title.unwrap_or("Select folder");
+        let title: Vec<u16> = default_title.encode_utf16().chain(std::iter::once(0)).collect();
+        let initial_path: Vec<u16> = initial_path
+            .map(|path| path.encode_utf16().chain(std::iter::once(0)).collect())
+            .unwrap_or_default();
         let mut bi = BROWSEINFOW {
             lpszTitle: windows::core::PCWSTR(title.as_ptr()),
+            lpfn: Some(browse_callback),
+            lParam: LPARAM(initial_path.as_ptr() as isize),
             ulFlags: BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE,
             ..Default::default()
         };
