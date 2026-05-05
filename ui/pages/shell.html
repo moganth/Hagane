@@ -39,15 +39,15 @@ html,body{height:100%;font-family:var(--font);font-size:14px;color:var(--text);b
 let _state=null;
 let _currentPage='';
 
-function send(t,p={}){const m=JSON.stringify({type:t,...p});if(window.chrome&&window.chrome.webview)window.chrome.webview.postMessage(m);else console.log('[→]',m)}
+function send(t,p={}){const m=JSON.stringify({type:t,...p});if(window.chrome&&window.chrome.webview)window.chrome.webview.postMessage(m);else if(window.ipc)window.ipc.postMessage(m);else console.log('[→]',m)}
 
 window.__shellPostMessage=function(raw){
   try{
     const msg=typeof raw==='string'?JSON.parse(raw):raw;
     if(msg&&msg.type==='ready')return;
-    if(window.chrome&&window.chrome.webview){
-      window.chrome.webview.postMessage(typeof raw==='string'?raw:JSON.stringify(msg));
-    }
+    const s=typeof raw==='string'?raw:JSON.stringify(msg);
+    if(window.chrome&&window.chrome.webview)window.chrome.webview.postMessage(s);
+    else if(window.ipc)window.ipc.postMessage(s);
   }catch(e){console.warn('shell relay parse failed',e)}
 };
 

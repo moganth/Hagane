@@ -32,6 +32,12 @@ windows = { version = "0.52", features = [
 webview2-com = "0.28"
 webview2-com-sys = "0.28"
 
+[target.'cfg(not(windows))'.dependencies]
+# Cross-platform WebView (WebKitGTK on Linux). Requires libwebkit2gtk-4.1-dev.
+wry = "0.43"
+tao = "0.30"
+libc = "0.2"
+
 [build-dependencies]
 # Embed manifest for UAC elevation request and DPI awareness
 winres = "0.1"

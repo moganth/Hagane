@@ -11,7 +11,11 @@
 function send(type, payload = {}) {
   const msg = JSON.stringify({ type, ...payload });
   if (window.chrome && window.chrome.webview) {
+    // Windows — WebView2
     window.chrome.webview.postMessage(msg);
+  } else if (window.ipc) {
+    // Linux/macOS — wry
+    window.ipc.postMessage(msg);
   } else {
     // Dev-mode fallback (browser testing)
     console.log('[IPC → Rust]', msg);

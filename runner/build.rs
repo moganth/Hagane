@@ -3,6 +3,7 @@ fn main() {
   let require_admin = std::env::var("HAGANE_REQUIRE_ADMIN")
     .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
     .unwrap_or(true);
+  #[cfg_attr(not(windows), allow(unused_variables))]
   let execution_level = if require_admin { "requireAdministrator" } else { "asInvoker" };
   let icon_path = std::env::var("HAGANE_ICON_PATH")
     .ok()
@@ -89,7 +90,7 @@ fn generate_theme_registry() {
   themes.sort();
 
   let mut code = String::new();
-  code.push_str("fn register_themed_html(map: &mut std::collections::HashMap<String, String>) {\n");
+  code.push_str("#[allow(dead_code)]\nfn register_themed_html(map: &mut std::collections::HashMap<String, String>) {\n");
 
   for theme in &themes {
     let theme_dir = themes_dir.join(theme);
@@ -140,7 +141,7 @@ fn generate_theme_registry() {
   }
   code.push_str("}\n\n");
 
-  code.push_str("fn theme_css_bundle_generated(preset: &str) -> Option<(&'static str, std::collections::HashMap<&'static str, &'static str>)> {\n");
+  code.push_str("#[allow(dead_code)]\nfn theme_css_bundle_generated(preset: &str) -> Option<(&'static str, std::collections::HashMap<&'static str, &'static str>)> {\n");
   code.push_str("    match preset {\n");
 
   for theme in &themes {
@@ -191,6 +192,7 @@ fn generate_theme_registry() {
   let _ = std::fs::write(out_file, code);
 }
 
+#[cfg(windows)]
 fn normalize_icon_path(path: &std::path::Path) -> std::path::PathBuf {
   #[cfg(windows)]
   {
