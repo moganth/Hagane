@@ -2,6 +2,8 @@
 
 Build your first installer in under 5 minutes.
 
+This guide shows a **Windows** installer. For Linux-specific steps (WebKitGTK setup, PATH scope, bash hooks, and uninstall) see [hagane.md](hagane.md) and [documentation.md](documentation.md).
+
 ## What You Will Build
 
 A standalone Windows setup EXE (`myapp-setup.exe`) that:
@@ -63,18 +65,20 @@ install:
       target: "{{INSTDIR}}"
 
   system:
-    register_app:
-      hive: HKCU
-      key: "Software/Acme/MyApp"
-      version: "{{APP_VERSION}}"
-      install_location: "{{INSTDIR}}"
-    shortcuts:
-      - name: "MyApp"
-        target: "{{INSTDIR}}/MyApp.exe"
-        location: desktop
+    windows:
+      register_app:
+        hive: HKCU
+        key: "Software/Acme/MyApp"
+        version: "1.0.0"
+        install_location: "{{INSTDIR}}"
+      shortcuts:
+        - name: "MyApp"
+          target: "{{INSTDIR}}/MyApp.exe"
+          location: desktop
 
   finalize:
-    write_uninstaller: "{{INSTDIR}}/uninstall.exe"
+    windows:
+      write_uninstaller: "{{INSTDIR}}/uninstall.exe"
 ```
 
 > **Tip**: The `# yaml-language-server` comment gives you field completion and validation in VS Code with the YAML extension installed.

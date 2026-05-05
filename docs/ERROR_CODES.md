@@ -102,15 +102,14 @@ install:
 
 `install.hooks.post_install` executes commands with automatic error classification.
 
-### PowerShell Hook Execution
-
-Execute a PowerShell command:
+### PowerShell Hook (Windows)
 
 ```yaml
 install:
   hooks:
     post_install:
       - run:
+          platform: windows
           command: |
             Write-Host "Hello from installer"
             [Environment]::SetEnvironmentVariable("MY_VAR", "value", "User")
@@ -118,6 +117,23 @@ install:
           wait: true
           fail_on_nonzero: true
           timeout_sec: 30
+```
+
+### Bash Hook (Linux)
+
+```yaml
+install:
+  hooks:
+    post_install:
+      - run:
+          platform: linux
+          command: |
+            chmod +x "{{INSTDIR}}/bin/myapp"
+            ln -sf "{{INSTDIR}}/bin/myapp" /usr/local/bin/myapp
+          shell: bash
+          wait: true
+          fail_on_nonzero: false
+          timeout_sec: 10
 ```
 
 ### Program Hook Execution
@@ -140,17 +156,19 @@ install:
 
 | Parameter | Type | Default | Required? | Notes |
 |-----------|------|---------|-----------|-------|
-| `command` | string | — | Yes | Command text to execute. For PowerShell, this is script content; for program mode, this is the command line. |
-| `shell` | string | — | Yes | `powershell` or `program`. |
+| `command` | string | — | Yes | Script content (`powershell`/`bash`) or command line (`program`). |
+| `shell` | string | — | Yes | `powershell` (Windows only), `bash` (Linux only), or `program` (all platforms). |
+| `platform` | string | (all) | No | Restrict hook to `windows` or `linux`. Omit to run on all platforms. |
 | `wait` | boolean | `true` | No | If `true`, the installer waits for the script to complete before continuing. If `false`, script runs in background. |
 | `fail_on_nonzero` | boolean | `true` | No | If `true`, a non-zero exit code from the script fails the entire installation. If `false`, non-zero exits are ignored. |
-| `timeout_sec` | number | (none) | No | Maximum execution time in seconds. If the script exceeds this time and `wait=true`, it's terminated and classified as `HG-PS-004` (timeout). |
+| `timeout_sec` | number | (none) | No | Maximum execution time in seconds. If the script exceeds this time and `wait=true`, it’s terminated and classified as `HG-PS-004` (timeout). |
 
 #### Hook Execution Notes
 
-- **Error Action Preference**: Scripts are automatically wrapped with `$ErrorActionPreference='Stop'` to ensure deterministic error codes.
-- **Elevation**: If the installer runs with admin elevation, scripts execute with the same privileges.
-- **Output**: Command output is captured and included in automatic error classification (HG-PS-001 through HG-PS-005 when using PowerShell).
+- **PowerShell error handling**: Scripts are automatically wrapped with `$ErrorActionPreference='Stop'` to ensure deterministic error codes.
+- **Bash output**: Bash hook stdout is logged at `INFO` level and stderr at `WARN` level. Both appear in the installer log stream so failures are always visible even when `fail_on_nonzero: false`.
+- **Elevation**: If the installer runs with admin elevation, hooks execute with the same privileges.
+- **Error classification**: HG-PS-001 through HG-PS-005 codes apply to both PowerShell and bash hook failures.
 - **Working Directory**: Hooks inherit the installer's working directory (`{{INSTDIR}}`).
 
 ## Error Line Format
@@ -350,23 +368,28 @@ value=<HIVE\Key path>
 **When it occurs:** An `env_var` step fails due to invalid scope, operation, or permission issues.
 
 **Valid Scope Values:**
-- `user` — per-user environment (HKEY_CURRENT_USER)
-- `system` — system-wide environment (HKEY_LOCAL_MACHINE) — **requires admin elevation**
+- `user` — per-user environment
+  - **Windows**: writes to `HKEY_CURRENT_USER`
+  - **Linux**: appends an `export` line to `~/.bashrc` and `~/.profile` for the installing user (tracked via `$SUDO_USER` when running with `sudo`)
+- `system` — system-wide environment — **requires admin elevation**
+  - **Windows**: writes to `HKEY_LOCAL_MACHINE`
+  - **Linux**: writes `/etc/profile.d/hagane-<name>.sh` (login shells) **and** appends to `/etc/bash.bashrc` (non-login interactive shells such as WSL2 default terminals)
 
 **Valid Operation Values:**
 - `set` — replace or create variable
-- `append` — add to the end of existing value (with `;` separator)
-- `prepend` — add to the beginning of existing value (with `;` separator)
+- `append` — add to the end of existing value (with `;` separator on Windows, `:` on Linux via shell export)
+- `prepend` — add to the beginning of existing value
 
 **Common causes:**
 - Invalid scope or operation spelling
 - Attempting system-wide operation (`scope: system`) without elevation
-- Registry write failure due to ACLs
+- On Windows: registry write failure due to ACLs
+- On Linux: insufficient permissions to write `/etc/bash.bashrc` or `/etc/profile.d/`
 
 **Typical fix:**
 1. Validate `scope` and `operation` values in manifest.
-2. **For system scope:** Run installer as Administrator.
-3. **For user scope:** No elevation required; ensure registry path is writable.
+2. **For system scope:** Run installer as Administrator (Windows) or with `sudo` (Linux). Set `app.require_admin: true`.
+3. **For user scope:** No elevation required; ensure the shell config files exist in the user's home directory.
 
 **Field mapping:**
 ```
@@ -582,6 +605,7 @@ install:
   hooks:
     post_install:
       - run:
+          platform: windows
           command: |
             Write-Host "Configuring application at {{INSTDIR}}"
           shell: powershell

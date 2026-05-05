@@ -1,7 +1,8 @@
 # Installer Engine Documentation
 
-Installer Engine is a YAML-driven Windows installer framework built in Rust.
-It combines a native backend (requirements checks, install plan execution, rollback) with a WebView2 UI layer and the `hagane` CLI for packaging and compilation.
+Installer Engine is a YAML-driven cross-platform installer framework built in Rust.
+It combines a native backend (requirements checks, install plan execution, rollback) with a WebView2/WebKitGTK UI layer and the `hagane` CLI for packaging and compilation.
+Windows uses WebView2; Linux uses wry + WebKitGTK.
 
 ## Why
 
@@ -335,9 +336,11 @@ installer-engine/
 
 ---
 
-## Requirements Checks (all native, no PowerShell)
+## Requirements Checks
 
-| Check | API used |
+> **Platform note:** The checks below use Windows-native APIs. Linux requirements checks use equivalent POSIX calls. Both platforms evaluate checks in parallel via Rayon.
+
+| Check | Windows API used |
 |---|---|
 | Windows version | `RtlGetVersion()` |
 | RAM | `GlobalMemoryStatusEx()` |
@@ -377,8 +380,9 @@ The installer now uses a required top-level `install` block (legacy top-level `s
 | `install.system.register_app` | Writes app registration metadata |
 | `install.system.register_uninstall` | Writes Add/Remove Programs metadata |
 | `install.system.shortcuts` | Creates desktop/start-menu/startup shortcuts |
-| `install.system.path` | Adds a directory to `PATH` (user/system scope) |
-| `install.hooks.post_install` | Runs post-install hooks (`powershell` or `program`) |
+| `install.system.path` | **(Windows flat form)** Adds a directory to PATH. Single entry only. Scope: `user` (HKCU) or `system` (HKLM). |
+| `install.system.linux.path` | **(Linux)** Adds a directory to PATH. Accepts a **single entry or a list** — use a list to define user and system scope entries simultaneously, each gated on its own component. |
+| `install.hooks.post_install` | Runs post-install hooks. `shell` can be `powershell` (Windows), `bash` (Linux), or `program` (all platforms). |
 | `install.finalize.write_uninstaller` | Writes the generated uninstaller executable |
 
 ---
@@ -481,9 +485,11 @@ In the current `install` DSL, logging is controlled primarily by top-level `logg
 
 For a full behavior matrix and end-to-end examples, see [LOGGING.md](LOGGING.md).
 
-### PowerShell Action
+### Post-Install Hook Actions
 
-Use `install.hooks.post_install` to run commands with deterministic error handling.
+Use `install.hooks.post_install` to run commands after all install steps complete.
+
+**Windows — PowerShell:**
 
 ```yaml
 install:
@@ -498,13 +504,37 @@ install:
           timeout_sec: 30
 ```
 
+**Linux — Bash:**
+
+```yaml
+install:
+  hooks:
+    post_install:
+      - run:
+          platform: linux
+          command: |
+            chmod +x "{{INSTDIR}}/bin/myapp"
+            ln -sf "{{INSTDIR}}/bin/myapp" /usr/local/bin/myapp
+          shell: bash
+          wait: true
+          fail_on_nonzero: false
+          timeout_sec: 10
+```
+
+> **`platform`** restricts the hook to a single OS (`windows` or `linux`). Omit it to run on all platforms.
+
+Bash hook stdout is logged at `INFO` level and stderr at `WARN` level — both appear in the installer log stream so failures are always visible.
+
 Supported parameters:
 
-- `command`
-- `shell` (`powershell` or `program`)
-- `wait`
-- `fail_on_nonzero`
-- `timeout_sec`
+| Parameter | Type | Notes |
+|---|---|---|
+| `command` | string | Script content (`powershell`/`bash`) or command line (`program`). |
+| `shell` | string | `powershell` (Windows only), `bash` (Linux only), or `program` (all platforms). |
+| `platform` | string | Optional. Restrict hook to `windows` or `linux`. Omit to run everywhere. |
+| `wait` | boolean | Wait for completion before continuing. Default: `true`. |
+| `fail_on_nonzero` | boolean | Fail the installation on non-zero exit. Default: `true`. |
+| `timeout_sec` | number | Kill and classify as `HG-PS-004` if exceeded. |
 
 ### Stable Error Codes
 
@@ -534,7 +564,7 @@ See [ERROR_CODES.md](ERROR_CODES.md) for the full field-by-field format and fix 
 
 Component selection is now controlled through `install.components` and per-entry `component` fields under system blocks.
 
-Supported `component` fields include `install.system.shortcuts[*].component` and `install.system.path.component`.
+Supported `component` fields include `install.system.shortcuts[*].component` and `install.system.path[*].component` (Linux list form) or `install.system.path.component` (single-entry form).
 
 ```yaml
 components:
@@ -556,6 +586,59 @@ install:
         location: start_menu
         component: docs
 ```
+
+---
+
+## Linux PATH Integration
+
+On Linux, `install.system.linux.path` controls how the installed binary directory is added to `$PATH`. Two scopes are supported:
+
+| Scope | What it writes | Takes effect |
+|---|---|---|
+| `user` | Appends to `~/.bashrc` and `~/.profile` for the installing user | New user terminal sessions |
+| `system` | Writes `/etc/profile.d/hagane-path.sh` **and** appends to `/etc/bash.bashrc` | All users, all new terminal sessions (login and non-login) |
+
+> **WSL2 note:** WSL2 terminal sessions are non-login interactive shells by default. `/etc/profile.d/` is only sourced for login shells. Using `scope: system` writes to **both** `/etc/profile.d/` and `/etc/bash.bashrc` so the PATH is active in all shell types without requiring a login.
+
+### Single scope (simple case)
+
+```yaml
+install:
+  system:
+    linux:
+      path:
+        add: "{{INSTDIR}}/bin"
+        scope: user               # writes ~/.bashrc and ~/.profile
+```
+
+### Both scopes simultaneously (list form)
+
+When you want users to choose between user-only and system-wide PATH, define two entries and gate each on its own component:
+
+```yaml
+components:
+  - id: user_path
+    name: "Add to user PATH"
+    description: "Appends to ~/.bashrc and ~/.profile (this user only)."
+    selected: true
+  - id: system_path
+    name: "Add to system PATH"
+    description: "Writes /etc/bash.bashrc and /etc/profile.d/ for all users. Requires admin."
+    selected: false
+
+install:
+  system:
+    linux:
+      path:
+        - add: "{{INSTDIR}}/bin"
+          scope: user
+          component: user_path
+        - add: "{{INSTDIR}}/bin"
+          scope: system
+          component: system_path
+```
+
+Only the selected component's entry is executed at install time. An existing single-entry `path:` block (without a list) continues to work unchanged for backwards compatibility.
 
 ---
 
@@ -626,13 +709,16 @@ app:
   require_admin: true
 ```
 
-Use `true` for operations that need system access, such as:
+Use `true` for operations that need system access:
 
-- `HKLM` registry writes
-- system environment variables
-- protected install locations like `C:\Program Files`
+| Platform | When required |
+|---|---|
+| Windows | `HKLM` registry writes, system PATH, protected install locations like `C:\Program Files` |
+| Linux | Writing to `/usr/local/`, `/etc/profile.d/`, `/etc/bash.bashrc`, or creating symlinks in `/usr/local/bin` |
 
 Use `false` for user-level installs that should not prompt for elevation.
+
+**Linux elevation behavior:** When `require_admin: true` and the installer is not already running as root, it re-launches itself with `sudo` automatically and exits the original process. The elevated re-launch inherits all command-line arguments. The original calling user's home directory is tracked via `$SUDO_USER` so PATH entries are written to the correct user's shell config files.
 
 ---
 
@@ -681,5 +767,7 @@ reg query "HKLM\SOFTWARE\InstallerEngine\Hagane" /s
 
 ## Notes
 
-- The runner requires Windows to compile (uses `windows-rs` and `webview2-com`).
-- The engine library and builder compile cross-platform for testing.
+- The runner binary compiles on both **Windows** (WebView2/Win32) and **Linux** (wry + WebKitGTK/GTK3).
+- The Windows runner uses `windows-rs` and `webview2-com`. WebView2 Runtime must be installed on the target machine.
+- The Linux runner uses `wry 0.43` + `tao 0.30` with WebKitGTK. Build dependencies: `libwebkit2gtk-4.1-dev`, `libgtk-3-dev`.
+- The engine library and builder compile cross-platform.
