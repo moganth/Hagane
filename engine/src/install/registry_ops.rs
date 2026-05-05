@@ -1,7 +1,12 @@
-use anyhow::{bail, Context, Result};
+use anyhow::Result;
+#[cfg(windows)]
+use anyhow::{bail, Context};
 use crate::parser::schema::{RegistryOperation, RegistryValueType};
-use super::rollback::{JournalEntry, RollbackJournal};
+#[cfg(windows)]
+use super::rollback::JournalEntry;
+use super::rollback::RollbackJournal;
 
+#[cfg_attr(not(windows), allow(unused_variables))]
 pub fn apply_registry_step(
     operation: &RegistryOperation,
     hive: &str,

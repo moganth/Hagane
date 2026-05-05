@@ -279,11 +279,22 @@ fn run_pack(manifest_path: Option<&Path>, release: bool) -> Result<()> {
     let manifest_path = resolve_manifest_path(manifest_path)?;
     let manifest = parser::load_from_file(&manifest_path)
         .context("Manifest load failed")?;
+    #[cfg_attr(not(windows), allow(unused_variables))]
     let manifest_dir = manifest_path
         .parent()
         .unwrap_or(Path::new("."))
         .to_path_buf();
     let workspace_root = resolve_backend_workspace(&manifest_path)?;
+
+    // Warn if manifest's build.os doesn't target the current platform.
+    if let Some(build_cfg) = &manifest.build {
+        if !build_cfg.os.contains(std::env::consts::OS) {
+            log::warn!(
+                "installer.yaml build.os does not include '{}' — continuing anyway.",
+                std::env::consts::OS
+            );
+        }
+    }
 
     if release {
         log::info!("Running: cargo build --release -p runner");
@@ -303,6 +314,9 @@ fn run_pack(manifest_path: Option<&Path>, release: bool) -> Result<()> {
         if manifest.app.require_admin { "1" } else { "0" },
     );
 
+    // Icon embedding is Windows-only — skip the env var on Linux to avoid
+    // confusing the build script.
+    #[cfg(windows)]
     if let Some(icon_rel) = manifest.app.icon.as_deref() {
         let icon_path = manifest_dir.join(icon_rel);
         if icon_path.exists() {
@@ -327,31 +341,32 @@ fn run_pack(manifest_path: Option<&Path>, release: bool) -> Result<()> {
     }
 
     let profile = if release { "release" } else { "debug" };
-    let exe_path = workspace_root
-        .join("target").join(profile)
-        .join(format!("{}-setup.exe", sanitize_name(&manifest.app.name)));
 
-    let default_exe = workspace_root.join("target").join(profile).join("installer.exe");
-    if default_exe.exists() {
-        if exe_path.exists() {
-            if let Err(e) = std::fs::remove_file(&exe_path) {
+    // Platform-specific binary names.
+    let (src_bin_name, dst_bin_name) = platform_binary_names(&manifest.app.name);
+    let default_bin = workspace_root.join("target").join(profile).join(&src_bin_name);
+    let final_bin   = workspace_root.join("target").join(profile).join(&dst_bin_name);
+
+    if default_bin.exists() {
+        if final_bin.exists() {
+            if let Err(e) = std::fs::remove_file(&final_bin) {
                 bail!(
                     "Cannot overwrite existing output '{}': {}. Close any running installer and try again.",
-                    exe_path.display(),
+                    final_bin.display(),
                     e
                 );
             }
         }
-        std::fs::rename(&default_exe, &exe_path)?;
-        log::info!("Output: {}", exe_path.display());
+        std::fs::rename(&default_bin, &final_bin)?;
+        log::info!("Output: {}", final_bin.display());
 
-        // Always copy output near the manifest for NSIS-style discoverability.
+        // Always copy output near the manifest for easy discovery.
         if let Some(manifest_dir) = manifest_path.parent() {
-            let project_copy = manifest_dir.join(exe_path.file_name().unwrap_or_default());
+            let project_copy = manifest_dir.join(final_bin.file_name().unwrap_or_default());
             if project_copy.exists() {
                 std::fs::remove_file(&project_copy)?;
             }
-            std::fs::copy(&exe_path, &project_copy)?;
+            std::fs::copy(&final_bin, &project_copy)?;
             log::info!("Copied to project: {}", project_copy.display());
         }
 
@@ -359,18 +374,82 @@ fn run_pack(manifest_path: Option<&Path>, release: bool) -> Result<()> {
         let hagane_bin_dir = workspace_root.join("hagane").join("bin");
         if hagane_bin_dir.exists() {
             std::fs::create_dir_all(&hagane_bin_dir)?;
-            let hagane_copy = hagane_bin_dir.join(exe_path.file_name().unwrap_or_default());
+            let hagane_copy = hagane_bin_dir.join(final_bin.file_name().unwrap_or_default());
             if hagane_copy.exists() {
                 std::fs::remove_file(&hagane_copy)?;
             }
-            std::fs::copy(&exe_path, &hagane_copy)?;
+            std::fs::copy(&final_bin, &hagane_copy)?;
             log::info!("Copied to: {}", hagane_copy.display());
         }
+
+        // On Linux: process any output formats declared in build.outputs.linux.
+        #[cfg(not(windows))]
+        {
+            let linux_outputs: &[String] = manifest.build.as_ref()
+                .and_then(|b| b.outputs.as_ref())
+                .and_then(|o| o.linux.as_ref())
+                .map(|v| v.as_slice())
+                .unwrap_or(&[]);
+            for fmt in linux_outputs {
+                package_linux_output(&final_bin, fmt, &manifest.app.name, &manifest.app.version)?;
+            }
+        }
     } else {
-        bail!("Expected output not found: {}", default_exe.display());
+        bail!("Expected output not found: {}", default_bin.display());
     }
 
     log::info!("Pack complete.");
+    Ok(())
+}
+
+/// Returns (cargo output binary name, final renamed binary name) for the current platform.
+fn platform_binary_names(app_name: &str) -> (String, String) {
+    let stem = sanitize_name(app_name);
+    if cfg!(windows) {
+        ("installer.exe".to_string(), format!("{}-setup.exe", stem))
+    } else {
+        ("installer".to_string(), format!("{}-linux-x86_64", stem))
+    }
+}
+
+/// Packages the built binary into a Linux distribution format.
+#[cfg(not(windows))]
+fn package_linux_output(binary: &Path, format: &str, app_name: &str, app_version: &str) -> Result<()> {
+    match format {
+        "tarball" => {
+            let stem = sanitize_name(app_name);
+            let archive_name = format!("{}-{}-linux-x86_64.tar.gz", stem, app_version);
+            let out_dir = binary.parent().unwrap_or(Path::new("."));
+            let out = out_dir.join(&archive_name);
+            let bin_file = binary.file_name().unwrap_or_default().to_string_lossy();
+            let status = std::process::Command::new("tar")
+                .args(["czf", out.to_str().unwrap_or_default(),
+                       "-C", out_dir.to_str().unwrap_or("."),
+                       bin_file.as_ref()])
+                .status()
+                .context("Failed to invoke 'tar' for tarball packaging — is tar installed?")?;
+            if !status.success() {
+                bail!("tar failed creating '{}'", archive_name);
+            }
+            log::info!("Tarball: {}", out.display());
+        }
+        "deb" => {
+            log::warn!(
+                "'deb' output packaging is not yet automated. \
+                Build a DEBIAN/ control structure and run dpkg-deb manually, \
+                or use 'cargo deb' (https://github.com/kornelski/cargo-deb)."
+            );
+        }
+        "appimage" => {
+            log::warn!(
+                "'appimage' output packaging is not yet automated. \
+                Use appimagetool (https://appimage.github.io/appimagetool/) manually."
+            );
+        }
+        other => {
+            log::warn!("Unknown Linux output format '{}' — skipped.", other);
+        }
+    }
     Ok(())
 }
 
@@ -560,6 +639,25 @@ pub static ARCHIVE_MAP: &[u8] = b\"{}\";\n",
     )?;
 
     log::info!("Bundled runtime prepared at {}", runtime_root.display());
+
+    // Copy the running hagane CLI binary into payload/bin/ so the installed
+    // package includes a ready-to-run hagane binary (no compilation needed).
+    let bin_dir = payload_root.join("bin");
+    std::fs::create_dir_all(&bin_dir)?;
+    let bin_name = if cfg!(windows) { "hagane.exe" } else { "hagane" };
+    let self_exe = std::env::current_exe()
+        .context("Failed to locate current hagane executable")?;
+    let dest_bin = bin_dir.join(bin_name);
+    std::fs::copy(&self_exe, &dest_bin)
+        .with_context(|| format!("Failed to bundle hagane binary into payload/bin/{}", bin_name))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&dest_bin, std::fs::Permissions::from_mode(0o755))
+            .context("Failed to set +x on bundled hagane binary")?;
+    }
+    log::info!("Bundled hagane binary → {}", dest_bin.display());
+
     Ok(())
 }
 
@@ -774,6 +872,7 @@ fn auto_discover_manifest() -> Result<PathBuf> {
     }
 }
 
+#[cfg(windows)]
 fn normalize_win_path_for_tools(path: &Path) -> PathBuf {
     #[cfg(windows)]
     {

@@ -106,17 +106,92 @@ fn run_single(idx: usize, req: &Requirement, install_dir: &str) -> CheckResult {
                 detail: "Custom check skipped (native mode)".into(),
             }
         }
+
+        Requirement::Package(r) => {
+            let label = r.label.clone().unwrap_or_else(|| format!("Package: {}", r.name));
+            // Package checks only apply on Linux.
+            #[cfg(not(target_os = "linux"))]
+            {
+                CheckResult {
+                    id: format!("pkg_{}", idx),
+                    label,
+                    passed: true,
+                    detail: "Not applicable on this platform".into(),
+                }
+            }
+            #[cfg(target_os = "linux")]
+            {
+                match check_linux_package(&r.name) {
+                    Ok(passed) => {
+                        let detail = if passed {
+                            format!("Package '{}' is installed", r.name)
+                        } else {
+                            format!("Package '{}' is not installed", r.name)
+                        };
+                        CheckResult { id: format!("pkg_{}", idx), label, passed, detail }
+                    }
+                    Err(e) => CheckResult {
+                        id: format!("pkg_{}", idx),
+                        label,
+                        passed: false,
+                        detail: e.to_string(),
+                    },
+                }
+            }
+        }
     }
 }
 
 fn run_os_check(r: &crate::parser::schema::OsRequirement) -> Result<bool> {
-    if r.platform != "windows" {
-        return Ok(cfg!(windows));
+    let current_os = std::env::consts::OS;
+    if r.platform != current_os {
+        // This requirement targets a different platform — skip (pass).
+        return Ok(true);
     }
-    if let Some(min_build) = r.min_build {
-        return os::meets_build_requirement(min_build);
+
+    match r.platform.as_str() {
+        "windows" => {
+            if let Some(min_build) = r.min_build {
+                return os::meets_build_requirement(min_build);
+            }
+            Ok(true)
+        }
+        "linux" => {
+            os::meets_linux_requirement(
+                r.distros.as_deref().unwrap_or(&[]),
+                r.min_version.as_deref().unwrap_or(""),
+            )
+        }
+        _ => Ok(true),
     }
-    Ok(true)
+}
+
+/// Detects whether a Linux package is installed using dpkg, rpm, or pacman.
+#[cfg(target_os = "linux")]
+fn check_linux_package(name: &str) -> Result<bool> {
+    use std::process::Command;
+
+    // Try dpkg (Debian/Ubuntu)
+    if let Ok(out) = Command::new("dpkg").args(["-l", name]).output() {
+        if out.status.success() {
+            let stdout = String::from_utf8_lossy(&out.stdout);
+            if stdout.lines().any(|l| l.starts_with("ii")) {
+                return Ok(true);
+            }
+        }
+    }
+
+    // Try rpm (Fedora/RHEL/openSUSE)
+    if let Ok(out) = Command::new("rpm").args(["-q", name]).output() {
+        if out.status.success() { return Ok(true); }
+    }
+
+    // Try pacman (Arch)
+    if let Ok(out) = Command::new("pacman").args(["-Q", name]).output() {
+        if out.status.success() { return Ok(true); }
+    }
+
+    Ok(false)
 }
 
 fn extract_drive(path: &str) -> String {
