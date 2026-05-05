@@ -1,8 +1,11 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use super::rollback::{JournalEntry, RollbackJournal};
 use crate::parser::schema::ShortcutLocation;
+#[cfg(windows)]
+use anyhow::Context;
 
 /// Creates a Windows .lnk shortcut file using the COM IShellLink interface.
+#[cfg_attr(not(windows), allow(unused_variables))]
 pub fn create_shortcut(
     target: &str,
     location: &ShortcutLocation,
@@ -98,14 +101,14 @@ fn resolve_location(location: &ShortcutLocation) -> Result<std::path::PathBuf> {
     }
 }
 
-fn dirs_path(name: &str) -> Option<std::path::PathBuf> {
+fn dirs_path(_name: &str) -> Option<std::path::PathBuf> {
     #[cfg(windows)]
     {
         use windows::Win32::UI::Shell::SHGetKnownFolderPath;
         use windows::core::GUID;
 
         // Known folder GUIDs
-        let guid: GUID = match name {
+        let guid: GUID = match _name {
             "Desktop"   => GUID::from_values(0xB4BFCC3A, 0xDB2C, 0x424C, [0xB0, 0x29, 0x7F, 0xE9, 0x9A, 0x87, 0xC6, 0x41]),
             "StartMenu" => GUID::from_values(0x625B53C3, 0xAB48, 0x4EC1, [0xBA, 0x1F, 0xA1, 0xEF, 0x41, 0x46, 0xFC, 0x19]),
             "Startup"   => GUID::from_values(0xB97D20BB, 0xF46A, 0x4C97, [0xBA, 0x10, 0x5E, 0x36, 0x08, 0x43, 0x08, 0x54]),

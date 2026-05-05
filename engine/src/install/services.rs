@@ -1,6 +1,9 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use crate::parser::schema::ServiceOperation;
+#[cfg(windows)]
+use anyhow::Context;
 
+#[cfg_attr(not(windows), allow(unused_variables))]
 pub fn apply_service_step(
     operation: &ServiceOperation,
     name: &str,

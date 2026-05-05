@@ -175,7 +175,9 @@ impl InstallerState {
                     .unwrap_or_else(|_| "C:\\Program Files".into());
                 format!("{}\\{}", pf, manifest.app.name)
             });
-        let declared_vars = manifest.variables.clone().unwrap_or_default();
+        let declared_vars = manifest.variables.as_ref()
+            .map(|v| v.resolve_for_os(std::env::consts::OS))
+            .unwrap_or_default();
         let install_dir = resolve_manifest_vars(&install_dir, &declared_vars);
 
         // Default all non-required components as selected

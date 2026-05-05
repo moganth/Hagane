@@ -16,6 +16,13 @@
     <span class="logo-tag">Installer Engine</span>
   </a>
   <div class="header-spacer"></div>
+  <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle light/dark mode">
+    <svg id="themeIconMoon" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 0 1 6 .278z"/></svg>
+    <svg id="themeIconSun" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" style="display:none"><path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm0 1a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8zm10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0zm-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707zM4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707z"/></svg>
+  </button>
+  <a class="header-github" href="https://github.com/moganth/Hagane" target="_blank" rel="noopener" aria-label="GitHub repository">
+    <svg class="github-icon" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+  </a>
   <div class="download-wrapper" id="downloadWrapper">
     <button class="header-download" onclick="toggleDownloadMenu()">&#8595; Download</button>
     <div class="download-menu" id="downloadMenu">
@@ -100,7 +107,6 @@
     <li><a href="#custom_pages-manifest-shape" class="nav-link nav-sub-link">Manifest Shape</a></li>
     <li><a href="#custom_pages-widget-reference" class="nav-link nav-sub-link">Widget Reference</a></li>
     <li><a href="#custom_pages-binding-values-to-later-steps" class="nav-link nav-sub-link">Binding Values To Later Steps</a></li>
-    <li><a href="#custom_pages-validation-rules" class="nav-link nav-sub-link">Validation Rules</a></li>
     <li><a href="#custom_pages-example-walkthrough" class="nav-link nav-sub-link">Example Walkthrough</a></li>
     <li><a href="#custom_pages-raw-html-mode" class="nav-link nav-sub-link">Raw HTML Mode</a></li>
     <li><a href="#custom_pages-practical-recommendations" class="nav-link nav-sub-link">Practical Recommendations</a></li>
@@ -159,6 +165,7 @@
     <li><a href="#testing-testing-requirements-check" class="nav-link nav-sub-link">Testing Requirements Check</a></li>
     <li><a href="#testing-advanced-testing" class="nav-link nav-sub-link">Advanced Testing</a></li>
     <li><a href="#testing-next-steps" class="nav-link nav-sub-link">Next Steps</a></li>
+    <li><a href="#testing-linux-testing-wsl2-ubuntu" class="nav-link nav-sub-link">Linux Testing (WSL2 / Ubuntu)</a></li>
     </ul>
     </li>
     <li><a href="#shipping" class="nav-link">Shipping Hagane</a>
@@ -169,7 +176,7 @@
     <li><a href="#shipping-build-hagane-installer" class="nav-link nav-sub-link">Build Hagane Installer</a></li>
     <li><a href="#shipping-install-and-verify" class="nav-link nav-sub-link">Install And Verify</a></li>
     <li><a href="#shipping-test-user-flow" class="nav-link nav-sub-link">Test User Flow</a></li>
-    <li><a href="#shipping-icon-behavior-and-current-fixes" class="nav-link nav-sub-link">Icon Behavior And Current Fixes</a></li>
+    <li><a href="#shipping-linux-uninstall" class="nav-link nav-sub-link">Linux Uninstall</a></li>
     <li><a href="#shipping-troubleshooting" class="nav-link nav-sub-link">Troubleshooting</a></li>
     <li><a href="#shipping-release-checklist" class="nav-link nav-sub-link">Release Checklist</a></li>
     </ul>
@@ -181,16 +188,16 @@
 </aside>
 
 <main class="content" id="main-content">
+<section class="doc-section" id="introduction">
+<span class="section-anchor" id="anchor-introduction"></span>
 <pre class="intro-ascii-art" aria-hidden="true">██╗  ██╗ █████╗  ██████╗  █████╗ ███╗   ██╗███████╗
 ██║  ██║██╔══██╗██╔════╝ ██╔══██╗████╗  ██║██╔════╝
 ███████║███████║██║  ███╗███████║██╔██╗ ██║█████╗  
 ██╔══██║██╔══██║██║   ██║██╔══██║██║╚██╗██║██╔══╝  
 ██║  ██║██║  ██║╚██████╔╝██║  ██║██║ ╚████║███████╗
 ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝</pre>
-<section class="doc-section" id="introduction">
-<span class="section-anchor" id="anchor-introduction"></span>
 <span class="section-anchor" id="introduction-installer-engine-documentation"></span><h1>Installer Engine Documentation</h1>
-<p>Installer Engine is a YAML-driven Windows installer framework built in Rust. It combines a native backend (requirements checks, install plan execution, rollback) with a WebView2 UI layer and the `hagane CLI for packaging and compilation.</p>
+<p>Installer Engine is a YAML-driven cross-platform installer framework built in Rust. It combines a native backend (requirements checks, install plan execution, rollback) with a WebView2/WebKitGTK UI layer and the `hagane CLI for packaging and compilation. Windows uses WebView2; Linux uses wry + WebKitGTK.</p>
 <span class="section-anchor" id="introduction-why"></span><h2>Why</h2>
 <div class="table-wrap"><table>
 <thead><tr>
@@ -544,11 +551,14 @@ hagane run ./path/to/installer.yaml --release</code></pre>
     ├── example/               # Example installer.yaml + assets
     └── schema/                # installer.schema.json for IDE support</code></pre>
 <hr/>
-<span class="section-anchor" id="introduction-requirements-checks-all-native-no-powershell"></span><h2>Requirements Checks (all native, no PowerShell)</h2>
+<span class="section-anchor" id="introduction-requirements-checks"></span><h2>Requirements Checks</h2>
+<div class="callout callout-info">
+<p>**Platform note:** The checks below use Windows-native APIs. Linux requirements checks use equivalent POSIX calls. Both platforms evaluate checks in parallel via Rayon.</p>
+</div>
 <div class="table-wrap"><table>
 <thead><tr>
 <th>Check</th>
-<th>API used</th>
+<th>Windows API used</th>
 </tr></thead>
 <tbody>
 <tr>
@@ -655,11 +665,15 @@ hagane run ./path/to/installer.yaml --release</code></pre>
 </tr>
 <tr>
 <td>`install.system.path</td>
-<td>Adds a directory to `PATH (user/system scope)</td>
+<td><strong>(Windows flat form)</strong> Adds a directory to PATH. Single entry only. Scope: `user (HKCU) or <code>system</code> (HKLM).</td>
+</tr>
+<tr>
+<td>`install.system.linux.path</td>
+<td>**(Linux)** Adds a directory to PATH. Accepts a **single entry or a list** — use a list to define user and system scope entries simultaneously, each gated on its own component.</td>
 </tr>
 <tr>
 <td>`install.hooks.post_install</td>
-<td>Runs post-install hooks (`powershell or <code>program</code>)</td>
+<td>Runs post-install hooks. `shell can be <code>powershell</code> (Windows), <code>bash</code> (Linux), or <code>program</code> (all platforms).</td>
 </tr>
 <tr>
 <td>`install.finalize.write_uninstaller</td>
@@ -775,8 +789,9 @@ install:
 <li>`manual_only suppresses normal lifecycle logs and keeps failure logging deterministic.</li>
 </ul>
 <p>For a full behavior matrix and end-to-end examples, see [LOGGING.md](LOGGING.md).</p>
-<span class="section-anchor" id="introduction-powershell-action"></span><h3>PowerShell Action</h3>
-<p>Use `install.hooks.post_install to run commands with deterministic error handling.</p>
+<span class="section-anchor" id="introduction-post-install-hook-actions"></span><h3>Post-Install Hook Actions</h3>
+<p>Use `install.hooks.post_install to run commands after all install steps complete.</p>
+<p>**Windows — PowerShell:**</p>
 <pre data-lang="yaml"><code>install:
   hooks:
     post_install:
@@ -787,14 +802,63 @@ install:
           wait: true
           fail_on_nonzero: true
           timeout_sec: 30</code></pre>
+<p>**Linux — Bash:**</p>
+<pre data-lang="yaml"><code>install:
+  hooks:
+    post_install:
+      - run:
+          platform: linux
+          command: |
+            chmod +x &quot;{{INSTDIR}}/bin/myapp&quot;
+            ln -sf &quot;{{INSTDIR}}/bin/myapp&quot; /usr/local/bin/myapp
+          shell: bash
+          wait: true
+          fail_on_nonzero: false
+          timeout_sec: 10</code></pre>
+<div class="callout callout-info">
+<p><em></em>`platform** restricts the hook to a single OS (<code>windows</code> or <code>linux</code>). Omit it to run on all platforms.</p>
+</div>
+<p>Bash hook stdout is logged at `INFO level and stderr at <code>WARN</code> level — both appear in the installer log stream so failures are always visible.</p>
 <p>Supported parameters:</p>
-<ul>
-<li>`command</li>
-<li>`shell (<code>powershell</code> or <code>program</code>)</li>
-<li>`wait</li>
-<li>`fail_on_nonzero</li>
-<li>`timeout_sec</li>
-</ul>
+<div class="table-wrap"><table>
+<thead><tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Notes</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>`command</td>
+<td>string</td>
+<td>Script content (`powershell/<code>bash</code>) or command line (<code>program</code>).</td>
+</tr>
+<tr>
+<td>`shell</td>
+<td>string</td>
+<td>`powershell (Windows only), <code>bash</code> (Linux only), or <code>program</code> (all platforms).</td>
+</tr>
+<tr>
+<td>`platform</td>
+<td>string</td>
+<td>Optional. Restrict hook to `windows or <code>linux</code>. Omit to run everywhere.</td>
+</tr>
+<tr>
+<td>`wait</td>
+<td>boolean</td>
+<td>Wait for completion before continuing. Default: `true.</td>
+</tr>
+<tr>
+<td>`fail_on_nonzero</td>
+<td>boolean</td>
+<td>Fail the installation on non-zero exit. Default: `true.</td>
+</tr>
+<tr>
+<td>`timeout_sec</td>
+<td>number</td>
+<td>Kill and classify as `HG-PS-004 if exceeded.</td>
+</tr>
+</tbody>
+</table></div>
 <span class="section-anchor" id="introduction-stable-error-codes"></span><h3>Stable Error Codes</h3>
 <p>The installer classifies step failures into stable v1 error codes:</p>
 <ul>
@@ -818,7 +882,7 @@ install:
 <hr/>
 <span class="section-anchor" id="introduction-conditional-install-execution"></span><h2>Conditional Install Execution</h2>
 <p>Component selection is now controlled through `install.components and per-entry <code>component</code> fields under system blocks.</p>
-<p>Supported `component fields include <code>install.system.shortcuts[*].component</code> and <code>install.system.path.component</code>.</p>
+<p>Supported `component fields include <code>install.system.shortcuts[*].component</code> and <code>install.system.path[*].component</code> (Linux list form) or <code>install.system.path.component</code> (single-entry form).</p>
 <pre data-lang="yaml"><code>components:
   - id: docs
     name: &quot;Documentation&quot;
@@ -837,6 +901,61 @@ install:
         target: &quot;{{INSTDIR}}/docs/manual.txt&quot;
         location: start_menu
         component: docs</code></pre>
+<hr/>
+<span class="section-anchor" id="introduction-linux-path-integration"></span><h2>Linux PATH Integration</h2>
+<p>On Linux, `install.system.linux.path controls how the installed binary directory is added to <code>$PATH</code>. Two scopes are supported:</p>
+<div class="table-wrap"><table>
+<thead><tr>
+<th>Scope</th>
+<th>What it writes</th>
+<th>Takes effect</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>`user</td>
+<td>Appends to `~/.bashrc and <code>~/.profile</code> for the installing user</td>
+<td>New user terminal sessions</td>
+</tr>
+<tr>
+<td>`system</td>
+<td>Writes `/etc/profile.d/hagane-path.sh **and** appends to <code>/etc/bash.bashrc</code></td>
+<td>All users, all new terminal sessions (login and non-login)</td>
+</tr>
+</tbody>
+</table></div>
+<div class="callout callout-info">
+<p><strong>WSL2 note:</strong> WSL2 terminal sessions are non-login interactive shells by default. `/etc/profile.d/ is only sourced for login shells. Using <code>scope: system</code> writes to **both** <code>/etc/profile.d/</code> and <code>/etc/bash.bashrc</code> so the PATH is active in all shell types without requiring a login.</p>
+</div>
+<span class="section-anchor" id="introduction-single-scope-simple-case"></span><h3>Single scope (simple case)</h3>
+<pre data-lang="yaml"><code>install:
+  system:
+    linux:
+      path:
+        add: &quot;{{INSTDIR}}/bin&quot;
+        scope: user               # writes ~/.bashrc and ~/.profile</code></pre>
+<span class="section-anchor" id="introduction-both-scopes-simultaneously-list-form"></span><h3>Both scopes simultaneously (list form)</h3>
+<p>When you want users to choose between user-only and system-wide PATH, define two entries and gate each on its own component:</p>
+<pre data-lang="yaml"><code>components:
+  - id: user_path
+    name: &quot;Add to user PATH&quot;
+    description: &quot;Appends to ~/.bashrc and ~/.profile (this user only).&quot;
+    selected: true
+  - id: system_path
+    name: &quot;Add to system PATH&quot;
+    description: &quot;Writes /etc/bash.bashrc and /etc/profile.d/ for all users. Requires admin.&quot;
+    selected: false
+
+install:
+  system:
+    linux:
+      path:
+        - add: &quot;{{INSTDIR}}/bin&quot;
+          scope: user
+          component: user_path
+        - add: &quot;{{INSTDIR}}/bin&quot;
+          scope: system
+          component: system_path</code></pre>
+<p>Only the selected component&#x27;s entry is executed at install time. An existing single-entry `path: block (without a list) continues to work unchanged for backwards compatibility.</p>
 <hr/>
 <span class="section-anchor" id="introduction-high-level-registry-abstractions"></span><h2>High-Level Registry Abstractions</h2>
 <p>Use high-level actions to avoid repetitive registry write blocks.</p>
@@ -886,13 +1005,25 @@ install:
 <p>Set `app.require_admin to control whether the installer requests elevation:</p>
 <pre data-lang="yaml"><code>app:
   require_admin: true</code></pre>
-<p>Use `true for operations that need system access, such as:</p>
-<ul>
-<li>`HKLM registry writes</li>
-<li>system environment variables</li>
-<li>protected install locations like `C:\Program Files</li>
-</ul>
+<p>Use `true for operations that need system access:</p>
+<div class="table-wrap"><table>
+<thead><tr>
+<th>Platform</th>
+<th>When required</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>Windows</td>
+<td>`HKLM registry writes, system PATH, protected install locations like <code>C:\Program Files</code></td>
+</tr>
+<tr>
+<td>Linux</td>
+<td>Writing to `/usr/local/, <code>/etc/profile.d/</code>, <code>/etc/bash.bashrc</code>, or creating symlinks in <code>/usr/local/bin</code></td>
+</tr>
+</tbody>
+</table></div>
 <p>Use `false for user-level installs that should not prompt for elevation.</p>
+<p><strong>Linux elevation behavior:</strong> When `require_admin: true and the installer is not already running as root, it re-launches itself with <code>sudo</code> automatically and exits the original process. The elevated re-launch inherits all command-line arguments. The original calling user&#x27;s home directory is tracked via <code>$SUDO_USER</code> so PATH entries are written to the correct user&#x27;s shell config files.</p>
 <hr/>
 <span class="section-anchor" id="introduction-theme-customization"></span><h2>Theme Customization</h2>
 <p>All colors, fonts, and sizing are CSS variables injected at runtime from `theme: in your YAML. No recompilation needed to rebrand the installer. For named theme presets and the folder layout used by this repository, see [THEMING_PRESETS.md](THEMING_PRESETS.md).</p>
@@ -917,12 +1048,14 @@ reg query &quot;HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Hagane&
 reg query &quot;HKLM\SOFTWARE\InstallerEngine\Hagane&quot; /s</code></pre>
 <span class="section-anchor" id="introduction-notes"></span><h2>Notes</h2>
 <ul>
-<li>The runner requires Windows to compile (uses `windows-rs and <code>webview2-com</code>).</li>
-<li>The engine library and builder compile cross-platform for testing.</li>
+<li>The runner binary compiles on both **Windows** (WebView2/Win32) and **Linux** (wry + WebKitGTK/GTK3).</li>
+<li>The Windows runner uses `windows-rs and <code>webview2-com</code>. WebView2 Runtime must be installed on the target machine.</li>
+<li>The Linux runner uses `wry 0.43 + <code>tao 0.30</code> with WebKitGTK. Build dependencies: <code>libwebkit2gtk-4.1-dev</code>, <code>libgtk-3-dev</code>.</li>
+<li>The engine library and builder compile cross-platform.</li>
 </ul>
 </section>
 
-<section class="doc-section" id="prerequisites" style="border-top:1px solid rgba(200,100,30,0.15);padding-top:60px">
+<section class="doc-section" id="prerequisites">
 <span class="section-anchor" id="anchor-prerequisites"></span>
 <span class="section-anchor" id="prerequisites-prerequisites-installation"></span><h1>Prerequisites &amp; Installation</h1>
 <p>Everything you need installed before building Windows installers with Hagane.</p>
@@ -993,7 +1126,7 @@ cargo build --release -p builder --bin hagane
 <p>Use `.\target\release\hagane.exe in place of <code>hagane</code> for all commands when running from source.</p>
 </section>
 
-<section class="doc-section" id="quickstart" style="border-top:1px solid rgba(200,100,30,0.15);padding-top:60px">
+<section class="doc-section" id="quickstart">
 <span class="section-anchor" id="anchor-quickstart"></span>
 <span class="section-anchor" id="quickstart-quick-start"></span><h1>Quick Start</h1>
 <p>Build your first installer in under 5 minutes.</p>
@@ -1113,7 +1246,7 @@ install:
 </ul>
 </section>
 
-<section class="doc-section" id="theming" style="border-top:1px solid rgba(200,100,30,0.15);padding-top:60px">
+<section class="doc-section" id="theming">
 <span class="section-anchor" id="anchor-theming"></span>
 <span class="section-anchor" id="theming-theme-presets"></span><h1>Theme Presets</h1>
 <p>This guide explains the preset-based theme system used by the installer UI.</p>
@@ -1406,7 +1539,7 @@ install:
 <p>That is the safe, scalable way to theme this installer.</p>
 </section>
 
-<section class="doc-section" id="custom_pages" style="border-top:1px solid rgba(200,100,30,0.15);padding-top:60px">
+<section class="doc-section" id="custom_pages">
 <span class="section-anchor" id="anchor-custom_pages"></span>
 <span class="section-anchor" id="custom_pages-custom-pages"></span><h1>Custom Pages</h1>
 <p>Custom pages let an installer ask the user for extra information that does not fit the built-in welcome, license, install directory, component, summary, or finish screens.</p>
@@ -1565,18 +1698,19 @@ install:
   required: true</code></pre>
 <span class="section-anchor" id="custom_pages-binding-values-to-later-steps"></span><h2>Binding Values To Later Steps</h2>
 <p>The `bind_to field is what turns a widget value into an installer variable.</p>
-<p>If a widget is bound to `CERT_DIR, later steps can use that variable like this:</p>
-<pre data-lang="yaml"><code>hooks:
-  post_install:
-    - run:
-        shell: powershell
-        wait: true
-        fail_on_nonzero: true
-        timeout_sec: 30
-        command: |
-          Write-Host &quot;Certificate folder: {{CERT_DIR}}&quot;</code></pre>
+<p>If a widget is bound to `CERT_DIR, later steps can reference it with <code>{{CERT_DIR}}</code>. Hooks are defined under <code>install.hooks.post_install</code>:</p>
+<pre data-lang="yaml"><code>install:
+  hooks:
+    post_install:
+      - run:
+          platform: windows
+          shell: powershell
+          wait: true
+          fail_on_nonzero: true
+          timeout_sec: 30
+          command: |
+            Write-Host &quot;Certificate folder: {{CERT_DIR}}&quot;</code></pre>
 <p>That is the key idea behind custom pages: the UI collects data once, then the rest of the installer uses it like any other variable.</p>
-<span class="section-anchor" id="custom_pages-validation-rules"></span><h2>Validation Rules</h2>
 <p>The validator checks several things before the installer is built:</p>
 <ul>
 <li>Custom pages must have a non-empty `id.</li>
@@ -1613,7 +1747,7 @@ install:
 <p>If you follow those rules, custom pages stay predictable and easy to maintain.</p>
 </section>
 
-<section class="doc-section" id="logging" style="border-top:1px solid rgba(200,100,30,0.15);padding-top:60px">
+<section class="doc-section" id="logging">
 <span class="section-anchor" id="anchor-logging"></span>
 <span class="section-anchor" id="logging-hagane-logging-guide"></span><h1>Hagane Logging Guide</h1>
 <p>This guide explains exactly how installer logging works with the `install DSL, what <code>auto</code> mode does, what <code>manual_only</code> mode does, and how to choose between them.</p>
@@ -1757,7 +1891,7 @@ install:
 </ul>
 </section>
 
-<section class="doc-section" id="error_codes" style="border-top:1px solid rgba(200,100,30,0.15);padding-top:60px">
+<section class="doc-section" id="error_codes">
 <span class="section-anchor" id="anchor-error_codes"></span>
 <span class="section-anchor" id="error_codes-hagane-installer-error-codes-and-logging-guide"></span><h1>Hagane Installer Error Codes and Logging Guide</h1>
 <p>This document defines stable v1 error codes and logging behavior in `installer.yaml.</p>
@@ -1886,12 +2020,12 @@ install:
       component: dev_tools</code></pre>
 <span class="section-anchor" id="error_codes-post-install-command-hooks"></span><h2>Post-Install Command Hooks</h2>
 <p>`install.hooks.post_install executes commands with automatic error classification.</p>
-<span class="section-anchor" id="error_codes-powershell-hook-execution"></span><h3>PowerShell Hook Execution</h3>
-<p>Execute a PowerShell command:</p>
+<span class="section-anchor" id="error_codes-powershell-hook-windows"></span><h3>PowerShell Hook (Windows)</h3>
 <pre data-lang="yaml"><code>install:
   hooks:
     post_install:
       - run:
+          platform: windows
           command: |
             Write-Host &quot;Hello from installer&quot;
             [Environment]::SetEnvironmentVariable(&quot;MY_VAR&quot;, &quot;value&quot;, &quot;User&quot;)
@@ -1899,6 +2033,19 @@ install:
           wait: true
           fail_on_nonzero: true
           timeout_sec: 30</code></pre>
+<span class="section-anchor" id="error_codes-bash-hook-linux"></span><h3>Bash Hook (Linux)</h3>
+<pre data-lang="yaml"><code>install:
+  hooks:
+    post_install:
+      - run:
+          platform: linux
+          command: |
+            chmod +x &quot;{{INSTDIR}}/bin/myapp&quot;
+            ln -sf &quot;{{INSTDIR}}/bin/myapp&quot; /usr/local/bin/myapp
+          shell: bash
+          wait: true
+          fail_on_nonzero: false
+          timeout_sec: 10</code></pre>
 <span class="section-anchor" id="error_codes-program-hook-execution"></span><h3>Program Hook Execution</h3>
 <p>Execute a normal process command:</p>
 <pre data-lang="yaml"><code>install:
@@ -1925,14 +2072,21 @@ install:
 <td>string</td>
 <td>—</td>
 <td>Yes</td>
-<td>Command text to execute. For PowerShell, this is script content; for program mode, this is the command line.</td>
+<td>Script content (`powershell/<code>bash</code>) or command line (<code>program</code>).</td>
 </tr>
 <tr>
 <td>`shell</td>
 <td>string</td>
 <td>—</td>
 <td>Yes</td>
-<td>`powershell or <code>program</code>.</td>
+<td>`powershell (Windows only), <code>bash</code> (Linux only), or <code>program</code> (all platforms).</td>
+</tr>
+<tr>
+<td>`platform</td>
+<td>string</td>
+<td>(all)</td>
+<td>No</td>
+<td>Restrict hook to `windows or <code>linux</code>. Omit to run on all platforms.</td>
 </tr>
 <tr>
 <td>`wait</td>
@@ -1953,15 +2107,16 @@ install:
 <td>number</td>
 <td>(none)</td>
 <td>No</td>
-<td>Maximum execution time in seconds. If the script exceeds this time and `wait=true, it&#x27;s terminated and classified as <code>HG-PS-004</code> (timeout).</td>
+<td>Maximum execution time in seconds. If the script exceeds this time and `wait=true, it’s terminated and classified as <code>HG-PS-004</code> (timeout).</td>
 </tr>
 </tbody>
 </table></div>
 <span class="section-anchor" id="error_codes-hook-execution-notes"></span><h4>Hook Execution Notes</h4>
 <ul>
-<li><strong>Error Action Preference</strong>: Scripts are automatically wrapped with `$ErrorActionPreference=&#x27;Stop&#x27; to ensure deterministic error codes.</li>
-<li>**Elevation**: If the installer runs with admin elevation, scripts execute with the same privileges.</li>
-<li>**Output**: Command output is captured and included in automatic error classification (HG-PS-001 through HG-PS-005 when using PowerShell).</li>
+<li><strong>PowerShell error handling</strong>: Scripts are automatically wrapped with `$ErrorActionPreference=&#x27;Stop&#x27; to ensure deterministic error codes.</li>
+<li><strong>Bash output</strong>: Bash hook stdout is logged at `INFO level and stderr at <code>WARN</code> level. Both appear in the installer log stream so failures are always visible even when <code>fail_on_nonzero: false</code>.</li>
+<li>**Elevation**: If the installer runs with admin elevation, hooks execute with the same privileges.</li>
+<li>**Error classification**: HG-PS-001 through HG-PS-005 codes apply to both PowerShell and bash hook failures.</li>
 <li><strong>Working Directory</strong>: Hooks inherit the installer&#x27;s working directory (`{{INSTDIR}}).</li>
 </ul>
 <span class="section-anchor" id="error_codes-error-line-format"></span><h2>Error Line Format</h2>
@@ -2142,26 +2297,31 @@ value=&lt;HIVE\Key path&gt;</code></pre>
 <p><strong>When it occurs:</strong> An `env_var step fails due to invalid scope, operation, or permission issues.</p>
 <p>**Valid Scope Values:**</p>
 <ul>
-<li>`user — per-user environment (HKEY_CURRENT_USER)</li>
-<li>`system — system-wide environment (HKEY_LOCAL_MACHINE) — **requires admin elevation**</li>
+<li>`user — per-user environment</li>
+<li><strong>Windows</strong>: writes to `HKEY_CURRENT_USER</li>
+<li><strong>Linux</strong>: appends an `export line to <code>~/.bashrc</code> and <code>~/.profile</code> for the installing user (tracked via <code>$SUDO_USER</code> when running with <code>sudo</code>)</li>
+<li>`system — system-wide environment — **requires admin elevation**</li>
+<li><strong>Windows</strong>: writes to `HKEY_LOCAL_MACHINE</li>
+<li><strong>Linux</strong>: writes `/etc/profile.d/hagane-&lt;name&gt;.sh (login shells) **and** appends to <code>/etc/bash.bashrc</code> (non-login interactive shells such as WSL2 default terminals)</li>
 </ul>
 <p>**Valid Operation Values:**</p>
 <ul>
 <li>`set — replace or create variable</li>
-<li>`append — add to the end of existing value (with <code>;</code> separator)</li>
-<li>`prepend — add to the beginning of existing value (with <code>;</code> separator)</li>
+<li>`append — add to the end of existing value (with <code>;</code> separator on Windows, <code>:</code> on Linux via shell export)</li>
+<li>`prepend — add to the beginning of existing value</li>
 </ul>
 <p>**Common causes:**</p>
 <ul>
 <li>Invalid scope or operation spelling</li>
 <li>Attempting system-wide operation (`scope: system) without elevation</li>
-<li>Registry write failure due to ACLs</li>
+<li>On Windows: registry write failure due to ACLs</li>
+<li>On Linux: insufficient permissions to write `/etc/bash.bashrc or <code>/etc/profile.d/</code></li>
 </ul>
 <p>**Typical fix:**</p>
 <ol>
 <li>Validate `scope and <code>operation</code> values in manifest.</li>
-<li>**For system scope:** Run installer as Administrator.</li>
-<li>**For user scope:** No elevation required; ensure registry path is writable.</li>
+<li><strong>For system scope:</strong> Run installer as Administrator (Windows) or with `sudo (Linux). Set <code>app.require_admin: true</code>.</li>
+<li>**For user scope:** No elevation required; ensure the shell config files exist in the user&#x27;s home directory.</li>
 </ol>
 <p>**Field mapping:**</p>
 <pre data-lang="text"><code>field=operation
@@ -2342,6 +2502,7 @@ install:
   hooks:
     post_install:
       - run:
+          platform: windows
           command: |
             Write-Host &quot;Configuring application at {{INSTDIR}}&quot;
           shell: powershell
@@ -2405,7 +2566,7 @@ install:
 </ul>
 </section>
 
-<section class="doc-section" id="testing" style="border-top:1px solid rgba(200,100,30,0.15);padding-top:60px">
+<section class="doc-section" id="testing">
 <span class="section-anchor" id="anchor-testing"></span>
 <span class="section-anchor" id="testing-testing-the-installer-engine"></span><h1>Testing the Installer Engine</h1>
 <span class="section-anchor" id="testing-complete-workflow-build-test"></span><h2>Complete Workflow: Build &amp; Test</h2>
@@ -2588,6 +2749,7 @@ install:
   hooks:
     post_install:
       - run:
+          platform: windows
           command: &quot;Write-Host &#x27;Testing PowerShell action&#x27;&quot;
           shell: powershell
           wait: true
@@ -2635,19 +2797,88 @@ Get-Process explorer | ForEach-Object { watcher }
 <li>✅ Rebuild and test</li>
 <li>✅ Ship the `.exe</li>
 </ol>
+<hr/>
+<span class="section-anchor" id="testing-linux-testing-wsl2-ubuntu"></span><h2>Linux Testing (WSL2 / Ubuntu)</h2>
+<span class="section-anchor" id="testing-prerequisites"></span><h3>Prerequisites</h3>
+<p>Install WebKitGTK build dependencies in WSL2:</p>
+<pre data-lang="bash"><code>sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev</code></pre>
+<span class="section-anchor" id="testing-build-linux-installer-binary"></span><h3>Build Linux Installer Binary</h3>
+<p>From the workspace root on Linux/WSL2:</p>
+<pre data-lang="bash"><code>cargo build --release -p runner</code></pre>
+<p>Output: `target/release/&lt;app-name&gt;-linux-x86_64</p>
+<span class="section-anchor" id="testing-run-the-linux-installer"></span><h3>Run the Linux Installer</h3>
+<p>The GUI uses wry + WebKitGTK. WSLg provides `$DISPLAY automatically.</p>
+<pre data-lang="bash"><code>./target/release/myapp-linux-x86_64</code></pre>
+<p>If `app.require_admin: true, the installer re-launches itself with <code>sudo</code> automatically.</p>
+<span class="section-anchor" id="testing-verify-path-integration"></span><h3>Verify PATH Integration</h3>
+<p>After installation completes, open a **new terminal** and check:</p>
+<pre data-lang="bash"><code># If user scope was selected:
+grep &quot;INSTDIR&quot; ~/.bashrc
+
+# If system scope was selected:
+cat /etc/profile.d/hagane-path.sh
+grep &quot;INSTDIR&quot; /etc/bash.bashrc
+
+# Verify the binary is in PATH:
+which myapp
+myapp --version</code></pre>
+<div class="callout callout-info">
+<p><strong>WSL2 note:</strong> `/etc/profile.d/ only applies to login shells. System scope also writes to <code>/etc/bash.bashrc</code> so the PATH works in all WSL2 terminal sessions without requiring a login shell.</p>
+</div>
+<span class="section-anchor" id="testing-verify-symlink-if-created-by-post-install-hook"></span><h3>Verify Symlink (if created by post-install hook)</h3>
+<pre data-lang="bash"><code>ls -la /usr/local/bin/myapp
+# Should show: /usr/local/bin/myapp -&gt; /usr/local/myapp/bin/myapp</code></pre>
+<span class="section-anchor" id="testing-test-linux-uninstall"></span><h3>Test Linux Uninstall</h3>
+<pre data-lang="bash"><code>sudo /usr/local/myapp/uninstall.sh</code></pre>
+<p>The uninstall script:</p>
+<ol>
+<li>Removes the install directory (`rm -rf)</li>
+<li>Removes the `/usr/local/bin/&lt;name&gt; symlink if it points into the install directory</li>
+<li>Cleans `~/.bashrc and <code>~/.profile</code> entries (using <code>$SUDO_USER</code> to target the correct user&#x27;s home)</li>
+<li>Cleans `/etc/bash.bashrc entries</li>
+<li>Removes `/etc/profile.d/hagane-path.sh</li>
+</ol>
+<p>Verify after uninstall:</p>
+<pre data-lang="bash"><code>test -d /usr/local/myapp &amp;&amp; echo &quot;FAIL: dir still exists&quot; || echo &quot;OK: removed&quot;
+which myapp 2&gt;/dev/null &amp;&amp; echo &quot;FAIL: still in PATH&quot; || echo &quot;OK: not in PATH&quot;</code></pre>
+<span class="section-anchor" id="testing-test-post-install-bash-hook-logging"></span><h3>Test Post-Install Bash Hook Logging</h3>
+<p>Add a bash hook to your test manifest:</p>
+<pre data-lang="yaml"><code>install:
+  hooks:
+    post_install:
+      - run:
+          platform: linux
+          command: |
+            echo &quot;Hook stdout line&quot;
+            echo &quot;Hook stderr line&quot; &gt;&amp;2
+          shell: bash
+          wait: true
+          fail_on_nonzero: true</code></pre>
+<p>After running the installer, confirm the log shows:</p>
+<ul>
+<li>`[INFO] [bash] Hook stdout line</li>
+<li>`[WARN] [bash stderr] Hook stderr line</li>
+</ul>
 </section>
 
-<section class="doc-section" id="shipping" style="border-top:1px solid rgba(200,100,30,0.15);padding-top:60px">
+<section class="doc-section" id="shipping">
 <span class="section-anchor" id="anchor-shipping"></span>
 <span class="section-anchor" id="shipping-hagane-shipping-guide"></span><h1>Hagane Shipping Guide</h1>
-<p>This document covers building, packaging, installing, and validating the Hagane CLI that is shipped to users.</p>
+<p>This document covers building, packaging, installing, and validating the Hagane CLI that is shipped to users. Both Windows and Linux targets are covered.</p>
 <span class="section-anchor" id="shipping-what-is-shipped"></span><h2>What Is Shipped</h2>
-<p>Install target layout:</p>
+<span class="section-anchor" id="shipping-windows-install-layout"></span><h3>Windows install layout</h3>
 <ul>
 <li>`C:\Program Files\Hagane\bin\hagane.exe</li>
 <li>`C:\Program Files\Hagane\runtime\... (embedded workspace used at build time)</li>
 </ul>
-<p>The installed `hagane.exe compiles user installers from any directory by using the bundled runtime workspace.</p>
+<span class="section-anchor" id="shipping-linux-install-layout"></span><h3>Linux install layout</h3>
+<ul>
+<li>`/usr/local/hagane/bin/hagane</li>
+<li>`/usr/local/bin/hagane → symlink created by post-install hook for immediate PATH access</li>
+<li>`/etc/profile.d/hagane-path.sh and <code>/etc/bash.bashrc</code> entry (if system PATH component selected)</li>
+<li>`/usr/local/hagane/uninstall.sh — generated uninstall script</li>
+</ul>
+<p>The installed `hagane binary compiles user installers from any directory by using the bundled runtime workspace.</p>
 <span class="section-anchor" id="shipping-runtime-source-of-truth"></span><h3>Runtime Source Of Truth</h3>
 <ul>
 <li>The authoritative code lives in root workspace crates: `engine/, <code>runner/</code>, and <code>ui/</code>.</li>
@@ -2655,9 +2886,12 @@ Get-Process explorer | ForEach-Object { watcher }
 <li>This avoids maintaining duplicate runtime source trees in git while still shipping a self-contained installed Hagane.</li>
 </ul>
 <span class="section-anchor" id="shipping-build-hagane-cli"></span><h2>Build Hagane CLI</h2>
-<p>From workspace root:</p>
+<span class="section-anchor" id="shipping-windows"></span><h3>Windows</h3>
 <pre data-lang="powershell"><code>cargo build -p builder --bin hagane --release</code></pre>
 <p>Output: `target/release/hagane.exe</p>
+<span class="section-anchor" id="shipping-linux"></span><h3>Linux</h3>
+<pre data-lang="bash"><code>cargo build -p builder --bin hagane --release</code></pre>
+<p>Output: `target/release/hagane</p>
 <span class="section-anchor" id="shipping-workspace-version-management"></span><h3>Workspace Version Management</h3>
 <p>The version is defined once in the root `Cargo.toml under <code>[workspace.package]</code> and inherited by all crates (<code>engine</code>, <code>runner</code>, <code>builder</code>). To bump the version, edit only the root <code>Cargo.toml</code>:</p>
 <pre data-lang="toml"><code>[workspace.package]
@@ -2665,46 +2899,83 @@ version = &quot;0.1.5&quot;
 edition = &quot;2021&quot;</code></pre>
 <p>All crates pick it up automatically via `version.workspace = true.</p>
 <span class="section-anchor" id="shipping-stage-hagane-into-its-own-payload"></span><h2>Stage Hagane Into Its Own Payload</h2>
-<p>Before packaging `hagane-setup.exe, copy the fresh binary into the Hagane payload:</p>
+<span class="section-anchor" id="shipping-windows"></span><h3>Windows</h3>
 <pre data-lang="powershell"><code>Copy-Item .\target\release\hagane.exe .\hagane\payload\bin\hagane.exe -Force</code></pre>
+<span class="section-anchor" id="shipping-linux"></span><h3>Linux</h3>
+<pre data-lang="bash"><code>cp ./target/release/hagane ./hagane/payload/bin/hagane
+chmod +x ./hagane/payload/bin/hagane</code></pre>
 <span class="section-anchor" id="shipping-build-hagane-installer"></span><h2>Build Hagane Installer</h2>
+<span class="section-anchor" id="shipping-windows"></span><h3>Windows</h3>
 <p>With auto-discovery (if `hagane/installer.yaml is the only YAML in the current directory):</p>
 <pre data-lang="powershell"><code>hagane run --release</code></pre>
 <p>Or with an explicit path:</p>
 <pre data-lang="powershell"><code>hagane run .\hagane\installer.yaml --release</code></pre>
+<p>Expected output: `hagane\bin\hagane-setup.exe</p>
+<span class="section-anchor" id="shipping-linux"></span><h3>Linux</h3>
+<pre data-lang="bash"><code># From the repo root — builds the Linux tarball/installer binary
+./target/release/hagane run hagane/installer.yaml --release</code></pre>
+<p>Expected output: `hagane/bin/hagane-linux-x86_64</p>
 <div class="callout callout-info">
 <strong>Auto-discovery</strong>If exactly one `.yaml or <code>.yml</code> file exists in the current directory, Hagane selects it automatically. If multiple are found, Hagane prints a warning listing all of them and asks you to specify explicitly. If none are found, Hagane tries <code>hagane/installer.yaml</code> as a fallback.
 </div>
-<p>Expected output:</p>
-<ul>
-<li>`hagane\bin\hagane-setup.exe</li>
-</ul>
 <span class="section-anchor" id="shipping-install-and-verify"></span><h2>Install And Verify</h2>
-<p>Run installer:</p>
-<pre data-lang="powershell"><code>Start-Process .\hagane\bin\hagane-setup.exe -Wait</code></pre>
-<p>Verify installation:</p>
-<pre data-lang="powershell"><code>Test-Path &quot;C:\Program Files\Hagane\bin\hagane.exe&quot;
+<span class="section-anchor" id="shipping-windows"></span><h3>Windows</h3>
+<pre data-lang="powershell"><code>Start-Process .\hagane\bin\hagane-setup.exe -Wait
+Test-Path &quot;C:\Program Files\Hagane\bin\hagane.exe&quot;
 &amp; &quot;C:\Program Files\Hagane\bin\hagane.exe&quot; --version</code></pre>
+<span class="section-anchor" id="shipping-linux"></span><h3>Linux</h3>
+<p>The installer requires root to write to `/usr/local/. When <code>require_admin: true</code>, it re-launches itself with <code>sudo</code> automatically.</p>
+<pre data-lang="bash"><code>./hagane/bin/hagane-linux-x86_64</code></pre>
+<p>Verify after the GUI installer completes:</p>
+<pre data-lang="bash"><code># Symlink created by post-install hook:
+ls -la /usr/local/bin/hagane
+
+# Binary accessible in PATH (new terminal):
+hagane --version
+
+# System PATH entry (if system PATH component was selected):
+cat /etc/profile.d/hagane-path.sh
+grep hagane /etc/bash.bashrc</code></pre>
+<div class="callout callout-info">
+<p>Open a <strong>new terminal</strong> after installation. The PATH update takes effect in new terminal sessions. No re-login required \u2014 `/etc/bash.bashrc is sourced for all non-login interactive shells (including the default WSL2 terminal).</p>
+</div>
 <span class="section-anchor" id="shipping-test-user-flow"></span><h2>Test User Flow</h2>
-<p>Installed Hagane — auto-discovery (single YAML in directory):</p>
-<pre data-lang="powershell"><code>Set-Location C:\your-installer.yaml-folder-path
-hagane run --release</code></pre>
-<p>Installed Hagane — explicit manifest:</p>
-<pre data-lang="powershell"><code>Set-Location C:\your-installer.yaml-folder-path
-hagane run installer.yaml --release</code></pre>
-<p>From source build (developer workflow):</p>
-<pre data-lang="powershell"><code>.\target\release\hagane.exe run .\path\to\installer.yaml --release</code></pre>
-<p>Expected output:</p>
-<ul>
-<li>`&lt;manifest-dir&gt;/bin/&lt;app-name&gt;-setup.exe (copied from <code>target/release/</code>)</li>
-</ul>
-<span class="section-anchor" id="shipping-icon-behavior-and-current-fixes"></span><h2>Icon Behavior And Current Fixes</h2>
-<p>Two icon paths exist:</p>
-<ul>
-<li>UI icon/logo in pages (loaded from manifest assets).</li>
-<li>Windows EXE icon resource (stamped at compile time).</li>
-</ul>
-<p>Current implementation passes manifest icon path from builder to runner using `HAGANE_ICON_PATH and normalizes Windows verbatim paths so winres can embed the icon correctly.</p>
+<span class="section-anchor" id="shipping-windows-installed-hagane"></span><h3>Windows — Installed Hagane</h3>
+<pre data-lang="powershell"><code># Auto-discovery (single YAML in directory)
+Set-Location C:\your-installer.yaml-folder-path
+hagane run --release
+
+# Explicit manifest
+hagane run installer.yaml --release
+
+# From source build (developer workflow)
+.\target\release\hagane.exe run .\path\to\installer.yaml --release</code></pre>
+<span class="section-anchor" id="shipping-linux-installed-hagane"></span><h3>Linux — Installed Hagane</h3>
+<pre data-lang="bash"><code># Auto-discovery
+cd /path/to/your-project
+hagane run --release
+
+# Explicit manifest
+hagane run installer.yaml --release
+
+# From source build (developer workflow)
+./target/release/hagane run ./path/to/installer.yaml --release</code></pre>
+<p>Expected output: `&lt;manifest-dir&gt;/bin/&lt;app-name&gt;-linux-x86_64</p>
+<span class="section-anchor" id="shipping-linux-uninstall"></span><h2>Linux Uninstall</h2>
+<p>The Linux installer generates `/usr/local/hagane/uninstall.sh. Run it as root:</p>
+<pre data-lang="bash"><code>sudo /usr/local/hagane/uninstall.sh</code></pre>
+<p>The script performs these steps in order:</p>
+<ol>
+<li>`rm -rf /usr/local/hagane — removes the entire install directory</li>
+<li>Removes `/usr/local/bin/hagane symlink if it points into the install directory</li>
+<li>Removes PATH entries from `~/.bashrc and <code>~/.profile</code> — uses <code>$SUDO_USER</code> to target the actual user&#x27;s home, not root&#x27;s</li>
+<li>Removes the `# hagane: PATH entry from <code>/etc/bash.bashrc</code></li>
+<li>Removes `/etc/profile.d/hagane-path.sh</li>
+</ol>
+<p>Verify after uninstall:</p>
+<pre data-lang="bash"><code>test -d /usr/local/hagane &amp;&amp; echo &quot;FAIL&quot; || echo &quot;OK: install dir removed&quot;
+ls /usr/local/bin/hagane 2&gt;/dev/null &amp;&amp; echo &quot;FAIL&quot; || echo &quot;OK: symlink removed&quot;
+grep -c hagane /etc/bash.bashrc 2&gt;/dev/null || echo &quot;OK: bash.bashrc clean&quot;</code></pre>
 <span class="section-anchor" id="shipping-troubleshooting"></span><h2>Troubleshooting</h2>
 <span class="section-anchor" id="shipping-bin-folder-is-empty-after-install"></span><h3>`bin folder is empty after install</h3>
 <p>Cause: `hagane\payload\bin\hagane.exe was not staged before building <code>hagane-setup.exe</code>.</p>
@@ -2761,6 +3032,7 @@ hagane run installer.yaml --release</code></pre>
 <li>Confirm the destination path is writable by the installer process.</li>
 </ul>
 <span class="section-anchor" id="shipping-release-checklist"></span><h2>Release Checklist</h2>
+<span class="section-anchor" id="shipping-windows"></span><h3>Windows</h3>
 <ul>
 <li>Build `hagane.exe in release mode.</li>
 <li>Stage binary into `hagane/payload/bin/hagane.exe.</li>
@@ -2771,14 +3043,39 @@ hagane run installer.yaml --release</code></pre>
 <li>Verify EXE icon and UI branding.</li>
 <li>Verify installation logs and error codes are emitted correctly during a failing test manifest.</li>
 </ul>
+<span class="section-anchor" id="shipping-linux"></span><h3>Linux</h3>
+<ul>
+<li>Build `hagane in release mode (<code>cargo build -p builder --bin hagane --release</code>).</li>
+<li>Stage binary into `hagane/payload/bin/hagane and <code>chmod +x</code>.</li>
+<li>Build `hagane-linux-x86_64.</li>
+<li>Install on clean machine or WSL2 VM (`sudo).</li>
+<li>Verify `/usr/local/bin/hagane symlink is created by the post-install hook.</li>
+<li>Open a new terminal and confirm `hagane --version works without modifying PATH manually.</li>
+<li>Verify user PATH scope writes to the correct user&#x27;s `~/.bashrc (check <code>$SUDO_USER</code>).</li>
+<li>Verify system PATH scope writes to both `/etc/profile.d/hagane-path.sh and <code>/etc/bash.bashrc</code>.</li>
+<li>Verify `uninstall.sh removes all installed files, symlinks, and PATH entries cleanly.</li>
+</ul>
 </section>
 
+  <div class="pagination" id="pagination">
+    <button class="pagination-btn prev" id="pagPrev" onclick="pagGo(-1)" disabled>
+      <span class="pag-arrow">&#8592;</span>
+      <span class="pag-label">
+        <span class="pag-hint">Previous</span>
+        <span class="pag-title" id="pagPrevTitle"></span>
+      </span>
+    </button>
+    <span class="pagination-info" id="pagInfo"></span>
+    <button class="pagination-btn next" id="pagNext" onclick="pagGo(1)">
+      <span class="pag-label" style="text-align:right">
+        <span class="pag-hint">Next</span>
+        <span class="pag-title" id="pagNextTitle"></span>
+      </span>
+      <span class="pag-arrow">&#8594;</span>
+    </button>
+  </div>
   <footer class="site-footer">
     <p>Hagane Installer Engine &mdash; v0.1.5 &mdash; Built with Rust &amp; WebView2</p>
-    <p style="margin-top:6px;font-size:11px;color:#4A4540">
-      Generated from <code>.md</code> source files &mdash;
-      edit the <code>docs/</code> files, then run <code>python site/generate_site.py</code> to rebuild.
-    </p>
   </footer>
 </main>
 </div>

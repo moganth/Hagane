@@ -264,6 +264,7 @@ install:
   hooks:
     post_install:
       - run:
+          platform: windows
           command: "Write-Host 'Testing PowerShell action'"
           shell: powershell
           wait: true
@@ -338,3 +339,103 @@ Get-Process explorer | ForEach-Object { watcher }
 3. ✅ Add your files to `payload/`, `docs/`, etc.
 4. ✅ Rebuild and test
 5. ✅ Ship the `.exe`
+
+---
+
+## Linux Testing (WSL2 / Ubuntu)
+
+### Prerequisites
+
+Install WebKitGTK build dependencies in WSL2:
+
+```bash
+sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev
+```
+
+### Build Linux Installer Binary
+
+From the workspace root on Linux/WSL2:
+
+```bash
+cargo build --release -p runner
+```
+
+Output: `target/release/<app-name>-linux-x86_64`
+
+### Run the Linux Installer
+
+The GUI uses wry + WebKitGTK. WSLg provides `$DISPLAY` automatically.
+
+```bash
+./target/release/myapp-linux-x86_64
+```
+
+If `app.require_admin: true`, the installer re-launches itself with `sudo` automatically.
+
+### Verify PATH Integration
+
+After installation completes, open a **new terminal** and check:
+
+```bash
+# If user scope was selected:
+grep "INSTDIR" ~/.bashrc
+
+# If system scope was selected:
+cat /etc/profile.d/hagane-path.sh
+grep "INSTDIR" /etc/bash.bashrc
+
+# Verify the binary is in PATH:
+which myapp
+myapp --version
+```
+
+> **WSL2 note:** `/etc/profile.d/` only applies to login shells. System scope also writes to `/etc/bash.bashrc` so the PATH works in all WSL2 terminal sessions without requiring a login shell.
+
+### Verify Symlink (if created by post-install hook)
+
+```bash
+ls -la /usr/local/bin/myapp
+# Should show: /usr/local/bin/myapp -> /usr/local/myapp/bin/myapp
+```
+
+### Test Linux Uninstall
+
+```bash
+sudo /usr/local/myapp/uninstall.sh
+```
+
+The uninstall script:
+1. Removes the install directory (`rm -rf`)
+2. Removes the `/usr/local/bin/<name>` symlink if it points into the install directory
+3. Cleans `~/.bashrc` and `~/.profile` entries (using `$SUDO_USER` to target the correct user's home)
+4. Cleans `/etc/bash.bashrc` entries
+5. Removes `/etc/profile.d/hagane-path.sh`
+
+Verify after uninstall:
+
+```bash
+test -d /usr/local/myapp && echo "FAIL: dir still exists" || echo "OK: removed"
+which myapp 2>/dev/null && echo "FAIL: still in PATH" || echo "OK: not in PATH"
+```
+
+### Test Post-Install Bash Hook Logging
+
+Add a bash hook to your test manifest:
+
+```yaml
+install:
+  hooks:
+    post_install:
+      - run:
+          platform: linux
+          command: |
+            echo "Hook stdout line"
+            echo "Hook stderr line" >&2
+          shell: bash
+          wait: true
+          fail_on_nonzero: true
+```
+
+After running the installer, confirm the log shows:
+- `[INFO] [bash] Hook stdout line`
+- `[WARN] [bash stderr] Hook stderr line`

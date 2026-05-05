@@ -216,23 +216,23 @@ Example:
 
 The `bind_to` field is what turns a widget value into an installer variable.
 
-If a widget is bound to `CERT_DIR`, later steps can use that variable like this:
+If a widget is bound to `CERT_DIR`, later steps can reference it with `{{CERT_DIR}}`. Hooks are defined under `install.hooks.post_install`:
 
 ```yaml
-hooks:
-  post_install:
-    - run:
-        shell: powershell
-        wait: true
-        fail_on_nonzero: true
-        timeout_sec: 30
-        command: |
-          Write-Host "Certificate folder: {{CERT_DIR}}"
+install:
+  hooks:
+    post_install:
+      - run:
+          platform: windows
+          shell: powershell
+          wait: true
+          fail_on_nonzero: true
+          timeout_sec: 30
+          command: |
+            Write-Host "Certificate folder: {{CERT_DIR}}"
 ```
 
 That is the key idea behind custom pages: the UI collects data once, then the rest of the installer uses it like any other variable.
-
-## Validation Rules
 
 The validator checks several things before the installer is built:
 

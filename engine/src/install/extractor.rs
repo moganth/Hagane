@@ -52,6 +52,14 @@ pub fn extract_zstd_archive(
                 bytes_done += n as u64;
                 on_progress(bytes_done, total);
             }
+
+            // Restore Unix permissions from the tar header (preserves +x on binaries).
+            #[cfg(unix)]
+            if let Ok(mode) = entry.header().mode() {
+                use std::os::unix::fs::PermissionsExt;
+                let _ = std::fs::set_permissions(&dest_path, std::fs::Permissions::from_mode(mode));
+            }
+
             extracted_files.push(dest_path.to_string_lossy().into_owned());
         }
     }

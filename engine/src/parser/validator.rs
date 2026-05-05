@@ -45,41 +45,40 @@ fn validate_app(manifest: &InstallerManifest) -> Result<()> {
 fn validate_variables(manifest: &InstallerManifest) -> Result<()> {
     let Some(vars) = &manifest.variables else { return Ok(()); };
 
-    let reserved = [
-        "INSTDIR",
-        "PROGRAMFILES",
-        "PROGRAMFILES64",
-        "APPDATA",
-        "LOCALAPPDATA",
-        "TEMP",
-        "WINDIR",
+    let reserved_windows = [
+        "INSTDIR", "PROGRAMFILES", "PROGRAMFILES64", "APPDATA",
+        "LOCALAPPDATA", "TEMP", "WINDIR",
+    ];
+    let reserved_linux = [
+        "INSTDIR", "HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME",
+        "XDG_CACHE_HOME", "TMPDIR",
     ];
 
-    for key in vars.keys() {
-        let trimmed = key.trim();
-        if trimmed.is_empty() {
-            bail!("HG-YAML-001: variables keys must not be empty");
-        }
-
-        let normalized = trimmed.trim_start_matches('$');
-        if normalized.is_empty() {
-            bail!("HG-YAML-001: variables key '{}' is invalid", key);
-        }
-        if reserved.contains(&normalized) {
-            bail!(
-                "HG-YAML-001: variables key '{}' attempts to override reserved variable '${}'",
-                key,
-                normalized
-            );
-        }
-        if !normalized
-            .chars()
-            .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_')
-        {
-            bail!(
-                "HG-YAML-001: variables key '{}' is invalid. Use only A-Z, 0-9, and '_' (optionally prefixed with '$')",
-                key
-            );
+    // Validate the resolved map for each platform.
+    for os in &["windows", "linux"] {
+        let resolved = vars.resolve_for_os(os);
+        let reserved: &[&str] = if *os == "windows" { &reserved_windows } else { &reserved_linux };
+        for key in resolved.keys() {
+            let trimmed = key.trim();
+            if trimmed.is_empty() {
+                bail!("HG-YAML-001: variables keys must not be empty");
+            }
+            let normalized = trimmed.trim_start_matches('$');
+            if normalized.is_empty() {
+                bail!("HG-YAML-001: variables key '{}' is invalid", key);
+            }
+            if reserved.contains(&normalized) {
+                bail!(
+                    "HG-YAML-001: variables key '{}' attempts to override reserved variable '${}'",
+                    key, normalized
+                );
+            }
+            if !normalized.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_') {
+                bail!(
+                    "HG-YAML-001: variables key '{}' is invalid. Use only A-Z, 0-9, and '_' (optionally prefixed with '$')",
+                    key
+                );
+            }
         }
     }
 
@@ -225,23 +224,54 @@ fn validate_install_dsl(manifest: &InstallerManifest) -> Result<()> {
         }
     }
 
-    if manifest.install.system.register_uninstall.is_none() {
-        bail!("HG-YAML-001: install.system.register_uninstall block is required");
-    }
+    // Only enforce Windows-specific system checks when the manifest targets Windows.
+    // A manifest that uses the platform-split form (install.system.windows:) is valid
+    // even if the flat fields are empty — windows_effective() resolves the right block.
+    let targets_windows = manifest.build.as_ref()
+        .map(|b| b.os.contains("windows"))
+        .unwrap_or(true); // no build block → assume Windows-only (legacy manifests)
 
-    if let Some(register_uninstall) = &manifest.install.system.register_uninstall {
-        if register_uninstall.key.trim().is_empty() {
-            bail!("HG-YAML-001: install.system.register_uninstall.key must be non-empty");
+    if targets_windows {
+        let win_sys = manifest.install.system.windows_effective();
+
+        if win_sys.register_uninstall.is_none() {
+            bail!("HG-YAML-001: install.system.register_uninstall block is required for Windows targets");
+        }
+
+        if let Some(register_uninstall) = &win_sys.register_uninstall {
+            if register_uninstall.key.trim().is_empty() {
+                bail!("HG-YAML-001: install.system.register_uninstall.key must be non-empty");
+            }
+        }
+
+        if let Some(path) = &win_sys.path {
+            if path.add.trim().is_empty() {
+                bail!("HG-YAML-001: install.system.path.add must be non-empty");
+            }
         }
     }
 
-    if let Some(path) = &manifest.install.system.path {
-        if path.add.trim().is_empty() {
-            bail!("HG-YAML-001: install.system.path.add must be non-empty");
+    // For Linux targets, validate linux system block if present.
+    let targets_linux = manifest.build.as_ref()
+        .map(|b| b.os.contains("linux"))
+        .unwrap_or(false);
+
+    if targets_linux {
+        if let Some(linux_sys) = manifest.install.system.linux_effective() {
+            for path in &linux_sys.path {
+                if path.add.trim().is_empty() {
+                    bail!("HG-YAML-001: install.system.linux.path.add must be non-empty");
+                }
+            }
         }
     }
 
-    if manifest.install.finalize.write_uninstaller.trim().is_empty() {
+    // Validate finalize has a non-empty uninstaller path for at least one platform.
+    let has_uninstaller = manifest.install.finalize.write_uninstaller_for_os("windows")
+        .or_else(|| manifest.install.finalize.write_uninstaller_for_os("linux"))
+        .map(|p| !p.trim().is_empty())
+        .unwrap_or(false);
+    if !has_uninstaller {
         bail!("HG-YAML-001: install.finalize.write_uninstaller must be non-empty");
     }
 
@@ -391,7 +421,10 @@ fn inline_log_spec(step: &InstallStep) -> Option<&InlineLogSpec> {
         InstallStep::Service(s) => s.log.as_ref(),
         InstallStep::RunProgram(s) => s.log.as_ref(),
         InstallStep::RunPowerShell(s) => s.log.as_ref(),
+        InstallStep::RunBash(s) => s.log.as_ref(),
         InstallStep::WriteUninstaller(s) => s.log.as_ref(),
+        InstallStep::WriteLinuxConfig(s) => s.log.as_ref(),
+        InstallStep::WriteDesktopEntry(s) => s.log.as_ref(),
     }
 }
 

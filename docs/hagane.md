@@ -1,15 +1,22 @@
 # Hagane Shipping Guide
 
-This document covers building, packaging, installing, and validating the Hagane CLI that is shipped to users.
+This document covers building, packaging, installing, and validating the Hagane CLI that is shipped to users. Both Windows and Linux targets are covered.
 
 ## What Is Shipped
 
-Install target layout:
+### Windows install layout
 
 - `C:\Program Files\Hagane\bin\hagane.exe`
 - `C:\Program Files\Hagane\runtime\...` (embedded workspace used at build time)
 
-The installed `hagane.exe` compiles user installers from any directory by using the bundled runtime workspace.
+### Linux install layout
+
+- `/usr/local/hagane/bin/hagane`
+- `/usr/local/bin/hagane` → symlink created by post-install hook for immediate PATH access
+- `/etc/profile.d/hagane-path.sh` and `/etc/bash.bashrc` entry (if system PATH component selected)
+- `/usr/local/hagane/uninstall.sh` — generated uninstall script
+
+The installed `hagane` binary compiles user installers from any directory by using the bundled runtime workspace.
 
 ### Runtime Source Of Truth
 
@@ -19,13 +26,21 @@ The installed `hagane.exe` compiles user installers from any directory by using 
 
 ## Build Hagane CLI
 
-From workspace root:
+### Windows
 
 ```powershell
 cargo build -p builder --bin hagane --release
 ```
 
 Output: `target/release/hagane.exe`
+
+### Linux
+
+```bash
+cargo build -p builder --bin hagane --release
+```
+
+Output: `target/release/hagane`
 
 ### Workspace Version Management
 
@@ -41,13 +56,22 @@ All crates pick it up automatically via `version.workspace = true`.
 
 ## Stage Hagane Into Its Own Payload
 
-Before packaging `hagane-setup.exe`, copy the fresh binary into the Hagane payload:
+### Windows
 
 ```powershell
 Copy-Item .\target\release\hagane.exe .\hagane\payload\bin\hagane.exe -Force
 ```
 
+### Linux
+
+```bash
+cp ./target/release/hagane ./hagane/payload/bin/hagane
+chmod +x ./hagane/payload/bin/hagane
+```
+
 ## Build Hagane Installer
+
+### Windows
 
 With auto-discovery (if `hagane/installer.yaml` is the only YAML in the current directory):
 
@@ -61,61 +85,108 @@ Or with an explicit path:
 hagane run .\hagane\installer.yaml --release
 ```
 
+Expected output: `hagane\bin\hagane-setup.exe`
+
+### Linux
+
+```bash
+# From the repo root — builds the Linux tarball/installer binary
+./target/release/hagane run hagane/installer.yaml --release
+```
+
+Expected output: `hagane/bin/hagane-linux-x86_64`
+
 > **Auto-discovery**: If exactly one `.yaml` or `.yml` file exists in the current directory, Hagane selects it automatically. If multiple are found, Hagane prints a warning listing all of them and asks you to specify explicitly. If none are found, Hagane tries `hagane/installer.yaml` as a fallback.
-
-Expected output:
-
-- `hagane\bin\hagane-setup.exe`
 
 ## Install And Verify
 
-Run installer:
+### Windows
 
 ```powershell
 Start-Process .\hagane\bin\hagane-setup.exe -Wait
-```
-
-Verify installation:
-
-```powershell
 Test-Path "C:\Program Files\Hagane\bin\hagane.exe"
 & "C:\Program Files\Hagane\bin\hagane.exe" --version
 ```
 
+### Linux
+
+The installer requires root to write to `/usr/local/`. When `require_admin: true`, it re-launches itself with `sudo` automatically.
+
+```bash
+./hagane/bin/hagane-linux-x86_64
+```
+
+Verify after the GUI installer completes:
+
+```bash
+# Symlink created by post-install hook:
+ls -la /usr/local/bin/hagane
+
+# Binary accessible in PATH (new terminal):
+hagane --version
+
+# System PATH entry (if system PATH component was selected):
+cat /etc/profile.d/hagane-path.sh
+grep hagane /etc/bash.bashrc
+```
+
+> Open a **new terminal** after installation. The PATH update takes effect in new terminal sessions. No re-login required \u2014 `/etc/bash.bashrc` is sourced for all non-login interactive shells (including the default WSL2 terminal).
+
 ## Test User Flow
 
-Installed Hagane — auto-discovery (single YAML in directory):
+### Windows — Installed Hagane
 
 ```powershell
+# Auto-discovery (single YAML in directory)
 Set-Location C:\your-installer.yaml-folder-path
 hagane run --release
-```
 
-Installed Hagane — explicit manifest:
-
-```powershell
-Set-Location C:\your-installer.yaml-folder-path
+# Explicit manifest
 hagane run installer.yaml --release
-```
 
-From source build (developer workflow):
-
-```powershell
+# From source build (developer workflow)
 .\target\release\hagane.exe run .\path\to\installer.yaml --release
 ```
 
-Expected output:
+### Linux — Installed Hagane
 
-- `<manifest-dir>/bin/<app-name>-setup.exe` (copied from `target/release/`)
+```bash
+# Auto-discovery
+cd /path/to/your-project
+hagane run --release
 
-## Icon Behavior And Current Fixes
+# Explicit manifest
+hagane run installer.yaml --release
 
-Two icon paths exist:
+# From source build (developer workflow)
+./target/release/hagane run ./path/to/installer.yaml --release
+```
 
-- UI icon/logo in pages (loaded from manifest assets).
-- Windows EXE icon resource (stamped at compile time).
+Expected output: `<manifest-dir>/bin/<app-name>-linux-x86_64`
 
-Current implementation passes manifest icon path from builder to runner using `HAGANE_ICON_PATH` and normalizes Windows verbatim paths so winres can embed the icon correctly.
+## Linux Uninstall
+
+The Linux installer generates `/usr/local/hagane/uninstall.sh`. Run it as root:
+
+```bash
+sudo /usr/local/hagane/uninstall.sh
+```
+
+The script performs these steps in order:
+
+1. `rm -rf /usr/local/hagane` — removes the entire install directory
+2. Removes `/usr/local/bin/hagane` symlink if it points into the install directory
+3. Removes PATH entries from `~/.bashrc` and `~/.profile` — uses `$SUDO_USER` to target the actual user's home, not root's
+4. Removes the `# hagane:` PATH entry from `/etc/bash.bashrc`
+5. Removes `/etc/profile.d/hagane-path.sh`
+
+Verify after uninstall:
+
+```bash
+test -d /usr/local/hagane && echo "FAIL" || echo "OK: install dir removed"
+ls /usr/local/bin/hagane 2>/dev/null && echo "FAIL" || echo "OK: symlink removed"
+grep -c hagane /etc/bash.bashrc 2>/dev/null || echo "OK: bash.bashrc clean"
+```
 
 ## Troubleshooting
 
@@ -187,6 +258,7 @@ Fix:
 
 ## Release Checklist
 
+### Windows
 - Build `hagane.exe` in release mode.
 - Stage binary into `hagane/payload/bin/hagane.exe`.
 - Build `hagane-setup.exe`.
@@ -195,3 +267,14 @@ Fix:
 - Verify ability to build external installer projects.
 - Verify EXE icon and UI branding.
 - Verify installation logs and error codes are emitted correctly during a failing test manifest.
+
+### Linux
+- Build `hagane` in release mode (`cargo build -p builder --bin hagane --release`).
+- Stage binary into `hagane/payload/bin/hagane` and `chmod +x`.
+- Build `hagane-linux-x86_64`.
+- Install on clean machine or WSL2 VM (`sudo`).
+- Verify `/usr/local/bin/hagane` symlink is created by the post-install hook.
+- Open a new terminal and confirm `hagane --version` works without modifying PATH manually.
+- Verify user PATH scope writes to the correct user's `~/.bashrc` (check `$SUDO_USER`).
+- Verify system PATH scope writes to both `/etc/profile.d/hagane-path.sh` and `/etc/bash.bashrc`.
+- Verify `uninstall.sh` removes all installed files, symlinks, and PATH entries cleanly.

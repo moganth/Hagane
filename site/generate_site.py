@@ -397,10 +397,21 @@ def render_sections() -> tuple[str, list[dict]]:
         })
 
         is_first = (entry == SITE_CONFIG[0])
-        sep = "" if is_first else ' style="border-top:1px solid rgba(200,100,30,0.15);padding-top:60px"'
+        ascii_art = (
+            '<pre class="intro-ascii-art" aria-hidden="true">'  
+            '\u2588\u2588\u2557  \u2588\u2588\u2557 \u2588\u2588\u2588\u2588\u2588\u2557  \u2588\u2588\u2588\u2588\u2588\u2588\u2557  \u2588\u2588\u2588\u2588\u2588\u2557 \u2588\u2588\u2588\u2557   \u2588\u2588\u2557\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2557\n'
+            '\u2588\u2588\u2551  \u2588\u2588\u2551\u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2557\u2588\u2588\u2554\u2550\u2550\u2550\u2550\u255d \u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2557\u2588\u2588\u2588\u2588\u2557  \u2588\u2588\u2551\u2588\u2588\u2554\u2550\u2550\u2550\u2550\u255d\n'
+            '\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2551\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2551\u2588\u2588\u2551  \u2588\u2588\u2588\u2557\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2551\u2588\u2588\u2554\u2588\u2588\u2557 \u2588\u2588\u2551\u2588\u2588\u2588\u2588\u2588\u2557  \n'
+            '\u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2551\u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2551\u2588\u2588\u2551   \u2588\u2588\u2551\u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2551\u2588\u2588\u2551\u255a\u2588\u2588\u2557\u2588\u2588\u2551\u2588\u2588\u2554\u2550\u2550\u255d  \n'
+            '\u2588\u2588\u2551  \u2588\u2588\u2551\u2588\u2588\u2551  \u2588\u2588\u2551\u255a\u2588\u2588\u2588\u2588\u2588\u2588\u2554\u255d\u2588\u2588\u2551  \u2588\u2588\u2551\u2588\u2588\u2551 \u255a\u2588\u2588\u2588\u2588\u2551\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2557\n'
+            '\u255a\u2550\u255d  \u255a\u2550\u255d\u255a\u2550\u255d  \u255a\u2550\u255d \u255a\u2550\u2550\u2550\u2550\u2550\u255d \u255a\u2550\u255d  \u255a\u2550\u255d\u255a\u2550\u255d  \u255a\u2550\u2550\u2550\u255d\u255a\u2550\u2550\u2550\u2550\u2550\u2550\u255d</pre>\n'
+            if is_first else ''
+        )
+        sep = ""
         sections_html.append(
-            f'<section class="doc-section" id="{sid}"{sep}>\n'
+            f'<section class="doc-section" id="{sid}">\n'
             f'<span class="section-anchor" id="anchor-{sid}"></span>\n'
+            f"{ascii_art}"
             f"{body_html}\n"
             f"</section>\n"
         )
@@ -486,6 +497,19 @@ CSS = """\
   --sidebar-w:    280px;
   --header-h:     58px;
   --content-max:  860px;
+  --header-bg:    #0A0A0A;
+}
+body.light {
+  --bg:           #F5F3F0;
+  --sidebar-bg:   #EDEBE8;
+  --card-bg:      #E8E5E1;
+  --border:       #D4D0CB;
+  --border-light: #C4BFB8;
+  --text:         #1A1714;
+  --text-muted:   #6B6560;
+  --code-bg:      #E4E1DC;
+  --code-border:  #CAC6C0;
+  --header-bg:    #EAE8E4;
 }
 
 html { scroll-behavior: smooth; font-size: 16px; }
@@ -503,7 +527,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
 .site-header {
   position: fixed; top: 0; left: 0; right: 0; z-index: 100;
   height: var(--header-h);
-  background: #0A0A0A;
+  background: var(--header-bg);
   border-bottom: 1px solid var(--border);
   display: flex; align-items: center; padding: 0 24px;
   gap: 16px;
@@ -521,6 +545,23 @@ hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
   padding-left: 12px; letter-spacing: 0.5px;
 }
 .header-spacer { flex: 1; }
+.header-github {
+  display: flex; align-items: center;
+  color: var(--text-muted); transition: color 0.15s;
+  text-decoration: none;
+}
+.header-github:hover { color: #fff; text-decoration: none; }
+.github-icon { width: 20px; height: 20px; fill: currentColor; display: block; }
+.theme-toggle {
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: 1px solid var(--border-light);
+  color: var(--text-muted); border-radius: 6px;
+  width: 32px; height: 32px; cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+.theme-toggle:hover { color: var(--text); border-color: var(--text-muted); background: rgba(128,128,128,0.08); }
+.theme-toggle svg { width: 15px; height: 15px; fill: currentColor; display: block; pointer-events: none; }
 .header-version {
   font-family: 'Courier New', monospace; font-size: 12px;
   color: var(--text-muted); background: var(--code-bg);
@@ -589,16 +630,16 @@ hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
   position: sticky; top: var(--header-h);
   height: calc(100vh - var(--header-h));
   overflow-y: auto; overflow-x: hidden;
-  padding: 16px 0 40px;
+  padding: 0 0 40px;
   scrollbar-width: thin; scrollbar-color: var(--border-light) transparent;
 }
 .sidebar::-webkit-scrollbar { width: 4px; }
 .sidebar::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 2px; }
 
 /* Top-level (ungrouped) nav items */
-.nav-top ul { list-style: none; padding: 0 0 8px; }
+.nav-top ul { list-style: none; padding: 0; }
 .nav-top ul li a {
-  display: block; padding: 7px 20px 7px 20px;
+  display: block; padding: 8px 20px;
   font-size: 13.5px; font-weight: 600;
   color: #9A9288; border-left: 2px solid transparent;
   text-decoration: none; transition: color .15s, border-color .15s, background .15s;
@@ -650,7 +691,41 @@ hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
   flex: 1; padding: 52px 56px 100px;
   min-width: 0; max-width: calc(var(--content-max) + 112px);
 }
-.doc-section { margin-bottom: 72px; }
+.doc-section { display: none; margin-bottom: 0; }
+.doc-section.active { display: block; }
+
+/* ─── Pagination ─── */
+.pagination {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-top: 56px; padding-top: 28px;
+  border-top: 1px solid var(--border);
+}
+.pagination-btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: none; border: 1px solid var(--border-light);
+  color: var(--text-muted); border-radius: 8px;
+  padding: 10px 18px; cursor: pointer; font-family: inherit;
+  font-size: 13px; transition: all 0.15s; text-decoration: none;
+}
+.pagination-btn:hover:not(:disabled) {
+  background: rgba(200,100,30,0.08);
+  border-color: var(--brand);
+  color: var(--brand-glow);
+  text-decoration: none;
+}
+.pagination-btn:disabled { opacity: 0.25; cursor: default; pointer-events: none; }
+.pagination-btn.next { margin-left: auto; }
+.pag-arrow { font-size: 16px; line-height: 1; }
+.pag-label { display: flex; flex-direction: column; }
+.pag-hint { font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; opacity: 0.65; }
+.pag-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.pagination-btn:hover:not(:disabled) .pag-title { color: var(--brand-glow); }
+.pagination-info {
+  font-family: 'Courier New', monospace; font-size: 11px;
+  color: var(--text-muted); white-space: nowrap;
+  background: var(--code-bg); border: 1px solid var(--border);
+  border-radius: 4px; padding: 3px 9px;
+}
 
 /* ─── Typography ─── */
 h1 { font-size: 2.2rem; font-weight: 800; color: #fff; line-height: 1.2; margin-bottom: 12px; }
@@ -755,6 +830,18 @@ figcaption { font-size: 12px; color: var(--text-muted); margin-top: 6px; text-al
   border-top: 1px solid var(--border);
 }
 
+/* ─── Light mode overrides for hardcoded colours ─── */
+body.light h1 { color: #1A1714; }
+body.light h2 { color: #2A2420; border-bottom-color: rgba(200,100,30,0.25); }
+body.light h3 { color: #7A4820; }
+body.light strong { color: #1A1714; }
+body.light pre code { color: #2A2420; }
+body.light a:hover { color: #1A1714; }
+body.light .cli-bar { background: var(--card-bg); }
+body.light thead { background: var(--card-bg); }
+body.light thead th { color: #3A3430; }
+body.light .download-menu { background: #ECEAE6; }
+
 /* Responsive */
 @media (max-width: 900px) {
   .sidebar { display: none; position: fixed; top: var(--header-h); left: 0; bottom: 0; z-index: 90; width: var(--sidebar-w); }
@@ -806,8 +893,113 @@ function updateActiveLink() {
   });
 }
 
-window.addEventListener('scroll', updateActiveLink, { passive: true });
-updateActiveLink();
+window.addEventListener('scroll', function() {}, { passive: true });
+// Active link is managed by pagShow()
+
+// ─── Pagination ───
+var pagSections = Array.from(document.querySelectorAll('.doc-section'));
+var pagCurrent = 0;
+
+function pagTitles() {
+  return pagSections.map(function(s) {
+    var h = s.querySelector('h1') || s.querySelector('h2');
+    return h ? h.textContent.trim() : '';
+  });
+}
+
+function pagShow(idx, push) {
+  if (idx < 0 || idx >= pagSections.length) return;
+  pagSections[pagCurrent].classList.remove('active');
+  pagCurrent = idx;
+  pagSections[pagCurrent].classList.add('active');
+
+  var titles = pagTitles();
+  var prevBtn   = document.getElementById('pagPrev');
+  var nextBtn   = document.getElementById('pagNext');
+  var info      = document.getElementById('pagInfo');
+  var prevTitle = document.getElementById('pagPrevTitle');
+  var nextTitle = document.getElementById('pagNextTitle');
+
+  prevBtn.disabled = pagCurrent === 0;
+  nextBtn.disabled = pagCurrent === pagSections.length - 1;
+  if (prevTitle) prevTitle.textContent = pagCurrent > 0 ? titles[pagCurrent - 1] : '';
+  if (nextTitle) nextTitle.textContent = pagCurrent < pagSections.length - 1 ? titles[pagCurrent + 1] : '';
+  if (info) info.textContent = (pagCurrent + 1) + ' \u00b7 ' + pagSections.length;
+
+  var sectionId = pagSections[pagCurrent].id;
+  document.querySelectorAll('.sidebar a[href^="#"]').forEach(function(link) {
+    link.classList.toggle('active', link.getAttribute('href') === '#' + sectionId);
+  });
+
+  window.scrollTo(0, 0);
+  if (push) history.pushState(null, '', '#' + sectionId);
+}
+
+function pagGo(delta) { pagShow(pagCurrent + delta, true); }
+
+(function() {
+  if (!pagSections.length) return;
+  var hash = window.location.hash.slice(1);
+  var start = 0;
+  if (hash) {
+    for (var i = 0; i < pagSections.length; i++) {
+      if (pagSections[i].id === hash) { start = i; break; }
+    }
+  }
+  pagSections[start].classList.add('active');
+  pagCurrent = start;
+  pagShow(start, false);
+})();
+
+document.querySelectorAll('.sidebar a[href^="#"]').forEach(function(link) {
+  link.addEventListener('click', function(e) {
+    var target = this.getAttribute('href').slice(1);
+    for (var i = 0; i < pagSections.length; i++) {
+      if (pagSections[i].id === target) {
+        e.preventDefault();
+        pagShow(i, true);
+        document.getElementById('sidebar').classList.remove('open');
+        return;
+      }
+    }
+  });
+});
+
+window.addEventListener('popstate', function() {
+  var hash = window.location.hash.slice(1);
+  for (var i = 0; i < pagSections.length; i++) {
+    if (pagSections[i].id === hash) { pagShow(i, false); return; }
+  }
+});
+
+// ─── Theme toggle ───
+(function() {
+  var saved = localStorage.getItem('hagane-theme');
+  if (saved === 'light') applyLight();
+})();
+function applyLight() {
+  document.body.classList.add('light');
+  var moon = document.getElementById('themeIconMoon');
+  var sun  = document.getElementById('themeIconSun');
+  if (moon) moon.style.display = 'none';
+  if (sun)  sun.style.display  = 'block';
+}
+function applyDark() {
+  document.body.classList.remove('light');
+  var moon = document.getElementById('themeIconMoon');
+  var sun  = document.getElementById('themeIconSun');
+  if (moon) moon.style.display = 'block';
+  if (sun)  sun.style.display  = 'none';
+}
+function toggleTheme() {
+  if (document.body.classList.contains('light')) {
+    applyDark();
+    localStorage.setItem('hagane-theme', 'dark');
+  } else {
+    applyLight();
+    localStorage.setItem('hagane-theme', 'light');
+  }
+}
 
 // ─── Download version picker ───
 function toggleDownloadMenu() {
@@ -874,6 +1066,13 @@ HTML_SHELL = """\
     <span class="logo-tag">Installer Engine</span>
   </a>
   <div class="header-spacer"></div>
+  <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle light/dark mode">
+    <svg id="themeIconMoon" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 0 1 6 .278z"/></svg>
+    <svg id="themeIconSun" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" style="display:none"><path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm0 1a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8zm10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0zm-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707zM4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707z"/></svg>
+  </button>
+  <a class="header-github" href="https://github.com/moganth/Hagane" target="_blank" rel="noopener" aria-label="GitHub repository">
+    <svg class="github-icon" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+  </a>
   <div class="download-wrapper" id="downloadWrapper">
     <button class="header-download" onclick="toggleDownloadMenu()">&#8595; Download</button>
     <div class="download-menu" id="downloadMenu">
@@ -891,19 +1090,26 @@ HTML_SHELL = """\
 </aside>
 
 <main class="content" id="main-content">
-<pre class="intro-ascii-art" aria-hidden="true">██╗  ██╗ █████╗  ██████╗  █████╗ ███╗   ██╗███████╗
-██║  ██║██╔══██╗██╔════╝ ██╔══██╗████╗  ██║██╔════╝
-███████║███████║██║  ███╗███████║██╔██╗ ██║█████╗  
-██╔══██║██╔══██║██║   ██║██╔══██║██║╚██╗██║██╔══╝  
-██║  ██║██║  ██║╚██████╔╝██║  ██║██║ ╚████║███████╗
-╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝</pre>
 {sections}
+  <div class="pagination" id="pagination">
+    <button class="pagination-btn prev" id="pagPrev" onclick="pagGo(-1)" disabled>
+      <span class="pag-arrow">&#8592;</span>
+      <span class="pag-label">
+        <span class="pag-hint">Previous</span>
+        <span class="pag-title" id="pagPrevTitle"></span>
+      </span>
+    </button>
+    <span class="pagination-info" id="pagInfo"></span>
+    <button class="pagination-btn next" id="pagNext" onclick="pagGo(1)">
+      <span class="pag-label" style="text-align:right">
+        <span class="pag-hint">Next</span>
+        <span class="pag-title" id="pagNextTitle"></span>
+      </span>
+      <span class="pag-arrow">&#8594;</span>
+    </button>
+  </div>
   <footer class="site-footer">
     <p>Hagane Installer Engine &mdash; v{version} &mdash; Built with Rust &amp; WebView2</p>
-    <p style="margin-top:6px;font-size:11px;color:#4A4540">
-      Generated from <code>.md</code> source files &mdash;
-      edit the <code>docs/</code> files, then run <code>python site/generate_site.py</code> to rebuild.
-    </p>
   </footer>
 </main>
 </div>

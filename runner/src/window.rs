@@ -1,3 +1,4 @@
+#[cfg(windows)]
 use anyhow::{Context, Result};
 
 #[cfg(windows)]
@@ -94,9 +95,11 @@ pub fn run_message_loop() {
 }
 
 #[cfg(not(windows))]
+#[allow(dead_code)]
 pub fn run_message_loop() {}
 
 #[cfg(not(windows))]
+#[allow(dead_code)]
 pub fn create_window(_title: &str, _width: u32, _height: u32) -> anyhow::Result<()> {
     anyhow::bail!("create_window only supported on Windows")
 }

@@ -1,21 +1,28 @@
 #![windows_subsystem = "windows"]
 
 mod window;
+#[cfg(not(windows))]
+mod wry_window;
 
 use anyhow::{Context, Result};
 use engine::{
     install::{InstallContext, StepRunner},
-    ipc::{parse_inbound, InboundMessage, OutboundEvent},
     parser,
     requirements,
-    state::{InstallProgress, InstallerState, Page},
+    state::InstallerState,
 };
 use std::{
     collections::{HashMap, HashSet},
     path::PathBuf,
-    process::Command,
     sync::{Arc, Mutex},
 };
+#[cfg(windows)]
+use engine::{
+    ipc::{parse_inbound, InboundMessage, OutboundEvent},
+    state::{InstallProgress, Page},
+};
+#[cfg(windows)]
+use std::process::Command;
 
 include!("../../hagane/generated/embedded.rs");
 include!(concat!(env!("OUT_DIR"), "/theme_registry.rs"));
@@ -41,9 +48,17 @@ fn run() -> Result<()> {
 
     let mut state = InstallerState::from_manifest(&manifest);
 
+    // On non-Windows, WebView2 is unavailable — always run headless.
+    // Respect --silent / custom flags on all platforms.
     let args: Vec<String> = std::env::args().collect();
-
-    let is_silent = args.iter().any(|a| a == "/S" || a == "--silent" || a == "-s");
+    let is_silent = {
+        let default_flags = vec!["/S".to_string(), "--silent".to_string(), "-s".to_string()];
+        let silent_flags: &[String] = manifest.silent.as_ref()
+            .and_then(|s| s.flags.as_ref())
+            .map(|f| f.as_slice())
+            .unwrap_or(&default_flags);
+        args.iter().any(|a| silent_flags.contains(a))
+    };
 
     #[cfg(windows)]
     {
@@ -64,6 +79,33 @@ fn run() -> Result<()> {
                 return run_uninstall(manifest, state);
             }
             prepare_uninstall_state(&mut state)?;
+        }
+    }
+
+    // Linux: check for uninstall flag (runs uninstall.sh logic directly)
+    #[cfg(not(windows))]
+    {
+        let arg_uninstall = args.iter().any(|a| {
+            a.eq_ignore_ascii_case("--uninstall") || a.eq_ignore_ascii_case("-u")
+        });
+        if arg_uninstall {
+            return run_uninstall_linux(manifest, state);
+        }
+    }
+
+    // Linux: re-exec with sudo if require_admin is set and we are not root.
+    #[cfg(not(windows))]
+    if manifest.app.require_admin {
+        let uid = unsafe { libc::getuid() };
+        if uid != 0 {
+            let exe = std::env::current_exe().context("cannot resolve own executable path")?;
+            log::info!("Elevation required — re-launching with sudo");
+            let status = std::process::Command::new("sudo")
+                .arg(&exe)
+                .args(&args[1..])
+                .status()
+                .context("Failed to launch sudo for elevation")?;
+            std::process::exit(status.code().unwrap_or(1));
         }
     }
 
@@ -88,7 +130,17 @@ fn run() -> Result<()> {
     };
     let archives = Arc::new(archives);
 
-    use windows::core::PCWSTR;
+    // state/manifest/archives are only consumed by the GUI path.
+    #[cfg(not(windows))]
+    {
+        let html_map = build_html_map();
+        return wry_window::run_gui(
+            Arc::try_unwrap(manifest).unwrap_or_else(|a| (*a).clone()),
+            Arc::try_unwrap(state).map(|m| m.into_inner().unwrap()).unwrap_or_else(|a| a.lock().unwrap().clone()),
+            Arc::try_unwrap(archives).unwrap_or_else(|a| (*a).clone()),
+            html_map,
+        );
+    }
 
     #[cfg(windows)]
     {
@@ -99,6 +151,7 @@ fn run() -> Result<()> {
             WebMessageReceivedEventHandler,
         };
         use windows::Win32::System::Com::{CoInitializeEx, COINIT_APARTMENTTHREADED};
+        use windows::core::PCWSTR;
 
         unsafe { CoInitializeEx(None, COINIT_APARTMENTTHREADED).ok(); }
 
@@ -221,9 +274,7 @@ fn run() -> Result<()> {
         window::run_message_loop();
     }
 
-    #[cfg(not(windows))]
-    log::warn!("GUI mode only supported on Windows. Use --silent for headless.");
-
+    #[allow(unreachable_code)]
     Ok(())
 }
 
@@ -295,7 +346,9 @@ fn handle_message(
                                 backup_dir: std::env::temp_dir().join("installer_backup"),
                                 logging: manifest_clone.logging.clone(),
                                 variables: {
-                                    let mut vars = manifest_clone.variables.clone().unwrap_or_default();
+                                    let mut vars = manifest_clone.variables.as_ref()
+                                        .map(|v| v.resolve_for_os(std::env::consts::OS))
+                                        .unwrap_or_default();
                                     vars.extend(custom_values.clone());
                                     vars
                                 },
@@ -532,7 +585,9 @@ fn run_silent(
         backup_dir: std::env::temp_dir().join("installer_backup"),
         logging: manifest.logging.clone(),
         variables: {
-            let mut vars = manifest.variables.clone().unwrap_or_default();
+            let mut vars = manifest.variables.as_ref()
+                .map(|v| v.resolve_for_os(std::env::consts::OS))
+                .unwrap_or_default();
             vars.extend(state.custom_values);
             vars
         },
@@ -540,15 +595,100 @@ fn run_silent(
 
     let mut runner = StepRunner::new(ctx);
     runner.run_all(&manifest.steps, |step, total, label| {
-        log::info!("[{}/{}] {}", step + 1, total, label);
+        // run_all calls with step == total for the final "Done" notification.
+        let n = if step < total { step + 1 } else { total };
+        log::info!("[{}/{}] {}", n, total, label);
     })?;
 
     log::info!("Installation complete.");
     Ok(())
 }
 
+// ── Linux uninstall ───────────────────────────────────────────────────────────
+
+#[cfg(not(windows))]
+fn run_uninstall_linux(
+    manifest: engine::parser::schema::InstallerManifest,
+    state: InstallerState,
+) -> Result<()> {
+    use std::io::{self, Write};
+
+    let install_dir = PathBuf::from(&state.install_dir);
+    log::info!("Uninstalling {} from {}", state.app_name, install_dir.display());
+
+    // Confirm unless stdin is not a tty (piped).
+    if atty_stdin() {
+        print!("Remove {} from {}? [y/N] ", state.app_name, install_dir.display());
+        io::stdout().flush().ok();
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).ok();
+        if !input.trim().eq_ignore_ascii_case("y") {
+            println!("Aborted.");
+            return Ok(());
+        }
+    }
+
+    // Remove PATH entries from shell configs.
+    let bin_dir = install_dir.join("bin").to_string_lossy().to_string();
+    for rc in &[
+        format!("/home/{}/.bashrc", std::env::var("SUDO_USER").unwrap_or_default()),
+        format!("/home/{}/.profile", std::env::var("SUDO_USER").unwrap_or_default()),
+        std::env::var("HOME").unwrap_or_default() + "/.bashrc",
+        std::env::var("HOME").unwrap_or_default() + "/.profile",
+    ] {
+        if rc.trim_start_matches('/').is_empty() || !std::path::Path::new(rc).exists() { continue; }
+        if let Ok(content) = std::fs::read_to_string(rc) {
+            let cleaned: String = content
+                .lines()
+                .filter(|l| !l.contains("# hagane:") && !l.contains(&bin_dir))
+                .map(|l| format!("{}\n", l))
+                .collect();
+            let _ = std::fs::write(rc, cleaned);
+        }
+    }
+
+    // Remove system profile.d snippet.
+    let app_name_slug = manifest.app.name.to_lowercase().replace(' ', "-");
+    let _ = std::fs::remove_file(format!("/etc/profile.d/{}-path.sh", app_name_slug));
+
+    // Run any custom uninstall extra_steps from the manifest.
+    if let Some(extra) = manifest.uninstall.as_ref().and_then(|u| u.extra_steps.as_ref()) {
+        if !extra.is_empty() {
+            let ctx = InstallContext {
+                install_dir: install_dir.clone(),
+                selected_components: HashSet::new(),
+                archives: HashMap::new(),
+                backup_dir: std::env::temp_dir().join("uninstall_backup"),
+                logging: manifest.logging.clone(),
+                variables: manifest.variables.as_ref()
+                    .map(|v| v.resolve_for_os(std::env::consts::OS))
+                    .unwrap_or_default(),
+            };
+            let mut runner = StepRunner::new(ctx);
+            let _ = runner.run_all(extra, |_, _, _| {});
+        }
+    }
+
+    // Remove the install directory.
+    if install_dir.exists() {
+        std::fs::remove_dir_all(&install_dir)
+            .with_context(|| format!("Failed to remove {}", install_dir.display()))?;
+        log::info!("Removed {}", install_dir.display());
+    }
+
+    println!("{} has been uninstalled.", state.app_name);
+    Ok(())
+}
+
+#[cfg(not(windows))]
+fn atty_stdin() -> bool {
+    // Simple check: fd 0 is a tty.
+    unsafe { libc::isatty(libc::STDIN_FILENO) != 0 }
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+#[cfg(windows)]
 fn page_to_filename(page: &engine::state::Page) -> &'static str {
     use engine::state::Page;
     match page {
@@ -566,6 +706,7 @@ fn page_to_filename(page: &engine::state::Page) -> &'static str {
     }
 }
 
+#[cfg(windows)]
 fn select_page_html<'a>(
     map: &'a HashMap<String, String>,
     page_name: &str,
@@ -634,6 +775,7 @@ fn to_state_json(st: &InstallerState, include_assets: bool) -> serde_json::Value
     json
 }
 
+#[cfg(windows)]
 fn theme_css_bundle(preset: &str) -> (&'static str, std::collections::HashMap<&'static str, &'static str>) {
     if let Some(bundle) = theme_css_bundle_generated(preset) {
         bundle
@@ -835,7 +977,9 @@ where
                 archives: HashMap::new(),
                 backup_dir: std::env::temp_dir().join("uninstall_backup"),
                 logging: manifest.logging.clone(),
-                variables: manifest.variables.clone().unwrap_or_default(),
+                variables: manifest.variables.as_ref()
+                    .map(|v| v.resolve_for_os(std::env::consts::OS))
+                    .unwrap_or_default(),
             };
             let mut runner = StepRunner::new(ctx);
             runner.run_all(extra_steps, |_step, _total, _label| {})?;
@@ -1110,6 +1254,7 @@ fn component_is_selected(component: &Option<String>, selected_components: &HashS
         .unwrap_or(true)
 }
 
+#[cfg(windows)]
 fn resolve_uninstall_var_string(
     input: &str,
     manifest: &engine::parser::schema::InstallerManifest,
@@ -1120,7 +1265,8 @@ fn resolve_uninstall_var_string(
     for _ in 0..10 {
         let before = s.clone();
         if let Some(vars) = &manifest.variables {
-            for (key, value) in vars {
+            let resolved = vars.resolve_for_os(std::env::consts::OS);
+            for (key, value) in &resolved {
                 let normalized = key.trim().trim_start_matches('$');
                 if normalized.is_empty() {
                     continue;
