@@ -1,8 +1,14 @@
 # yaml-language-server: $schema=../sdk/schema/installer.schema.json
 
+build:
+  os: [windows, linux]
+  outputs:
+    windows: [exe]
+    linux: [tarball]
+
 app:
   name: "Hagane"
-  version: "0.1.3"
+  version: "0.1.5"
   publisher: "Installer Engine"
   description: "Command-line installer builder for the Installer Engine workspace."
   default_install_dir: "{{INSTALL_ROOT}}"
@@ -10,11 +16,16 @@ app:
   require_admin: true
 
 variables:
-  INSTALL_ROOT: "{{PROGRAMFILES64}}/Hagane"
   LOG_DIR: "{{INSTDIR}}/logs"
-  HAGANE_EXE: "{{INSTDIR}}/bin/hagane.exe"
-  UNINSTALL_KEY: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Hagane"
-  APP_REG_KEY: "SOFTWARE\\InstallerEngine\\Hagane"
+  platform:
+    windows:
+      INSTALL_ROOT: "{{PROGRAMFILES64}}/Hagane"
+      HAGANE_EXE: "{{INSTDIR}}/bin/hagane.exe"
+      UNINSTALL_KEY: "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Hagane"
+      APP_REG_KEY: "SOFTWARE\\InstallerEngine\\Hagane"
+    linux:
+      INSTALL_ROOT: "/usr/local/hagane"
+      HAGANE_EXE: "{{INSTDIR}}/bin/hagane"
 
 logging:
   mode: auto
@@ -47,13 +58,17 @@ pages:
 components:
   - id: user_path
     name: "Add to user PATH"
-    description: "Make hagane available in your current Windows user profile."
+    description: |
+      Windows: adds hagane to your user PATH.
+      Linux: appends to ~/.bashrc and ~/.profile.
     required: false
     selected: true
 
   - id: system_path
     name: "Add to system PATH"
-    description: "Make hagane available for all users on this machine."
+    description: |
+      Windows: adds hagane to the system PATH for all users.
+      Linux: writes /etc/profile.d/hagane-path.sh (requires sudo).
     required: false
     selected: false
 
@@ -72,26 +87,68 @@ install:
       target: "{{INSTDIR}}"
 
   system:
-    register_app:
-      key: "{{APP_REG_KEY}}"
-      hive: HKLM
-      version: "0.1.3"
-      install_location: "{{INSTDIR}}"
+    windows:
+      register_app:
+        key: "{{APP_REG_KEY}}"
+        hive: HKLM
+        version: "0.1.5"
+        install_location: "{{INSTDIR}}"
 
-    register_uninstall:
-      key: "{{UNINSTALL_KEY}}"
-      hive: HKLM
-      name: "Hagane"
-      version: "0.1.3"
-      publisher: "Installer Engine"
-      install_location: "{{INSTDIR}}"
-      uninstall: "{{INSTDIR}}/uninstall.exe"
-      no_modify: true
-      no_repair: true
+      register_uninstall:
+        key: "{{UNINSTALL_KEY}}"
+        hive: HKLM
+        name: "Hagane"
+        version: "0.1.5"
+        publisher: "Installer Engine"
+        install_location: "{{INSTDIR}}"
+        uninstall: "{{INSTDIR}}/uninstall.exe"
+        no_modify: true
+        no_repair: true
 
-    path:
-      add: "{{INSTDIR}}/bin"
-      scope: system
+      path:
+        add: "{{INSTDIR}}/bin"
+        scope: system
+        component: system_path
+
+    linux:
+      uninstall_manifest:
+        path: "{{INSTDIR}}/uninstall.json"
+        entries:
+          - key: name
+            value: "Hagane"
+          - key: version
+            value: "0.1.5"
+          - key: install_dir
+            value: "{{INSTDIR}}"
+          - key: binary
+            value: "{{HAGANE_EXE}}"
+
+      path:
+        - add: "{{INSTDIR}}/bin"
+          scope: user
+          component: user_path
+        - add: "{{INSTDIR}}/bin"
+          scope: system
+          component: system_path
 
   finalize:
-    write_uninstaller: "{{INSTDIR}}/uninstall.exe"
+    windows:
+      write_uninstaller: "{{INSTDIR}}/uninstall.exe"
+    linux:
+      write_uninstaller: "{{INSTDIR}}/uninstall.sh"
+
+  hooks:
+    post_install:
+      - run:
+          platform: linux
+          command: |
+            chmod +x "{{HAGANE_EXE}}"
+            ln -sf "{{HAGANE_EXE}}" /usr/local/bin/hagane
+          shell: bash
+          wait: true
+          fail_on_nonzero: false
+          timeout_sec: 10
+
+silent:
+  flags: ["/S", "--silent", "-s"]
+  install_dir: "{{INSTALL_ROOT}}"

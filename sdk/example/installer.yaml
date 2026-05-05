@@ -1,31 +1,65 @@
 # -- MyApp Installer Definition -------------------------------------------------
-# Build with: iebuild --manifest installer.yaml --build
-# Silent:     MyApp-setup.exe /S
+# Build (Windows):  hagane run installer.yaml --release
+# Build (Linux):    hagane run installer.yaml --release
+# Silent (Windows): MyApp-setup.exe /S
+# Silent (Linux):   ./myapp-setup --silent
+# Output formats:   exe (Windows), binary / deb / appimage (Linux)
 
+# ── Build configuration ──────────────────────────────────────────────────────
+# Declare target platforms and output formats here.
+# The engine reads this block first to decide which runner and toolchain to use.
+build:
+  os: [windows, linux]
+  outputs:
+    windows:
+      - exe                       # Self-contained PE installer
+    linux:
+      - binary                    # Raw ELF executable (portable)
+      - deb                       # Debian/Ubuntu package (.deb)
+      - appimage                  # Universal Linux bundle (.AppImage)
+
+# ── Application metadata ─────────────────────────────────────────────────────
 app:
   name: "MyApp"
   version: "2.1.0"
   publisher: "Acme Corporation"
-  description: "A fast, modern productivity application for Windows."
+  description: "A fast, modern productivity application."
   website: "https://example.com"
   support_url: "https://example.com/support"
   logo: "assets/logo.png"
-  banner: "assets/banner.png"
+  banner: "assets/banner.gif"
   icon: "assets/icon.ico"
-  default_install_dir: "{{INSTALL_ROOT}}"
-  registry_key: "{{COMPANY_PRODUCT}}"
-  require_admin: true
+  default_install_dir: "{{INSTALL_ROOT}}"   # resolved per platform below
+  require_admin: true                        # Windows: UAC elevation; Linux: pkexec/sudo
 
+# ── Variables ─────────────────────────────────────────────────────────────────
+# Shared variables are available on both platforms.
+# The platform: sub-block defines overrides resolved at runtime based on the
+# current OS. Platform-specific variables shadow shared ones with the same key.
 variables:
-  COMPANY: "Acme"
-  PRODUCT: "MyApp"
+  COMPANY:         "Acme"
+  PRODUCT:         "MyApp"
   COMPANY_PRODUCT: "{{COMPANY}}/{{PRODUCT}}"
-  INSTALL_ROOT: "{{PROGRAMFILES64}}/{{COMPANY}}/{{PRODUCT}}"
-  LOG_DIR: "{{INSTDIR}}/logs"
-  APP_EXE: "{{INSTDIR}}/MyApp.exe"
-  UNINSTALL_KEY: "SOFTWARE/Microsoft/Windows/CurrentVersion/Uninstall/AcmeMyApp"
-  APP_REG_KEY: "SOFTWARE/{{COMPANY_PRODUCT}}"
 
+  # ── Platform-specific path resolution ──
+  platform:
+    windows:
+      INSTALL_ROOT:   "{{PROGRAMFILES64}}/{{COMPANY}}/{{PRODUCT}}"
+      APP_EXE:        "{{INSTDIR}}/MyApp.exe"
+      CONFIG_DIR:     "{{LOCALAPPDATA}}/{{COMPANY_PRODUCT}}"
+      LOG_DIR:        "{{INSTDIR}}/logs"
+      UNINSTALL_KEY:  "SOFTWARE/Microsoft/Windows/CurrentVersion/Uninstall/AcmeMyApp"
+      APP_REG_KEY:    "SOFTWARE/{{COMPANY_PRODUCT}}"
+
+    linux:
+      INSTALL_ROOT:   "/opt/{{COMPANY}}/{{PRODUCT}}"
+      APP_EXE:        "{{INSTDIR}}/myapp"
+      CONFIG_DIR:     "{{HOME}}/.config/{{COMPANY_PRODUCT}}"
+      LOG_DIR:        "{{HOME}}/.local/share/{{COMPANY_PRODUCT}}/logs"
+      DESKTOP_DIR:    "{{HOME}}/.local/share/applications"
+      UNINSTALL_MANIFEST: "{{INSTDIR}}/.uninstall.json"
+
+# ── Logging ───────────────────────────────────────────────────────────────────
 logging:
   mode: auto
   path: "{{LOG_DIR}}"
@@ -34,6 +68,9 @@ logging:
   include_raw_os_error: false
   slow_step_warn_sec: 10
 
+# ── Theme ─────────────────────────────────────────────────────────────────────
+# Applied to the WebView2 UI (Windows) or wry/WebKitGTK UI (Linux).
+# All fields are CSS-compatible — the same UI HTML works on both platforms.
 theme:
   accent_color: "#0F6CBD"
   accent_dark_color: "#0B4F9A"
@@ -165,11 +202,19 @@ pages:
     title: "Setup Complete"
 
 requirements:
+  # OS version checks — platform: restricts to one OS
   - type: os
     platform: windows
-    min_build: 18362        # Windows 10 1903+
+    min_build: 18362                       # Windows 10 1903+
     label: "Windows 10 1903 or newer"
 
+  - type: os
+    platform: linux
+    distros: [ubuntu, debian, fedora, arch]
+    min_version: "20.04"                   # Ubuntu 20.04 / Debian 11 / Fedora 33+
+    label: "Ubuntu 20.04+, Debian 11+, or Fedora 33+"
+
+  # Cross-platform hardware checks (no platform: = runs on all)
   - type: ram
     min_mb: 2048
     label: "2 GB RAM minimum"
@@ -179,9 +224,22 @@ requirements:
     path: "{{INSTDIR}}"
     label: "512 MB free disk space"
 
+  # Windows-only runtime checks
   - type: dotnet
+    platform: windows
     min_version: "4.8"
     label: ".NET Framework 4.8"
+
+  # Linux-only package checks (resolved via dpkg/rpm/pacman at runtime)
+  - type: package
+    platform: linux
+    name: "libgtk-3-0"
+    label: "GTK3 runtime (required for UI)"
+
+  - type: package
+    platform: linux
+    name: "libwebkit2gtk-4.1"
+    label: "WebKitGTK 4.1 (required for UI)"
 
 
 components:
@@ -214,11 +272,15 @@ components:
     selected: false
 
 install:
+
+  # Shared: run on both platforms
   setup:
     create_dirs:
       - "{{INSTDIR}}"
       - "{{LOG_DIR}}"
+      - "{{CONFIG_DIR}}"
 
+  # Shared: component extraction (archive names are identical on both platforms)
   components:
     core:
       archive: "payload.zst"
@@ -230,54 +292,119 @@ install:
       archive: "samples.zst"
       target: "{{INSTDIR}}/samples"
 
+  # Platform-specific system integration
   system:
-    register_app:
-      key: "{{APP_REG_KEY}}"
-      hive: HKLM
-      version: "2.1.0"
-      install_location: "{{INSTDIR}}"
 
-    register_uninstall:
-      key: "{{UNINSTALL_KEY}}"
-      hive: HKLM
-      name: "MyApp 2.1.0"
-      version: "2.1.0"
-      publisher: "Acme Corporation"
-      install_location: "{{INSTDIR}}"
-      uninstall: "{{INSTDIR}}/uninstall.exe"
-      estimated_size_kb: 180224
-      no_modify: true
-      no_repair: true
+    # ── Windows ──────────────────────────────────────────────────────────────
+    windows:
+      # Writes to HKLM\SOFTWARE\Acme\MyApp
+      register_app:
+        key: "{{APP_REG_KEY}}"
+        hive: HKLM
+        version: "2.1.0"
+        install_location: "{{INSTDIR}}"
 
-    shortcuts:
-      - name: "MyApp"
-        target: "{{APP_EXE}}"
-        location: desktop
-        description: "Launch MyApp"
-        icon: "{{APP_EXE}}"
-        working_dir: "{{INSTDIR}}"
+      # Writes Add/Remove Programs entry
+      register_uninstall:
+        key: "{{UNINSTALL_KEY}}"
+        hive: HKLM
+        name: "MyApp 2.1.0"
+        version: "2.1.0"
+        publisher: "Acme Corporation"
+        install_location: "{{INSTDIR}}"
+        uninstall: "{{INSTDIR}}/uninstall.exe"
+        estimated_size_kb: 180224
+        no_modify: true
+        no_repair: true
+
+      # .lnk shortcuts
+      shortcuts:
+        - name: "MyApp"
+          target: "{{APP_EXE}}"
+          location: desktop
+          description: "Launch MyApp"
+          icon: "{{APP_EXE}}"
+          working_dir: "{{INSTDIR}}"
+          component: core
+
+        - name: "MyApp"
+          target: "{{APP_EXE}}"
+          location: start_menu
+          description: "Launch MyApp"
+          icon: "{{APP_EXE}}"
+          working_dir: "{{INSTDIR}}"
+          component: core
+
+        - name: "MyApp User Manual"
+          target: "{{INSTDIR}}/docs/UserManual.pdf"
+          location: start_menu
+          component: docs
+
+      # Appends to system PATH via registry (HKLM)
+      path:
+        add: "{{INSTDIR}}/bin"
+        scope: system             # system = HKLM, user = HKCU
+
+    # ── Linux ────────────────────────────────────────────────────────────────
+    linux:
+      # Equivalent of register_app: writes an INI config under CONFIG_DIR
+      # Windows uses registry; Linux uses config files in ~/.config or /etc
+      config:
+        path: "{{CONFIG_DIR}}/app.conf"
+        format: ini               # ini | json | toml
+        entries:
+          - key: InstallDir
+            value: "{{INSTDIR}}"
+          - key: Version
+            value: "2.1.0"
+          - key: Publisher
+            value: "Acme Corporation"
+          - key: UpdateChannel
+            value: "{{UPDATE_CHANNEL}}"
+
+      # Equivalent of register_uninstall: JSON manifest read by the generated
+      # Linux uninstaller binary (no Add/Remove Programs panel on Linux)
+      uninstall_manifest:
+        path: "{{INSTDIR}}/.uninstall.json"
+        entries:
+          - key: name
+            value: "MyApp 2.1.0"
+          - key: version
+            value: "2.1.0"
+          - key: publisher
+            value: "Acme Corporation"
+          - key: install_dir
+            value: "{{INSTDIR}}"
+          - key: config_dir
+            value: "{{CONFIG_DIR}}"
+          - key: desktop_entry
+            value: "{{DESKTOP_DIR}}/myapp.desktop"
+
+      # Equivalent of Windows .lnk shortcuts: XDG .desktop files
+      # location: user   → ~/.local/share/applications/myapp.desktop
+      # location: system → /usr/share/applications/myapp.desktop (needs root)
+      desktop_entry:
+        name: "MyApp"
+        exec: "{{APP_EXE}} %U"
+        icon: "{{INSTDIR}}/assets/icon.png"
+        comment: "A fast, modern productivity application"
+        categories: "Office;Utility;"
+        terminal: false
+        location: user
         component: core
 
-      - name: "MyApp"
-        target: "{{APP_EXE}}"
-        location: start_menu
-        description: "Launch MyApp"
-        icon: "{{APP_EXE}}"
-        working_dir: "{{INSTDIR}}"
-        component: core
+      # Equivalent of Windows PATH registry write
+      # scope: user   → appends to ~/.bashrc and ~/.profile
+      # scope: system → writes /etc/profile.d/myapp.sh (needs root)
+      path:
+        add: "{{INSTDIR}}/bin"
+        scope: user
 
-      - name: "MyApp User Manual"
-        target: "{{INSTDIR}}/docs/UserManual.pdf"
-        location: start_menu
-        component: docs
-
-    path:
-      add: "{{INSTDIR}}/bin"
-      scope: system
-
+  # Post-install hooks — platform: restricts to one OS
   hooks:
     post_install:
       - run:
+          platform: windows
           command: |
             Write-Host 'MyApp post-install validation completed'
             Write-Host "Organization: {{ORGANIZATION_NAME}}"
@@ -291,14 +418,38 @@ install:
           fail_on_nonzero: true
           timeout_sec: 30
 
-  finalize:
-    write_uninstaller: "{{INSTDIR}}/uninstall.exe"
+      - run:
+          platform: linux
+          command: |
+            echo "MyApp post-install validation completed"
+            echo "Organization: {{ORGANIZATION_NAME}}"
+            echo "Install mode: {{INSTALL_MODE}}"
+            echo "Update channel: {{UPDATE_CHANNEL}}"
+            chmod +x "{{APP_EXE}}"
+            update-desktop-database "{{DESKTOP_DIR}}" 2>/dev/null || true
+          shell: bash
+          wait: true
+          fail_on_nonzero: true
+          timeout_sec: 30
 
+  # Write the uninstaller binary for each platform
+  finalize:
+    windows:
+      write_uninstaller: "{{INSTDIR}}/uninstall.exe"
+    linux:
+      write_uninstaller: "{{INSTDIR}}/uninstall"     # ELF binary
+
+# ── Uninstall metadata ────────────────────────────────────────────────────────
 uninstall:
   display_name: "MyApp 2.1.0"
   publisher: "Acme Corporation"
 
+# ── Silent install ────────────────────────────────────────────────────────────
+# All three flags are accepted on either platform:
+#   Windows: MyApp-setup.exe /S
+#   Linux:   ./myapp-setup --silent   or   ./myapp-setup -s
 silent:
+  flags: ["/S", "--silent", "-s"]
   install_dir: "{{INSTALL_ROOT}}"
   components:
     - core
