@@ -87,15 +87,16 @@ install:
       target: "{{INSTDIR}}/devtools"
 
   system:
-    shortcuts:
-      - name: "Developer Shell"
-        target: "{{INSTDIR}}/devtools/shell.exe"
-        location: start_menu
+    windows:
+      shortcuts:
+        - name: "Developer Shell"
+          target: "{{INSTDIR}}/devtools/shell.exe"
+          location: start_menu
+          component: dev_tools
+      path:
+        add: "{{INSTDIR}}/devtools/bin"
+        scope: user
         component: dev_tools
-    path:
-      add: "{{INSTDIR}}/devtools/bin"
-      scope: user
-      component: dev_tools
 ```
 
 ## Post-Install Command Hooks
@@ -592,15 +593,16 @@ install:
       target: "{{INSTDIR}}/bin"
 
   system:
-    register_app:
-      hive: HKCU
-      key: "Software/Acme/MyApp"
-      version: "1.0.0"
-      install_location: "{{INSTDIR}}"
+    windows:
+      register_app:
+        hive: HKCU
+        key: "Software/Acme/MyApp"
+        version: "1.0.0"
+        install_location: "{{INSTDIR}}"
 
-    path:
-      add: "{{INSTDIR}}/bin"
-      scope: user
+      path:
+        add: "{{INSTDIR}}/bin"
+        scope: user
 
   hooks:
     post_install:
@@ -612,9 +614,21 @@ install:
           wait: true
           fail_on_nonzero: true
           timeout_sec: 60
+      - run:
+          platform: linux
+          command: |
+            chmod +x "{{INSTDIR}}/bin/myapp"
+            ln -sf "{{INSTDIR}}/bin/myapp" /usr/local/bin/myapp
+          shell: bash
+          wait: true
+          fail_on_nonzero: true
+          timeout_sec: 30
 
   finalize:
-    write_uninstaller: "{{INSTDIR}}/Uninstall.exe"
+    windows:
+      write_uninstaller: "{{INSTDIR}}/Uninstall.exe"
+    linux:
+      write_uninstaller: "{{INSTDIR}}/uninstall"
 ```
 
 ### Error Handling and Troubleshooting Pattern

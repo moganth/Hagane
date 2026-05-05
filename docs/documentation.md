@@ -63,13 +63,15 @@ install:
       target: "{{INSTDIR}}"
 
   system:
-    shortcuts:
-      - name: "MyApp"
-        target: "{{INSTDIR}}/MyApp.exe"
-        location: desktop
+    windows:
+      shortcuts:
+        - name: "MyApp"
+          target: "{{INSTDIR}}/MyApp.exe"
+          location: desktop
 
   finalize:
-    write_uninstaller: "{{INSTDIR}}/uninstall.exe"
+    windows:
+      write_uninstaller: "{{INSTDIR}}/uninstall.exe"
 ```
 
 ### 2. Place your payload
@@ -396,12 +398,16 @@ variables:
   COMPANY: "Acme"
   PRODUCT: "MyApp"
   COMPANY_PRODUCT: "{{COMPANY}}/{{PRODUCT}}"
-  INSTALL_ROOT: "{{PROGRAMFILES64}}/{{COMPANY}}/{{PRODUCT}}"
   APP_REG_KEY: "SOFTWARE/{{COMPANY_PRODUCT}}"
+
+  platform:
+    windows:
+      INSTALL_ROOT: "{{PROGRAMFILES64}}/{{COMPANY}}/{{PRODUCT}}"
+    linux:
+      INSTALL_ROOT: "/opt/{{COMPANY}}/{{PRODUCT}}"
 
 app:
   default_install_dir: "{{INSTALL_ROOT}}"
-  registry_key: "{{COMPANY_PRODUCT}}"
 
 install:
   setup:
@@ -414,14 +420,18 @@ install:
       target: "{{INSTDIR}}"
 
   system:
-    register_app:
-      hive: HKLM
-      key: "{{APP_REG_KEY}}"
-      install_location: "{{INSTDIR}}"
-      version: "2.1.0"
+    windows:
+      register_app:
+        hive: HKLM
+        key: "{{APP_REG_KEY}}"
+        install_location: "{{INSTDIR}}"
+        version: "2.1.0"
 
   finalize:
-    write_uninstaller: "{{INSTDIR}}/uninstall.exe"
+    windows:
+      write_uninstaller: "{{INSTDIR}}/uninstall.exe"
+    linux:
+      write_uninstaller: "{{INSTDIR}}/uninstall"
 ```
 
 Rules:
@@ -580,11 +590,12 @@ install:
       target: "{{INSTDIR}}/docs"
 
   system:
-    shortcuts:
-      - name: "Documentation"
-        target: "{{INSTDIR}}/docs/manual.txt"
-        location: start_menu
-        component: docs
+    windows:
+      shortcuts:
+        - name: "Documentation"
+          target: "{{INSTDIR}}/docs/manual.txt"
+          location: start_menu
+          component: docs
 ```
 
 ---

@@ -96,7 +96,10 @@ install:
       target: "{{INSTDIR}}"
 
   finalize:
-    write_uninstaller: "{{INSTDIR}}/uninstall.exe"
+    windows:
+      write_uninstaller: "{{INSTDIR}}/uninstall.exe"
+    linux:
+      write_uninstaller: "{{INSTDIR}}/uninstall"
 ```
 
 What you get:
@@ -126,7 +129,10 @@ install:
       target: "{{INSTDIR}}"
 
   finalize:
-    write_uninstaller: "{{INSTDIR}}/uninstall.exe"
+    windows:
+      write_uninstaller: "{{INSTDIR}}/uninstall.exe"
+    linux:
+      write_uninstaller: "{{INSTDIR}}/uninstall"
 ```
 
 What you get:
