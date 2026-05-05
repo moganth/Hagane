@@ -5,8 +5,10 @@ use std::collections::{BTreeMap, HashMap};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InstallerManifest {
+    /// Optional build configuration block (must appear first in YAML).
+    pub build: Option<BuildConfig>,
     pub app: AppInfo,
-    pub variables: Option<HashMap<String, String>>,
+    pub variables: Option<VariablesConfig>,
     pub theme: Option<ThemeConfig>,
     pub pages: Vec<PageDefinition>,
     pub requirements: Option<Vec<Requirement>>,
@@ -21,13 +23,104 @@ pub struct InstallerManifest {
     pub silent: Option<SilentConfig>,
 }
 
+// ── Build config ──────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BuildConfig {
+    /// Target OSes: "windows", "linux", or both.
+    pub os: OsTargets,
+    /// Output formats per platform.
+    pub outputs: Option<BuildOutputs>,
+}
+
+/// Accept either a single string ("windows") or a list (["windows","linux"]).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum OsTargets {
+    Single(String),
+    Multi(Vec<String>),
+}
+
+impl OsTargets {
+    pub fn contains(&self, target: &str) -> bool {
+        match self {
+            OsTargets::Single(s) => s == target,
+            OsTargets::Multi(v) => v.iter().any(|s| s == target),
+        }
+    }
+    pub fn targets(&self) -> Vec<&str> {
+        match self {
+            OsTargets::Single(s) => vec![s.as_str()],
+            OsTargets::Multi(v) => v.iter().map(String::as_str).collect(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct BuildOutputs {
+    pub windows: Option<Vec<String>>,
+    pub linux: Option<Vec<String>>,
+}
+
+// ── Variables ─────────────────────────────────────────────────────────────────
+
+/// Variables block — flat map plus optional per-platform overrides.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct VariablesConfig {
+    /// Platform-specific variable sub-blocks.
+    pub platform: Option<PlatformVariables>,
+    /// All other flat key=value entries captured via flatten.
+    #[serde(flatten)]
+    pub shared: HashMap<String, serde_yaml::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct PlatformVariables {
+    pub windows: Option<HashMap<String, String>>,
+    pub linux: Option<HashMap<String, String>>,
+}
+
+impl VariablesConfig {
+    /// Resolve to a flat string map for the given runtime OS.
+    /// Platform-specific values override shared ones.
+    pub fn resolve_for_os(&self, os: &str) -> HashMap<String, String> {
+        let mut out: HashMap<String, String> = self
+            .shared
+            .iter()
+            .filter_map(|(k, v)| {
+                if k == "platform" { return None; }
+                let s = match v {
+                    serde_yaml::Value::String(s) => s.clone(),
+                    other => serde_yaml::to_string(other).unwrap_or_default().trim().to_string(),
+                };
+                Some((k.clone(), s))
+            })
+            .collect();
+        if let Some(platform) = &self.platform {
+            let overrides = match os {
+                "windows" => platform.windows.as_ref(),
+                "linux"   => platform.linux.as_ref(),
+                _ => None,
+            };
+            if let Some(map) = overrides {
+                for (k, v) in map {
+                    out.insert(k.clone(), v.clone());
+                }
+            }
+        }
+        out
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InstallDsl {
     pub setup: InstallSetupDsl,
     pub components: BTreeMap<String, InstallComponentDsl>,
-    pub system: InstallSystemDsl,
+    /// Flat (legacy/Windows-only) system block — used when no platform sub-keys present.
+    #[serde(default)]
+    pub system: InstallSystemFlat,
     pub hooks: Option<InstallHooksDsl>,
-    pub finalize: InstallFinalizeDsl,
+    pub finalize: InstallFinalizePlatform,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -41,13 +134,126 @@ pub struct InstallComponentDsl {
     pub target: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Accepts either the old flat layout or the new platform-split layout:
+///   system:
+///     register_app: ...          ← flat (Windows-only)
+///
+///   system:
+///     windows:
+///       register_app: ...
+///     linux:
+///       desktop_entry: ...
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct InstallSystemFlat {
+    // ── flat (backwards-compatible) ──
+    pub register_app: Option<InstallRegisterAppDsl>,
+    pub register_uninstall: Option<InstallRegisterUninstallDsl>,
+    pub shortcuts: Option<Vec<InstallShortcutDsl>>,
+    pub path: Option<InstallPathDsl>,
+    // ── platform sub-keys ──
+    pub windows: Option<InstallSystemDsl>,
+    pub linux: Option<InstallSystemLinuxDsl>,
+}
+
+impl InstallSystemFlat {
+    /// Return the Windows-effective system config: prefer explicit windows sub-block,
+    /// fall back to the flat fields (backwards compatibility).
+    pub fn windows_effective(&self) -> InstallSystemDsl {
+        if let Some(w) = &self.windows { return w.clone(); }
+        InstallSystemDsl {
+            register_app:       self.register_app.clone(),
+            register_uninstall: self.register_uninstall.clone(),
+            shortcuts:          self.shortcuts.clone(),
+            path:               self.path.clone(),
+        }
+    }
+
+    pub fn linux_effective(&self) -> Option<&InstallSystemLinuxDsl> {
+        self.linux.as_ref()
+    }
+}
+
+/// Windows-specific system integration.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct InstallSystemDsl {
     pub register_app: Option<InstallRegisterAppDsl>,
     pub register_uninstall: Option<InstallRegisterUninstallDsl>,
     pub shortcuts: Option<Vec<InstallShortcutDsl>>,
     pub path: Option<InstallPathDsl>,
 }
+
+/// Linux-specific system integration.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct InstallSystemLinuxDsl {
+    /// Writes an INI/JSON/TOML config file (replaces registry for Linux).
+    pub config: Option<LinuxConfigDsl>,
+    /// Writes a JSON uninstall manifest (replaces Add/Remove Programs).
+    pub uninstall_manifest: Option<LinuxUninstallManifestDsl>,
+    /// Creates an XDG .desktop file (replaces .lnk shortcuts).
+    pub desktop_entry: Option<LinuxDesktopEntryDsl>,
+    /// Appends to PATH via shell profile (replaces registry PATH write).
+    /// Accepts a single entry or a list so both user and system scopes
+    /// can be defined simultaneously (each gated on its own component).
+    #[serde(default, deserialize_with = "deserialize_path_list")]
+    pub path: Vec<InstallPathDsl>,
+}
+
+/// Deserialises `path:` as either a single `InstallPathDsl` object or a list
+/// of them, so existing single-entry YAMLs continue to work unchanged.
+pub fn deserialize_path_list<'de, D>(d: D) -> Result<Vec<InstallPathDsl>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(serde::Deserialize)]
+    #[serde(untagged)]
+    enum OneOrMany {
+        One(InstallPathDsl),
+        Many(Vec<InstallPathDsl>),
+    }
+    match OneOrMany::deserialize(d)? {
+        OneOrMany::One(p)  => Ok(vec![p]),
+        OneOrMany::Many(v) => Ok(v),
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LinuxConfigDsl {
+    pub path: String,
+    #[serde(default = "default_ini")]
+    pub format: String,
+    pub entries: Vec<LinuxKvEntry>,
+}
+
+fn default_ini() -> String { "ini".to_string() }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LinuxKvEntry {
+    pub key: String,
+    pub value: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LinuxUninstallManifestDsl {
+    pub path: String,
+    pub entries: Vec<LinuxKvEntry>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LinuxDesktopEntryDsl {
+    pub name: String,
+    pub exec: String,
+    pub icon: Option<String>,
+    pub comment: Option<String>,
+    pub categories: Option<String>,
+    #[serde(default)]
+    pub terminal: bool,
+    /// "user" → ~/.local/share/applications, "system" → /usr/share/applications
+    #[serde(default = "default_user")]
+    pub location: String,
+    pub component: Option<String>,
+}
+
+fn default_user() -> String { "user".to_string() }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InstallRegisterAppDsl {
@@ -106,6 +312,8 @@ pub struct InstallHookStepDsl {
 pub struct InstallRunHookDsl {
     pub command: String,
     pub shell: InstallHookShell,
+    /// If set, this hook only runs on the specified OS ("windows" or "linux").
+    pub platform: Option<String>,
     #[serde(default = "default_true")]
     pub wait: bool,
     #[serde(default = "default_true")]
@@ -117,12 +325,42 @@ pub struct InstallRunHookDsl {
 #[serde(rename_all = "lowercase")]
 pub enum InstallHookShell {
     Powershell,
+    Bash,
     Program,
+}
+
+/// Accepts either a flat string (legacy) or platform sub-blocks.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum InstallFinalizePlatform {
+    /// Legacy flat form: `write_uninstaller: "..."`
+    Flat(InstallFinalizeDsl),
+    /// New platform-split form
+    Platform(InstallFinalizeSplit),
+}
+
+impl InstallFinalizePlatform {
+    pub fn write_uninstaller_for_os(&self, os: &str) -> Option<String> {
+        match self {
+            InstallFinalizePlatform::Flat(f) => Some(f.write_uninstaller.clone()),
+            InstallFinalizePlatform::Platform(p) => match os {
+                "windows" => p.windows.as_ref().map(|w| w.write_uninstaller.clone()),
+                "linux"   => p.linux.as_ref().map(|l| l.write_uninstaller.clone()),
+                _ => None,
+            },
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InstallFinalizeDsl {
     pub write_uninstaller: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstallFinalizeSplit {
+    pub windows: Option<InstallFinalizeDsl>,
+    pub linux: Option<InstallFinalizeDsl>,
 }
 
 // ── Logging ──────────────────────────────────────────────────────────────────
@@ -326,16 +564,31 @@ pub enum Requirement {
     Disk(DiskRequirement),
     Dotnet(DotnetRequirement),
     VcRedist(VcRedistRequirement),
+    Package(PackageRequirement),
     Custom(CustomRequirement),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OsRequirement {
-    /// e.g. "windows" — future: "linux", "macos"
+    /// "windows" or "linux"
     pub platform: String,
-    /// Minimum Windows build number (e.g. 10240 = Win10, 22000 = Win11)
+    /// Windows: minimum build number (e.g. 18362 = Win10 1903)
     pub min_build: Option<u32>,
+    /// Linux: minimum distro version string (e.g. "20.04" for Ubuntu)
+    pub min_version: Option<String>,
+    /// Linux: allowed distro names (e.g. ["ubuntu", "debian"])
+    pub distros: Option<Vec<String>>,
     /// Human-readable label shown on requirements page
+    pub label: Option<String>,
+}
+
+/// Linux-only: checks for a system package via dpkg/rpm/pacman.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PackageRequirement {
+    /// Only runs on this platform ("linux" expected).
+    pub platform: Option<String>,
+    /// Package name to check (e.g. "libgtk-3-0").
+    pub name: String,
     pub label: Option<String>,
 }
 
@@ -414,7 +667,10 @@ pub enum InstallStep {
     RunProgram(RunProgramStep),
     #[serde(rename = "run_powershell", alias = "run_power_shell")]
     RunPowerShell(RunPowerShellStep),
+    RunBash(RunBashStep),
     WriteUninstaller(WriteUninstallerStep),
+    WriteLinuxConfig(WriteLinuxConfigStep),
+    WriteDesktopEntry(WriteDesktopEntryStep),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -615,6 +871,46 @@ pub struct WriteUninstallerStep {
     pub log: Option<InlineLogSpec>,
 }
 
+/// Writes a config file (INI/JSON/TOML) to disk — Linux equivalent of registry writes.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WriteLinuxConfigStep {
+    pub path: String,
+    /// "ini", "json", or "toml"
+    pub format: String,
+    /// Ordered key-value pairs to write.
+    pub entries: Vec<(String, String)>,
+    pub log: Option<InlineLogSpec>,
+}
+
+/// Writes an XDG .desktop file — Linux equivalent of .lnk shortcuts.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WriteDesktopEntryStep {
+    pub name: String,
+    pub exec: String,
+    pub icon: Option<String>,
+    pub comment: Option<String>,
+    pub categories: Option<String>,
+    pub terminal: bool,
+    /// "user" or "system"
+    pub location: String,
+    pub component: Option<String>,
+    pub log: Option<InlineLogSpec>,
+}
+
+/// Runs a bash/sh script — Linux equivalent of RunPowerShell.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RunBashStep {
+    /// Inline script body.
+    pub script: Option<String>,
+    /// Path to a script file.
+    pub file: Option<String>,
+    pub wait: bool,
+    pub fail_on_nonzero: bool,
+    pub timeout_sec: Option<u64>,
+    pub component: Option<String>,
+    pub log: Option<InlineLogSpec>,
+}
+
 // ── Uninstall config ──────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -627,8 +923,10 @@ pub struct UninstallConfig {
 
 // ── Silent install config ─────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct SilentConfig {
+    /// Accepted silent-mode flags. Defaults: [\"/S\", \"--silent\", \"-s\"]
+    pub flags: Option<Vec<String>>,
     /// Install directory override for silent mode
     pub install_dir: Option<String>,
     /// Component IDs to install in silent mode (empty = all required)
