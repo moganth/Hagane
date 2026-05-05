@@ -226,14 +226,18 @@ install:
       target: "{{INSTDIR}}"
 
   system:
-    register_app:
-      hive: HKCU
-      key: "Software/MyCompany/HelloWorld"
-      version: "1.0.0"
-      install_location: "{{INSTDIR}}"
+    windows:
+      register_app:
+        hive: HKCU
+        key: "Software/MyCompany/HelloWorld"
+        version: "1.0.0"
+        install_location: "{{INSTDIR}}"
 
   finalize:
-    write_uninstaller: "{{INSTDIR}}/uninstall.exe"
+    windows:
+      write_uninstaller: "{{INSTDIR}}/uninstall.exe"
+    linux:
+      write_uninstaller: "{{INSTDIR}}/uninstall"
 ```
 
 ### 2. Build:
