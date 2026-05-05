@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 use crate::parser::schema::{
     InlineLogSpec, InstallStep, LogLevel, LoggingConfig, LoggingMode, RegisterAppStep, RegisterUninstallStep, RegistryOperation,
-    RegistryValueType, RunPowerShellStep,
+    RegistryValueType, RunBashStep, RunPowerShellStep, WriteDesktopEntryStep, WriteLinuxConfigStep,
 };
 use rollback::RollbackJournal;
 
@@ -223,6 +223,20 @@ impl StepRunner {
                 self.run_powershell(s)?;
             }
 
+            InstallStep::RunBash(s) => {
+                if !self.component_active(s.component.as_deref()) { return Ok(()); }
+                self.run_bash(s)?;
+            }
+
+            InstallStep::WriteLinuxConfig(s) => {
+                self.write_linux_config(s)?;
+            }
+
+            InstallStep::WriteDesktopEntry(s) => {
+                if !self.component_active(s.component.as_deref()) { return Ok(()); }
+                self.write_desktop_entry(s)?;
+            }
+
             InstallStep::WriteUninstaller(s) => {
                 let path = PathBuf::from(self.resolve_vars_path(&s.path)?);
                 write_uninstaller_stub(&path)?;
@@ -232,15 +246,16 @@ impl StepRunner {
     }
 
     fn progress_label(&self, step: &InstallStep, default_label: &str) -> String {
-        if !self.manual_only_logging {
-            return default_label.to_string();
-        }
-        if let Some(spec) = inline_log_spec(step) {
-            if let Some(msg) = spec.ui.as_ref().or(spec.both.as_ref()) {
-                return self.resolve_vars(msg);
+        if self.manual_only_logging {
+            if let Some(spec) = inline_log_spec(step) {
+                if let Some(msg) = spec.ui.as_ref().or(spec.both.as_ref()) {
+                    return self.resolve_vars(msg);
+                }
             }
+            return String::new();
         }
-        String::new()
+        // Always resolve variables in the label so {{INSTDIR}} etc. are expanded.
+        self.resolve_vars(default_label)
     }
 
     fn run_powershell(&self, step: &RunPowerShellStep) -> Result<()> {
@@ -331,7 +346,138 @@ impl StepRunner {
             let _ = step;
             return Err(anyhow::anyhow!("HG-PS-002: run_powershell is only supported on Windows"));
         }
+        #[allow(unreachable_code)]
+        Ok(())
+    }
 
+    fn run_bash(&self, step: &RunBashStep) -> Result<()> {
+        #[cfg(target_os = "linux")]
+        {
+            use std::process::{Command, Stdio};
+            use std::time::{Duration, Instant};
+
+            let mut cmd = Command::new("/bin/bash");
+            cmd.arg("-e")
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped());
+
+            if let Some(script) = &step.script {
+                cmd.args(["-c", &self.resolve_vars(script)]);
+            } else if let Some(file) = &step.file {
+                cmd.arg(self.resolve_vars_path(file)?);
+            }
+
+            if !step.wait {
+                cmd.spawn().context("HG-PS-002: failed to spawn bash")?;
+                return Ok(());
+            }
+
+            let mut child = cmd.spawn().context("HG-PS-002: failed to spawn bash")?;
+
+            let output = if let Some(timeout_sec) = step.timeout_sec {
+                let deadline = Instant::now() + Duration::from_secs(timeout_sec);
+                loop {
+                    if let Some(_status) = child.try_wait().context("HG-PS-003: failed while waiting for bash")? {
+                        break child.wait_with_output().context("HG-PS-003: failed to collect bash output")?;
+                    }
+                    if Instant::now() >= deadline {
+                        let _ = child.kill();
+                        return Err(anyhow::anyhow!("HG-PS-004: bash script timed out after {} seconds", timeout_sec));
+                    }
+                    std::thread::sleep(Duration::from_millis(100));
+                }
+            } else {
+                child.wait_with_output().context("HG-PS-003: failed to collect bash output")?
+            };
+
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            for line in stdout.lines() {
+                if !line.trim().is_empty() { log::info!("[bash] {}", line); }
+            }
+            for line in stderr.lines() {
+                if !line.trim().is_empty() { log::warn!("[bash stderr] {}", line); }
+            }
+
+            if step.fail_on_nonzero && !output.status.success() {
+                let reason = stderr.trim().to_string();
+                return Err(anyhow::anyhow!(
+                    "HG-PS-003: bash script returned non-zero exit code {:?}: {}",
+                    output.status.code(),
+                    reason
+                ));
+            }
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            let _ = step;
+            return Err(anyhow::anyhow!("HG-PS-002: run_bash is only supported on Linux"));
+        }
+        #[allow(unreachable_code)]
+        Ok(())
+    }
+
+    fn write_linux_config(&self, step: &WriteLinuxConfigStep) -> Result<()> {
+        let path = PathBuf::from(self.resolve_vars_path(&step.path)?);
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)
+                .with_context(|| format!("Failed to create directory for config file '{}'", path.display()))?;
+        }
+        let content = match step.format.as_str() {
+            "json" => {
+                let map: serde_json::Map<String, serde_json::Value> = step
+                    .entries
+                    .iter()
+                    .map(|(k, v)| (k.clone(), serde_json::Value::String(v.clone())))
+                    .collect();
+                serde_json::to_string_pretty(&map)
+                    .context("Failed to serialize config as JSON")?
+            }
+            _ => {
+                // INI: simple key=value
+                step.entries
+                    .iter()
+                    .map(|(k, v)| format!("{}={}", k, v))
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            }
+        };
+        std::fs::write(&path, content)
+            .with_context(|| format!("Failed to write config file '{}'", path.display()))?;
+        Ok(())
+    }
+
+    fn write_desktop_entry(&self, step: &WriteDesktopEntryStep) -> Result<()> {
+        let base = if step.location == "system" {
+            PathBuf::from("/usr/share/applications")
+        } else {
+            // user scope: ~/.local/share/applications
+            let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
+            PathBuf::from(home).join(".local/share/applications")
+        };
+        std::fs::create_dir_all(&base)
+            .with_context(|| format!("Failed to create applications directory '{}'", base.display()))?;
+
+        let exec = self.resolve_vars(&step.exec);
+        let icon = step.icon.as_deref().map(|i| self.resolve_vars(i)).unwrap_or_default();
+        let comment = step.comment.as_deref().unwrap_or_default();
+        let categories = step.categories.as_deref().unwrap_or("Application;");
+
+        let content = format!(
+            "[Desktop Entry]\nType=Application\nName={name}\nExec={exec}\nIcon={icon}\nComment={comment}\nCategories={categories}\nTerminal={terminal}\n",
+            name = step.name,
+            exec = exec,
+            icon = icon,
+            comment = comment,
+            categories = categories,
+            terminal = step.terminal,
+        );
+
+        // Sanitise the name to a valid filename
+        let filename = format!("{}.desktop", step.name.replace(' ', "-").to_lowercase());
+        let dest = base.join(&filename);
+        std::fs::write(&dest, content)
+            .with_context(|| format!("Failed to write .desktop file '{}'", dest.display()))?;
         Ok(())
     }
 
@@ -359,12 +505,9 @@ impl StepRunner {
     }
 
     fn resolve_vars_path(&self, input: &str) -> Result<String> {
-        let mut resolved = self.resolve_vars(input);
+        let resolved = self.resolve_vars(input);
         #[cfg(windows)]
-        {
-            // Allow manifest authors to use universal '/' separators in path-like fields.
-            resolved = resolved.replace('/', "\\");
-        }
+        let resolved = resolved.replace('/', "\\");
         if let Some(token) = unresolved_token(&resolved) {
             return Err(anyhow::anyhow!(
                 "HG-VAR-001: unresolved variable '{}' in '{}'",
@@ -807,7 +950,84 @@ fn apply_env_var(
     }
     #[cfg(not(windows))]
     {
-        log::warn!("EnvVar step skipped on non-Windows");
+        apply_env_var_linux(name, value, scope, operation, journal)?;
+    }
+    Ok(())
+}
+
+/// Appends/sets an env var in shell profile files on Linux.
+/// - `user` scope  → `~/.bashrc` + `~/.profile`
+/// - `system` scope → `/etc/profile.d/hagane-{name}.sh`
+#[cfg(not(windows))]
+fn apply_env_var_linux(
+    name: &str,
+    value: &str,
+    scope: &str,
+    operation: &str,
+    _journal: &mut RollbackJournal,
+) -> Result<()> {
+    let export_line = match operation {
+        "append"  => format!("\nexport {}=\"${}:{}\"\n", name, name, value),
+        "prepend" => format!("\nexport {}=\"{}:${}\"\n", name, value, name),
+        _         => format!("\nexport {}=\"{}\"\n", name, value),
+    };
+
+    if scope == "system" {
+        // Write a standalone profile.d snippet for login shells.
+        let snippet_name = format!("hagane-{}.sh", name.to_lowercase().replace('_', "-"));
+        let dest = std::path::PathBuf::from("/etc/profile.d").join(&snippet_name);
+        std::fs::write(&dest, format!("#!/bin/sh{}", export_line))
+            .with_context(|| format!("Failed to write /etc/profile.d/{} — try running with sudo", snippet_name))?;
+        log::info!("System PATH updated via /etc/profile.d/{}", snippet_name);
+
+        // Also write to /etc/bash.bashrc so the PATH applies to
+        // non-login interactive shells (the default in WSL2 / Ubuntu terminals).
+        let bashrc_path = std::path::PathBuf::from("/etc/bash.bashrc");
+        if bashrc_path.exists() {
+            let current = std::fs::read_to_string(&bashrc_path).unwrap_or_default();
+            let marker = format!("# hagane: {}", name);
+            if !current.contains(&marker) {
+                let append = format!("\n{}\n{}\n", marker, export_line.trim_start_matches('\n'));
+                use std::io::Write as _;
+                let mut f = std::fs::OpenOptions::new().append(true).open(&bashrc_path)
+                    .context("Failed to open /etc/bash.bashrc for appending")?;
+                f.write_all(append.as_bytes())
+                    .context("Failed to write to /etc/bash.bashrc")?;
+                log::info!("System PATH also updated in /etc/bash.bashrc");
+            } else {
+                log::info!("/etc/bash.bashrc already contains {} entry — skipping", name);
+            }
+        }
+    } else {
+        // User scope: append to ~/.bashrc and ~/.profile (if they exist).
+        // Under `sudo`, HOME is /root — use SUDO_USER's home instead so the
+        // PATH is written for the actual calling user, not root.
+        let home = {
+            let sudo_user = std::env::var("SUDO_USER").unwrap_or_default();
+            if !sudo_user.is_empty() && sudo_user != "root" {
+                format!("/home/{}", sudo_user)
+            } else {
+                std::env::var("HOME").unwrap_or_else(|_| "/root".to_string())
+            }
+        };
+        for rc_file in &[".bashrc", ".profile"] {
+            let rc_path = std::path::PathBuf::from(&home).join(rc_file);
+            if !rc_path.exists() { continue; }
+            let current = std::fs::read_to_string(&rc_path).unwrap_or_default();
+            // Avoid duplicate entries.
+            let marker = format!("# hagane: {}", name);
+            if current.contains(&marker) {
+                log::info!("{} already contains {} entry — skipping", rc_file, name);
+                continue;
+            }
+            let append = format!("{}\n{}\n", marker, export_line.trim_start_matches('\n'));
+            use std::io::Write as _;
+            let mut f = std::fs::OpenOptions::new().append(true).open(&rc_path)
+                .with_context(|| format!("Failed to open {} for appending", rc_path.display()))?;
+            f.write_all(append.as_bytes())
+                .with_context(|| format!("Failed to write to {}", rc_path.display()))?;
+            log::info!("PATH updated in {}", rc_path.display());
+        }
     }
     Ok(())
 }
@@ -900,8 +1120,63 @@ fn write_uninstaller_stub(path: &Path) -> Result<()> {
 
     #[cfg(not(windows))]
     {
-        std::fs::write(path, b"#!/bin/sh\necho 'Uninstall is only supported on Windows'\n")?;
-        log::info!("Uninstaller stub written to: {}", path.display());
+        // Write a functional shell uninstall script.
+        // Use a plain template + string replace to avoid format! quoting issues
+        // with shell variables inside the script body.
+        let install_dir = path.parent().unwrap_or(path);
+        let install_dir_str = install_dir.to_string_lossy();
+
+        // Template uses __INSTALL_DIR__ as a placeholder — no
+        // conflict with Rust format args or shell $VAR quoting.
+        let template = concat!(
+            "#!/bin/sh\n",
+            "# Generated by Hagane Installer Engine\n",
+            "\n",
+            "INSTALL_DIR=\"__INSTALL_DIR__\"\n",
+            "\n",
+            "echo \"Uninstalling from $INSTALL_DIR ...\"\n",
+            "rm -rf \"$INSTALL_DIR\"\n",
+            "\n",
+            "# Remove symlink from /usr/local/bin if it points into this install\n",
+            "if [ -L /usr/local/bin/hagane ]; then\n",
+            "    TARGET=$(readlink /usr/local/bin/hagane 2>/dev/null || true)\n",
+            "    case \"$TARGET\" in\n",
+            "        \"$INSTALL_DIR\"*) rm -f /usr/local/bin/hagane ;;\n",
+            "    esac\n",
+            "fi\n",
+            "\n",
+            "# Remove PATH entries from user shell configs (~/.bashrc, ~/.profile)\n",
+            "SUDO_USER_HOME=\"\"\n",
+            "if [ -n \"$SUDO_USER\" ] && [ \"$SUDO_USER\" != root ]; then\n",
+            "    SUDO_USER_HOME=\"/home/$SUDO_USER\"\n",
+            "fi\n",
+            "HOME_DIR=\"${SUDO_USER_HOME:-$HOME}\"\n",
+            "for RC in \"$HOME_DIR/.bashrc\" \"$HOME_DIR/.profile\"; do\n",
+            "    if [ -f \"$RC\" ]; then\n",
+            "        grep -v '# hagane:' \"$RC\" | grep -v \"$INSTALL_DIR/bin\" > \"$RC.tmp\" && mv \"$RC.tmp\" \"$RC\"\n",
+            "    fi\n",
+            "done\n",
+            "\n",
+            "# Remove system PATH entries from /etc/bash.bashrc\n",
+            "if [ -f /etc/bash.bashrc ]; then\n",
+            "    grep -v '# hagane:' /etc/bash.bashrc | grep -v \"$INSTALL_DIR/bin\" > /etc/bash.bashrc.tmp && mv /etc/bash.bashrc.tmp /etc/bash.bashrc\n",
+            "fi\n",
+            "\n",
+            "# Remove system PATH snippet from /etc/profile.d/\n",
+            "rm -f /etc/profile.d/hagane-path.sh 2>/dev/null || true\n",
+            "\n",
+            "echo \"Done.\"\n",
+        );
+        let script = template
+            .replace("__INSTALL_DIR__", &install_dir_str);
+
+        std::fs::write(path, script.as_bytes())?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755));
+        }
+        log::info!("Uninstaller script written to: {}", path.display());
     }
 
     Ok(())
@@ -921,7 +1196,10 @@ fn step_label(step: &InstallStep) -> String {
         InstallStep::Service(s)       => format!("Service: {:?} '{}'", s.operation, s.name),
         InstallStep::RunProgram(s)    => format!("Running {}", s.executable),
         InstallStep::RunPowerShell(_) => "Running PowerShell".to_string(),
+        InstallStep::RunBash(_) => "Running bash script".to_string(),
         InstallStep::WriteUninstaller(s) => format!("Writing uninstaller to {}", s.path),
+        InstallStep::WriteLinuxConfig(s) => format!("Writing config to {}", s.path),
+        InstallStep::WriteDesktopEntry(s) => format!("Writing .desktop entry for {}", s.name),
     }
 }
 
@@ -939,7 +1217,10 @@ fn step_action(step: &InstallStep) -> &'static str {
         InstallStep::Service(_) => "service",
         InstallStep::RunProgram(_) => "run_program",
         InstallStep::RunPowerShell(_) => "run_powershell",
+        InstallStep::RunBash(_) => "run_bash",
         InstallStep::WriteUninstaller(_) => "write_uninstaller",
+        InstallStep::WriteLinuxConfig(_) => "write_linux_config",
+        InstallStep::WriteDesktopEntry(_) => "write_desktop_entry",
     }
 }
 
@@ -1093,7 +1374,10 @@ fn inline_log_spec(step: &InstallStep) -> Option<&InlineLogSpec> {
         InstallStep::Service(s) => s.log.as_ref(),
         InstallStep::RunProgram(s) => s.log.as_ref(),
         InstallStep::RunPowerShell(s) => s.log.as_ref(),
+        InstallStep::RunBash(s) => s.log.as_ref(),
         InstallStep::WriteUninstaller(s) => s.log.as_ref(),
+        InstallStep::WriteLinuxConfig(s) => s.log.as_ref(),
+        InstallStep::WriteDesktopEntry(s) => s.log.as_ref(),
     }
 }
 
@@ -1111,6 +1395,9 @@ fn step_component(step: &InstallStep) -> Option<&str> {
         InstallStep::Service(_) => None,
         InstallStep::RunProgram(s) => s.component.as_deref(),
         InstallStep::RunPowerShell(s) => s.component.as_deref(),
+        InstallStep::RunBash(s) => s.component.as_deref(),
         InstallStep::WriteUninstaller(_) => None,
+        InstallStep::WriteLinuxConfig(_) => None,
+        InstallStep::WriteDesktopEntry(s) => s.component.as_deref(),
     }
 }
